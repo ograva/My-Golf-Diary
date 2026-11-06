@@ -30,6 +30,7 @@ Fine/coarse location permissions are declared in `android/app/src/main/AndroidMa
 |-----|-------------|
 | **My Bag** | Club profiles, category filters, min/max/avg yardages, swing notes |
 | **On Course** | Single-screen fairway HUD, GPS shot logging, penalties/mulligans/concede, hole scores |
+| **Scorecard** | 18-hole table, out/in/total vs par, round picker, auto-refresh when tab opens |
 | **Range** | 10-shot drill flow, swing cue card, updates club stats on save |
 
 ## Tests

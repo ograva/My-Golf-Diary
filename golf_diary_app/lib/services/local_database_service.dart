@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/golf_models.dart';
+import '../models/round_summary.dart';
 
 class LocalDatabaseService {
   static final LocalDatabaseService instance = LocalDatabaseService._init();
@@ -163,17 +164,97 @@ class LocalDatabaseService {
 
   Future<String?> getActiveRoundId() async {
     final db = await database;
-    final existing = await db.query(
-      'round_scores',
-      orderBy: 'hole_number DESC',
-      limit: 1,
-    );
-    if (existing.isEmpty) return null;
-    final latest = RoundScore.fromMap(existing.first);
-    if (latest.holeNumber == 18 && latest.finalScore > 0) {
+    final rows = await db.rawQuery('''
+      SELECT round_id, MAX(hole_number) as max_hole
+      FROM round_scores
+      GROUP BY round_id
+      ORDER BY round_id DESC
+      LIMIT 1
+    ''');
+    if (rows.isEmpty) return null;
+    final roundId = rows.first['round_id'] as String;
+    final hole18 = await getHoleScore(roundId, 18);
+    if (hole18 != null && hole18.finalScore > 0) {
       return null;
     }
-    return latest.roundId;
+    return roundId;
+  }
+
+  Future<List<RoundScore>> getScoresForRound(String roundId) async {
+    final db = await database;
+    final rows = await db.query(
+      'round_scores',
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+      orderBy: 'hole_number ASC',
+    );
+    return rows.map(RoundScore.fromMap).toList();
+  }
+
+  Future<List<RoundSummary>> listRecentRounds({int limit = 10}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT round_id, course_name, COUNT(*) as holes_recorded
+      FROM round_scores
+      GROUP BY round_id
+      ORDER BY round_id DESC
+      LIMIT ?
+    ''', [limit]);
+
+    return rows.map((row) {
+      final roundId = row['round_id'] as String;
+      final ms = _roundIdToMs(roundId);
+      return RoundSummary(
+        roundId: roundId,
+        courseName: row['course_name'] as String,
+        holesRecorded: row['holes_recorded'] as int,
+        startedAtMs: ms,
+      );
+    }).toList();
+  }
+
+  int _roundIdToMs(String roundId) {
+    final suffix = roundId.startsWith('round_') ? roundId.substring(6) : roundId;
+    return int.tryParse(suffix) ?? 0;
+  }
+
+  Future<RoundTotals?> computeRoundTotals(String roundId) async {
+    final holes = await getScoresForRound(roundId);
+    if (holes.isEmpty) return null;
+
+    var frontScore = 0;
+    var backScore = 0;
+    var frontPar = 0;
+    var backPar = 0;
+    var penalties = 0;
+    var mulligans = 0;
+
+    for (final hole in holes) {
+      if (!isHolePlayed(hole)) continue;
+      final score = effectiveHoleScore(hole);
+      penalties += hole.penalties;
+      mulligans += hole.mulligans;
+      if (hole.holeNumber <= 9) {
+        frontScore += score;
+        frontPar += hole.par;
+      } else {
+        backScore += score;
+        backPar += hole.par;
+      }
+    }
+
+    return RoundTotals(
+      roundId: roundId,
+      courseName: holes.first.courseName,
+      frontNineScore: frontScore,
+      backNineScore: backScore,
+      totalScore: frontScore + backScore,
+      frontNinePar: frontPar,
+      backNinePar: backPar,
+      totalPar: frontPar + backPar,
+      penaltiesTotal: penalties,
+      mulligansTotal: mulligans,
+    );
   }
 
   Future<String> ensureActiveRound({required String courseName}) async {

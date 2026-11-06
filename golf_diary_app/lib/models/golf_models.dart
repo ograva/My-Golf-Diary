@@ -279,3 +279,13 @@ class RangeDrillLog {
 int computeFinalScore({required int strokes, required int penalties}) {
   return strokes + penalties;
 }
+
+/// Score shown on the scorecard: finalized holes use [RoundScore.finalScore].
+int effectiveHoleScore(RoundScore hole) {
+  if (hole.finalScore > 0) return hole.finalScore;
+  return computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
+}
+
+bool isHolePlayed(RoundScore hole) {
+  return hole.finalScore > 0 || hole.strokes > 0 || hole.conceded == 1;
+}

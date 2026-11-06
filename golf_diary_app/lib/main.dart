@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/clubs_screen.dart';
 import 'screens/fairway_tracker_screen.dart';
 import 'screens/range_drill_screen.dart';
+import 'screens/scorecard_screen.dart';
 import 'services/cloud_sync_service.dart';
 import 'theme/app_theme.dart';
 
@@ -35,12 +36,21 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 1;
+  final _scorecardKey = GlobalKey<ScorecardScreenState>();
 
-  static const _pages = [
-    ClubsScreen(),
-    FairwayTrackerScreen(),
-    RangeDrillScreen(),
+  late final List<Widget> _pages = [
+    const ClubsScreen(),
+    const FairwayTrackerScreen(),
+    ScorecardScreen(key: _scorecardKey),
+    const RangeDrillScreen(),
   ];
+
+  void _onTabSelected(int i) {
+    setState(() => _index = i);
+    if (i == 2) {
+      _scorecardKey.currentState?.loadScorecard();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +58,11 @@ class _HomeShellState extends State<HomeShell> {
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.golf_course), label: 'My Bag'),
           NavigationDestination(icon: Icon(Icons.my_location), label: 'On Course'),
+          NavigationDestination(icon: Icon(Icons.scoreboard), label: 'Scorecard'),
           NavigationDestination(icon: Icon(Icons.fitness_center), label: 'Range'),
         ],
       ),

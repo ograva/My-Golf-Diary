@@ -7,6 +7,20 @@ void main() {
     expect(computeFinalScore(strokes: 0, penalties: 2), 2);
   });
 
+  test('effectiveHoleScore prefers finalized score', () {
+    final hole = RoundScore(
+      id: 'x',
+      roundId: 'r',
+      courseName: 'Test',
+      holeNumber: 1,
+      par: 4,
+      strokes: 5,
+      penalties: 1,
+      finalScore: 6,
+    );
+    expect(effectiveHoleScore(hole), 6);
+  });
+
   test('Club round-trips through map', () {
     final club = Club(
       id: '7iron',

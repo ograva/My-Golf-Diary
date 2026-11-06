@@ -5,10 +5,12 @@ import 'screens/fairway_tracker_screen.dart';
 import 'screens/range_drill_screen.dart';
 import 'screens/scorecard_screen.dart';
 import 'services/cloud_sync_service.dart';
+import 'services/desktop_database.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initDesktopDatabase();
   await initializeFirebase();
   runApp(const GolfDiaryApp());
 }

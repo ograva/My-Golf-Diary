@@ -22,11 +22,23 @@
 | Athena (Dev) | [cohorts/athena.agent.md](cohorts/athena.agent.md) | `golf_diary_app/` implementation, branches, optional `gh` | Implement shards / features, analyze & test |
 | Quinn (QA) | [cohorts/quinn.agent.md](cohorts/quinn.agent.md) | Test plans, audits, `flutter test` guidance | Quality gate, widget/integration strategy |
 
+## Publish skills
+
+Project skills under [`.cursor/skills/`](.cursor/skills/) for shipping the Flutter app:
+
+| Skill | Use when |
+| :--- | :--- |
+| [`publish-pwa-github-pages`](.cursor/skills/publish-pwa-github-pages/SKILL.md) | Deploy the web PWA to GitHub Pages (`gh-pages`) |
+| [`publish-github-release-pwa-apk`](.cursor/skills/publish-github-release-pwa-apk/SKILL.md) | Cut a GitHub Release with the PWA zip and/or Android APK |
+
+Invoke with `/publish-pwa-github-pages` or `/publish-github-release-pwa-apk`, or ask in plain language to publish Pages / a release.
+
 ## How to use in Cursor
 
 1. **@** the cohort file for the role you need (e.g. `@cohorts/watson.agent.md`).
 2. Read prerequisites from **`docs/context/`** in order: ProjectBrief → PRD → Architecture (Architecture § Constraints for stack rules).
 3. Optional: copy a **handoff** prompt from the cohort’s YAML frontmatter into a new message when switching personas.
+4. For shipping the PWA or APK, use the **Publish skills** above.
 
 ## Doc flow
 

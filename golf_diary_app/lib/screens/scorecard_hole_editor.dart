@@ -69,6 +69,8 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
 
   int get _previewTotal => computeFinalScore(strokes: _strokes, penalties: _penalties);
 
+  bool get _showDelta => _strokes > 0 || _conceded;
+
   Future<void> _save() async {
     await LocalDatabaseService.instance.saveManualHoleScore(
       roundId: widget.roundId,
@@ -95,8 +97,18 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
     setState(() => _penalties = (_penalties + delta).clamp(0, 10));
   }
 
+  void _setPar(int par) {
+    setState(() {
+      _par = par;
+      if (_conceded) _strokes = par * 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final delta = _previewTotal - _par;
+    final deltaLabel = !_showDelta ? '—' : _toParLabel(delta);
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -110,12 +122,31 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               textAlign: TextAlign.center,
             ),
             Text(
-              'Manual score entry',
+              'Manual score. GPS shots on this hole replace strokes.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            const SizedBox(height: 16),
+            Text('GROSS', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              '$_previewTotal',
+              key: const ValueKey('hole-editor-gross'),
+              textAlign: TextAlign.center,
+              style: GolfTextStyles.tabularNum(context, fontSize: 36),
+            ),
+            Text(
+              _showDelta ? '$deltaLabel vs par' : '— vs par',
+              textAlign: TextAlign.center,
+              style: !_showDelta
+                  ? Theme.of(context).textTheme.bodyMedium
+                  : delta < 0
+                      ? GolfTextStyles.scorePositive(context, fontSize: 16)
+                      : delta > 0
+                          ? GolfTextStyles.scoreNegative(context, fontSize: 16)
+                          : GolfTextStyles.tabularNum(context, fontSize: 16),
+            ),
             const SizedBox(height: 20),
-            const Text('Par', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('PAR', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Row(
               children: [3, 4, 5].map((p) {
@@ -123,9 +154,10 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ChoiceChip(
+                      key: ValueKey('hole-editor-par-chip-$p'),
                       label: Text('$p'),
                       selected: _par == p,
-                      onSelected: (_) => setState(() => _par = p),
+                      onSelected: (_) => _setPar(p),
                     ),
                   ),
                 );
@@ -135,6 +167,8 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
             _CounterRow(
               label: 'Strokes',
               value: _strokes,
+              decKey: const ValueKey('hole-editor-strokes-dec'),
+              incKey: const ValueKey('hole-editor-strokes-inc'),
               onDecrement: () => _adjustStrokes(-1),
               onIncrement: () => _adjustStrokes(1),
             ),
@@ -142,18 +176,24 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
             _CounterRow(
               label: 'Penalties',
               value: _penalties,
+              decKey: const ValueKey('hole-editor-penalties-dec'),
+              incKey: const ValueKey('hole-editor-penalties-inc'),
               onDecrement: () => _adjustPenalties(-1),
               onIncrement: () => _adjustPenalties(1),
             ),
             const SizedBox(height: 12),
             _CounterRow(
-              label: 'Mulligans (practice)',
+              label: 'Mulligans',
+              subtitle: 'Practice only — not in gross',
               value: _mulligans,
+              decKey: const ValueKey('hole-editor-mulligans-dec'),
+              incKey: const ValueKey('hole-editor-mulligans-inc'),
               onDecrement: () => setState(() => _mulligans = (_mulligans - 1).clamp(0, 20)),
               onIncrement: () => setState(() => _mulligans = (_mulligans + 1).clamp(0, 20)),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
+              key: const ValueKey('hole-editor-concede-switch'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Concede / gimme (2× par)'),
               value: _conceded,
@@ -168,24 +208,18 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               },
             ),
             SwitchListTile(
+              key: const ValueKey('hole-editor-complete-switch'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Mark hole complete'),
               subtitle: Text('Locks score on card ($_previewTotal gross)'),
               value: _holeComplete,
-              onChanged: _conceded
-                  ? null
-                  : (v) => setState(() => _holeComplete = v),
+              onChanged: _conceded ? null : (v) => setState(() => _holeComplete = v),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 64,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(
-                  'Save hole ${widget.holeNumber}',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
+            FilledButton(
+              key: const ValueKey('hole-editor-save-btn'),
+              onPressed: _save,
+              child: Text('Save hole ${widget.holeNumber}'),
             ),
           ],
         ),
@@ -194,30 +228,53 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
   }
 }
 
+String _toParLabel(int toPar) {
+  if (toPar == 0) return 'E';
+  if (toPar > 0) return '+$toPar';
+  return '$toPar';
+}
+
 class _CounterRow extends StatelessWidget {
   const _CounterRow({
     required this.label,
     required this.value,
     required this.onDecrement,
     required this.onIncrement,
+    required this.decKey,
+    required this.incKey,
+    this.subtitle,
   });
 
   final String label;
+  final String? subtitle;
   final int value;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final Key decKey;
+  final Key incKey;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.titleSmall),
+              if (subtitle != null)
+                Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
         IconButton.filled(
+          key: decKey,
           onPressed: value > 0 ? onDecrement : null,
           icon: const Icon(Icons.remove),
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.green,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
             minimumSize: const Size(56, 56),
           ),
         ),
@@ -226,15 +283,16 @@ class _CounterRow extends StatelessWidget {
           child: Text(
             '$value',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: GolfTextStyles.tabularNum(context, fontSize: 22),
           ),
         ),
         IconButton.filled(
+          key: incKey,
           onPressed: onIncrement,
           icon: const Icon(Icons.add),
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.green,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
             minimumSize: const Size(56, 56),
           ),
         ),

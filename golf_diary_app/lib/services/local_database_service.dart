@@ -297,6 +297,17 @@ class LocalDatabaseService {
     );
   }
 
+  Future<void> updateRoundCourseName(String roundId, String courseName) async {
+    final db = await database;
+    final name = courseName.trim().isEmpty ? 'Local Course' : courseName.trim();
+    await db.update(
+      'round_scores',
+      {'course_name': name, 'is_synced': 0},
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
   Future<String> getCourseNameForRound(String roundId) async {
     final db = await database;
     final rows = await db.query(

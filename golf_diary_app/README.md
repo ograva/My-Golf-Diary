@@ -57,6 +57,19 @@ flutter run
 
 Choose a phone or an emulator when Flutter asks. Allow location if you want shot distances.
 
+### Browser / PWA storage
+
+The web build keeps the diary in the browser (SQLite over WASM, persisted in IndexedDB). Data survives a refresh in that browser. A different browser, cleared site data, or the Android APK has its own separate diary.
+
+Generate the web SQLite assets before a Chrome run or web build:
+
+```bash
+dart run sqflite_common_ffi_web:setup
+flutter run -d chrome
+# or
+flutter build web
+```
+
 ```bash
 flutter test
 ```

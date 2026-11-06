@@ -53,6 +53,17 @@ Allow location when the phone asks, if you want the distance between shots.
 
 A cloud copy is optional. The diary already works on the phone. If you connect Firebase later, **On Course** can upload what you have logged. Until you sign in, that copy is stored under the name `local_user`.
 
+## Browser / PWA storage
+
+On the web build, the same SQLite diary runs inside the browser (WASM + IndexedDB). Clubs, notes, rounds, and range sessions stay on that browser and survive a refresh. A new browser, cleared site storage, or the installed Android APK starts its own diary.
+
+Before `flutter build web` or `flutter run -d chrome`, generate the web SQLite assets once (or after upgrading `sqflite_common_ffi_web`):
+
+```bash
+cd golf_diary_app
+dart run sqflite_common_ffi_web:setup
+```
+
 To run the app’s checks:
 
 ```bash

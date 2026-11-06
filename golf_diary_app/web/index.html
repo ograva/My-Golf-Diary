@@ -19,6 +19,10 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="screen-orientation" content="portrait">
+  <meta name="x5-orientation" content="portrait">
+  <meta name="mobile-web-app-capable" content="yes">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,6 +37,28 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    (function () {
+      function lockPortrait() {
+        var orientation = screen.orientation || screen.mozOrientation || screen.msOrientation;
+        if (orientation && typeof orientation.lock === 'function') {
+          orientation.lock('portrait').catch(function () {});
+        } else if (typeof screen.lockOrientation === 'function') {
+          screen.lockOrientation('portrait');
+        } else if (typeof screen.mozLockOrientation === 'function') {
+          screen.mozLockOrientation('portrait');
+        } else if (typeof screen.msLockOrientation === 'function') {
+          screen.msLockOrientation('portrait');
+        }
+      }
+      lockPortrait();
+      window.addEventListener('orientationchange', lockPortrait);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) lockPortrait();
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
+

@@ -297,6 +297,53 @@ class LocalDatabaseService {
     );
   }
 
+  Future<String> getCourseNameForRound(String roundId) async {
+    final db = await database;
+    final rows = await db.query(
+      'round_scores',
+      columns: ['course_name'],
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return 'Local Course';
+    return rows.first['course_name'] as String;
+  }
+
+  /// Persists par/strokes/penalties from the scorecard editor (no GPS shots required).
+  Future<void> saveManualHoleScore({
+    required String roundId,
+    required String courseName,
+    required int holeNumber,
+    required int par,
+    required int strokes,
+    required int penalties,
+    required bool holeComplete,
+    bool conceded = false,
+    int mulligans = 0,
+  }) async {
+    final existing = await getHoleScore(roundId, holeNumber);
+    final strokeCount = conceded ? par * 2 : strokes.clamp(0, 99);
+    final penCount = penalties.clamp(0, 99);
+    final gross = computeFinalScore(strokes: strokeCount, penalties: penCount);
+    final finalScore = holeComplete || conceded ? gross : 0;
+
+    final score = RoundScore(
+      id: existing?.id ?? '${roundId}_h$holeNumber',
+      roundId: roundId,
+      courseName: existing?.courseName ?? courseName,
+      holeNumber: holeNumber,
+      par: par,
+      strokes: strokeCount,
+      penalties: penCount,
+      mulligans: mulligans,
+      conceded: conceded ? 1 : 0,
+      finalScore: finalScore,
+      isSynced: 0,
+    );
+    await upsertHoleScore(score);
+  }
+
   Future<List<ShotRecord>> getShotsForHole(String roundId, int holeNumber) async {
     final db = await database;
     final rows = await db.query(

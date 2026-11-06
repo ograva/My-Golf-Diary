@@ -7,6 +7,10 @@ void main() {
     expect(computeFinalScore(strokes: 0, penalties: 2), 2);
   });
 
+  test('manual hole gross uses strokes plus penalties', () {
+    expect(computeFinalScore(strokes: 5, penalties: 2), 7);
+  });
+
   test('effectiveHoleScore prefers finalized score', () {
     final hole = RoundScore(
       id: 'x',

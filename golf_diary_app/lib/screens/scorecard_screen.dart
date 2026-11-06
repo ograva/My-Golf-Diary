@@ -4,6 +4,7 @@ import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
   const ScorecardScreen({super.key});
@@ -64,6 +65,22 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     return null;
   }
 
+  String get _courseName =>
+      _totals?.courseName ?? (_holes.isNotEmpty ? _holes.first.courseName : 'Local Course');
+
+  Future<void> _editHole(int holeNumber) async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    await showScorecardHoleEditor(
+      context: context,
+      roundId: roundId,
+      courseName: _courseName,
+      holeNumber: holeNumber,
+      existing: _holeRow(holeNumber),
+    );
+    await loadScorecard();
+  }
+
   @override
   Widget build(BuildContext context) {
     final courseName = _totals?.courseName ?? 'No round selected';
@@ -122,8 +139,13 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                     const SizedBox(height: 12),
                     _SummaryBanner(totals: _totals),
-                    const SizedBox(height: 16),
-                    _ScorecardTable(holeRow: _holeRow),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap any hole to enter or edit scores manually.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    _ScorecardTable(holeRow: _holeRow, onHoleTap: _editHole),
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       onPressed: _startNewRound,
@@ -203,9 +225,10 @@ class _SummaryCell extends StatelessWidget {
 }
 
 class _ScorecardTable extends StatelessWidget {
-  const _ScorecardTable({required this.holeRow});
+  const _ScorecardTable({required this.holeRow, required this.onHoleTap});
 
   final RoundScore? Function(int holeNumber) holeRow;
+  final Future<void> Function(int holeNumber) onHoleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +238,7 @@ class _ScorecardTable extends StatelessWidget {
           const _ScorecardHeaderRow(),
           const Divider(height: 1),
           for (var hole = 1; hole <= 18; hole++) ...[
-            _ScorecardDataRow(hole: hole, row: holeRow(hole)),
+            _ScorecardDataRow(hole: hole, row: holeRow(hole), onTap: () => onHoleTap(hole)),
             if (hole == 9) const Divider(height: 1, thickness: 2),
           ],
         ],
@@ -247,10 +270,11 @@ class _ScorecardHeaderRow extends StatelessWidget {
 }
 
 class _ScorecardDataRow extends StatelessWidget {
-  const _ScorecardDataRow({required this.hole, required this.row});
+  const _ScorecardDataRow({required this.hole, required this.row, required this.onTap});
 
   final int hole;
   final RoundScore? row;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -281,15 +305,24 @@ class _ScorecardDataRow extends StatelessWidget {
       }
     }
 
-    return Container(
+    return Material(
       color: rowColor,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text('$hole${conceded ? ' *' : ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
-          ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Row(
+                  children: [
+                    Text('$hole${conceded ? ' *' : ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade600),
+                  ],
+                ),
+              ),
           Expanded(child: Text(played || row != null ? '$par' : '—', textAlign: TextAlign.center)),
           Expanded(child: Text(played ? '$strokes' : '—', textAlign: TextAlign.center)),
           Expanded(child: Text(penalties > 0 ? '$penalties' : '—', textAlign: TextAlign.center)),
@@ -310,7 +343,9 @@ class _ScorecardDataRow extends StatelessWidget {
               ),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

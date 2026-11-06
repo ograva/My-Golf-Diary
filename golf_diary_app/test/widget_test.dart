@@ -36,6 +36,16 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('range-shot-counter-increment')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('range-save-drill-btn')),
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byType(RangeDrillScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.byKey(const ValueKey('range-save-drill-btn')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('shell-tab-scorecard')));

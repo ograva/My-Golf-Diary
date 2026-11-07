@@ -56,17 +56,21 @@ Use a **portable** base href (`/`) so the unzipped site can be hosted at a domai
 ```bash
 cd golf_diary_app
 dart run sqflite_common_ffi_web:setup
-flutter build web --release --base-href / --no-wasm-dry-run
+./tool/build_web.sh --base-href /
 
-# Verify portrait + sqlite assets
+# Verify portrait, sqlite assets, and the PWA update stamp
 python3 - <<'PY'
 import json
 from pathlib import Path
 m = json.loads(Path('build/web/manifest.json').read_text())
 html = Path('build/web/index.html').read_text()
+stamp = json.loads(Path('build/web/app_build.json').read_text())
 assert m.get('orientation') == 'portrait'
 assert Path('build/web/sqlite3.wasm').exists()
 assert Path('build/web/sqflite_sw.js').exists()
+assert Path('build/web/pwa_service_worker.js').exists()
+assert stamp.get('buildId')
+assert 'content="true"' in html and 'golf-diary-release' in html
 assert "orientation.lock('portrait')" in html or 'screen-orientation' in html
 print('PWA build checks OK')
 PY

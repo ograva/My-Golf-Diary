@@ -61,13 +61,13 @@ Choose a phone or an emulator when Flutter asks. Allow location if you want shot
 
 The web build keeps the diary in the browser (SQLite over WASM, persisted in IndexedDB). Data survives a refresh in that browser. A different browser, cleared site data, or the Android APK has its own separate diary.
 
-Generate the web SQLite assets before a Chrome run or web build:
+A published PWA checks `app_build.json` when it opens and while it stays open. When that file names a newer build, Golf Diary asks before it reloads. Saved rounds stay on the device. Use the release script so the compiled build id and `app_build.json` match:
 
 ```bash
 dart run sqflite_common_ffi_web:setup
 flutter run -d chrome
-# or
-flutter build web
+# Release PWA (domain root). GitHub Pages uses --base-href /My-Golf-Diary/
+./tool/build_web.sh --base-href /
 ```
 
 ```bash

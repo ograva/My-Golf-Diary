@@ -1,0 +1,336 @@
+{
+  ".cursor/environment.json": {
+    "mtime": 1793958494.8610601,
+    "seen": 1794018683.3359258,
+    "ast_hash": "ee9ce3bcd740d860720ba82f0f2dfde9",
+    "semantic_hash": "ee9ce3bcd740d860720ba82f0f2dfde9",
+    "ast_empty": true
+  },
+  "golf_diary_app/analysis_options.yaml": {
+    "mtime": 1794017957.5139124,
+    "seen": 1794018683.3359313,
+    "ast_hash": "33d8d2f7b7af52c5eaf407230a2a91d6",
+    "semantic_hash": "33d8d2f7b7af52c5eaf407230a2a91d6"
+  },
+  "golf_diary_app/android/app/build.gradle": {
+    "mtime": 1793958494.8610601,
+    "seen": 1794018683.3359802,
+    "ast_hash": "d60416ed17dc94cf9d91bed03345a804",
+    "semantic_hash": "d60416ed17dc94cf9d91bed03345a804"
+  },
+  "golf_diary_app/android/app/src/main/kotlin/com/golfdiary/golf_diary_app/MainActivity.kt": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3360102,
+    "ast_hash": "7184fc9c531daa865076f5f9110b5377",
+    "semantic_hash": "7184fc9c531daa865076f5f9110b5377"
+  },
+  "golf_diary_app/android/build.gradle": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3360536,
+    "ast_hash": "8fea88f0221dc81c23b0e4c55c169ccc",
+    "semantic_hash": "8fea88f0221dc81c23b0e4c55c169ccc"
+  },
+  "golf_diary_app/android/settings.gradle": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3360758,
+    "ast_hash": "f2bd1a19983eddeeb87a4621af74ebf4",
+    "semantic_hash": "f2bd1a19983eddeeb87a4621af74ebf4"
+  },
+  "golf_diary_app/ios/Runner/AppDelegate.swift": {
+    "mtime": 1793958494.8610601,
+    "seen": 1794018683.3360977,
+    "ast_hash": "303ca46dbd58544be7b816861d70a27c",
+    "semantic_hash": "303ca46dbd58544be7b816861d70a27c"
+  },
+  "golf_diary_app/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1794017957.5139124,
+    "seen": 1794018683.336122,
+    "ast_hash": "c870f277d0c83d1af12f8dc2d368879a",
+    "semantic_hash": "c870f277d0c83d1af12f8dc2d368879a",
+    "ast_empty": true
+  },
+  "golf_diary_app/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3361237,
+    "ast_hash": "770f4f65e02ca2fc57f46f4f4148d15d",
+    "semantic_hash": "770f4f65e02ca2fc57f46f4f4148d15d",
+    "ast_empty": true
+  },
+  "golf_diary_app/ios/Runner/Runner-Bridging-Header.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3361244,
+    "ast_hash": "e07862ac930ed4d8479185d52c6cc66d",
+    "semantic_hash": "e07862ac930ed4d8479185d52c6cc66d"
+  },
+  "golf_diary_app/ios/RunnerTests/RunnerTests.swift": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3361473,
+    "ast_hash": "a225a382d14d7b16b6f602a5c1d49331",
+    "semantic_hash": "a225a382d14d7b16b6f602a5c1d49331"
+  },
+  "golf_diary_app/lib/main.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3361712,
+    "ast_hash": "ac9d5b9e40509edbe3e6bdff8bd0a1ac",
+    "semantic_hash": "ac9d5b9e40509edbe3e6bdff8bd0a1ac"
+  },
+  "golf_diary_app/lib/models/golf_models.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336194,
+    "ast_hash": "2944cd928f51585acf4dd8ebf07aba30",
+    "semantic_hash": "2944cd928f51585acf4dd8ebf07aba30"
+  },
+  "golf_diary_app/lib/models/round_summary.dart": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3362174,
+    "ast_hash": "d1fb175f08da225970e2ff90db556219",
+    "semantic_hash": "d1fb175f08da225970e2ff90db556219"
+  },
+  "golf_diary_app/lib/screens/clubs_screen.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3362396,
+    "ast_hash": "f6236faa53caa2f96c1f32fb24904cb2",
+    "semantic_hash": "f6236faa53caa2f96c1f32fb24904cb2"
+  },
+  "golf_diary_app/lib/screens/fairway_tracker_screen.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336262,
+    "ast_hash": "46cf681daf8a4d4bcce9e4999462f391",
+    "semantic_hash": "46cf681daf8a4d4bcce9e4999462f391"
+  },
+  "golf_diary_app/lib/screens/range_drill_screen.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336284,
+    "ast_hash": "985e7c9f9ab31ae0e95ffddd802670a8",
+    "semantic_hash": "985e7c9f9ab31ae0e95ffddd802670a8"
+  },
+  "golf_diary_app/lib/screens/scorecard_hole_editor.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3363059,
+    "ast_hash": "6e7928eec073261816befb127cf77ea0",
+    "semantic_hash": "6e7928eec073261816befb127cf77ea0"
+  },
+  "golf_diary_app/lib/screens/scorecard_screen.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3363283,
+    "ast_hash": "ca7cc06cd92b13e6293d6a5d2af443ca",
+    "semantic_hash": "ca7cc06cd92b13e6293d6a5d2af443ca"
+  },
+  "golf_diary_app/lib/services/cloud_sync_service.dart": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.33635,
+    "ast_hash": "7db380aba73c072f71d5f20f0c78dceb",
+    "semantic_hash": "7db380aba73c072f71d5f20f0c78dceb"
+  },
+  "golf_diary_app/lib/services/desktop_database.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3363721,
+    "ast_hash": "57da5473e6b06a5228f15e39d69efd7d",
+    "semantic_hash": "57da5473e6b06a5228f15e39d69efd7d"
+  },
+  "golf_diary_app/lib/services/desktop_database_io.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336395,
+    "ast_hash": "847644f1ea6810419e56831b2a152593",
+    "semantic_hash": "847644f1ea6810419e56831b2a152593"
+  },
+  "golf_diary_app/lib/services/desktop_database_stub.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3364172,
+    "ast_hash": "14e9b7b3b0d4c7d9151b1a0e5a26f4f7",
+    "semantic_hash": "14e9b7b3b0d4c7d9151b1a0e5a26f4f7"
+  },
+  "golf_diary_app/lib/services/desktop_database_web.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3364394,
+    "ast_hash": "bd5ccc456c398b16e207159a43a1f186",
+    "semantic_hash": "bd5ccc456c398b16e207159a43a1f186"
+  },
+  "golf_diary_app/lib/services/local_database_service.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336461,
+    "ast_hash": "87d884c68e6ec6d2aba6c5e70ed1a16c",
+    "semantic_hash": "87d884c68e6ec6d2aba6c5e70ed1a16c"
+  },
+  "golf_diary_app/lib/theme/app_theme.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3364823,
+    "ast_hash": "fcd5a20e361dff4626cf62c14e96bad9",
+    "semantic_hash": "fcd5a20e361dff4626cf62c14e96bad9"
+  },
+  "golf_diary_app/lib/theme/font_loading.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3365045,
+    "ast_hash": "00ac53a64761fdfe84301bad1393fd42",
+    "semantic_hash": "00ac53a64761fdfe84301bad1393fd42"
+  },
+  "golf_diary_app/lib/theme/font_loading_io.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3365269,
+    "ast_hash": "b25a2c0b148345162e0783e01dd9ef32",
+    "semantic_hash": "b25a2c0b148345162e0783e01dd9ef32"
+  },
+  "golf_diary_app/lib/theme/font_loading_stub.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3365479,
+    "ast_hash": "6b012880df0c148fdf22d132780c06b0",
+    "semantic_hash": "6b012880df0c148fdf22d132780c06b0"
+  },
+  "golf_diary_app/linux/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1794017214.3561983,
+    "seen": 1794018683.3365693,
+    "ast_hash": "d07afe003d5837167bdd357d593f20a0",
+    "semantic_hash": "d07afe003d5837167bdd357d593f20a0"
+  },
+  "golf_diary_app/linux/flutter/generated_plugin_registrant.h": {
+    "mtime": 1794017214.3561983,
+    "seen": 1794018683.3365917,
+    "ast_hash": "d295462c9da9f7fef22dc86c34492318",
+    "semantic_hash": "d295462c9da9f7fef22dc86c34492318"
+  },
+  "golf_diary_app/linux/main.cc": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3366132,
+    "ast_hash": "0643b8609698e96b3abd63c210361a87",
+    "semantic_hash": "0643b8609698e96b3abd63c210361a87"
+  },
+  "golf_diary_app/linux/my_application.cc": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3366332,
+    "ast_hash": "761da63ee10735687d69da03adfdf813",
+    "semantic_hash": "761da63ee10735687d69da03adfdf813"
+  },
+  "golf_diary_app/linux/my_application.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3366528,
+    "ast_hash": "7bd839b67ebee22174be9f4da4521b6f",
+    "semantic_hash": "7bd839b67ebee22174be9f4da4521b6f"
+  },
+  "golf_diary_app/macos/Flutter/GeneratedPluginRegistrant.swift": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3366733,
+    "ast_hash": "bffefb64a1ff415d0be68ecda15b960b",
+    "semantic_hash": "bffefb64a1ff415d0be68ecda15b960b"
+  },
+  "golf_diary_app/macos/Runner/AppDelegate.swift": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.336695,
+    "ast_hash": "43e630f8974625a25df2af9653bb6ac4",
+    "semantic_hash": "43e630f8974625a25df2af9653bb6ac4"
+  },
+  "golf_diary_app/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3367174,
+    "ast_hash": "805294427bc0c1cf0c22609b008b7300",
+    "semantic_hash": "805294427bc0c1cf0c22609b008b7300",
+    "ast_empty": true
+  },
+  "golf_diary_app/macos/Runner/MainFlutterWindow.swift": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3367186,
+    "ast_hash": "4a747b1f256d62a2bbb79bd976891eb5",
+    "semantic_hash": "4a747b1f256d62a2bbb79bd976891eb5"
+  },
+  "golf_diary_app/macos/RunnerTests/RunnerTests.swift": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.336739,
+    "ast_hash": "97d3a20fd20a063c192e886d1822b4a8",
+    "semantic_hash": "97d3a20fd20a063c192e886d1822b4a8"
+  },
+  "golf_diary_app/pubspec.yaml": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.336762,
+    "ast_hash": "e88acc781ea7f87693d71eb4909246d9",
+    "semantic_hash": "e88acc781ea7f87693d71eb4909246d9"
+  },
+  "golf_diary_app/test/flutter_test_config.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3367798,
+    "ast_hash": "42160c7f8bf31f635a21240e782c3d90",
+    "semantic_hash": "42160c7f8bf31f635a21240e782c3d90"
+  },
+  "golf_diary_app/test/golf_models_test.dart": {
+    "mtime": 1794017957.5179124,
+    "seen": 1794018683.3367991,
+    "ast_hash": "8756de9cdf9ed50d6229c21d627eacb9",
+    "semantic_hash": "8756de9cdf9ed50d6229c21d627eacb9"
+  },
+  "golf_diary_app/test/widget_test.dart": {
+    "mtime": 1794017957.5219126,
+    "seen": 1794018683.336819,
+    "ast_hash": "1bb8dd8f562c55a01bb07ee723b8b6d5",
+    "semantic_hash": "1bb8dd8f562c55a01bb07ee723b8b6d5"
+  },
+  "golf_diary_app/web/manifest.json": {
+    "mtime": 1794017957.5219126,
+    "seen": 1794018683.3368402,
+    "ast_hash": "bff7912adb6bcdb18d9098aa2175dffe",
+    "semantic_hash": "bff7912adb6bcdb18d9098aa2175dffe"
+  },
+  "golf_diary_app/web/sqflite_sw.js": {
+    "mtime": 1794017957.5219126,
+    "seen": 1794018683.3368614,
+    "ast_hash": "d443e2a84070df35b85544705cbb9591",
+    "semantic_hash": "d443e2a84070df35b85544705cbb9591"
+  },
+  "golf_diary_app/windows/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1794017214.3601983,
+    "seen": 1794018683.3368819,
+    "ast_hash": "5895a1743f198f8974491966546429a7",
+    "semantic_hash": "5895a1743f198f8974491966546429a7"
+  },
+  "golf_diary_app/windows/flutter/generated_plugin_registrant.h": {
+    "mtime": 1794017214.3601983,
+    "seen": 1794018683.3369045,
+    "ast_hash": "0ea33875f9f8e118f9c2ded03e2e2835",
+    "semantic_hash": "0ea33875f9f8e118f9c2ded03e2e2835"
+  },
+  "golf_diary_app/windows/runner/flutter_window.cpp": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3369262,
+    "ast_hash": "9b92b95a9eecce25e3e9d356688d0cb6",
+    "semantic_hash": "9b92b95a9eecce25e3e9d356688d0cb6"
+  },
+  "golf_diary_app/windows/runner/flutter_window.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3369472,
+    "ast_hash": "79bea736711adda00c49419a39a4a0b4",
+    "semantic_hash": "79bea736711adda00c49419a39a4a0b4"
+  },
+  "golf_diary_app/windows/runner/main.cpp": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3369684,
+    "ast_hash": "0f0eec0718737b36c5b1f32cc8614e75",
+    "semantic_hash": "0f0eec0718737b36c5b1f32cc8614e75"
+  },
+  "golf_diary_app/windows/runner/resource.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3369913,
+    "ast_hash": "c8f809a4f8d3f2f625e358fd90f72fee",
+    "semantic_hash": "c8f809a4f8d3f2f625e358fd90f72fee"
+  },
+  "golf_diary_app/windows/runner/utils.cpp": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.337013,
+    "ast_hash": "9b5697b276c8ad67a02ec12ad2c09851",
+    "semantic_hash": "9b5697b276c8ad67a02ec12ad2c09851"
+  },
+  "golf_diary_app/windows/runner/utils.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3370342,
+    "ast_hash": "c741fb9cddbf3a62f4688b6cca39ddcc",
+    "semantic_hash": "c741fb9cddbf3a62f4688b6cca39ddcc"
+  },
+  "golf_diary_app/windows/runner/win32_window.cpp": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3370564,
+    "ast_hash": "928e86a2be27eca688669dce6c9177d9",
+    "semantic_hash": "928e86a2be27eca688669dce6c9177d9"
+  },
+  "golf_diary_app/windows/runner/win32_window.h": {
+    "mtime": 1793958494.8650603,
+    "seen": 1794018683.3370779,
+    "ast_hash": "5a4cf051798d7e6931ee0405a4523c8f",
+    "semantic_hash": "5a4cf051798d7e6931ee0405a4523c8f"
+  }
+}

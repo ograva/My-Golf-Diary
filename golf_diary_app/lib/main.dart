@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'pwa/pwa_update_client.dart';
+import 'pwa/pwa_update_host.dart';
 import 'screens/clubs_screen.dart';
 import 'screens/fairway_tracker_screen.dart';
 import 'screens/range_drill_screen.dart';
@@ -10,6 +12,7 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await preparePwaSession();
   await initDesktopDatabase();
   await initializeFirebase();
   runApp(const GolfDiaryApp());
@@ -73,17 +76,23 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _onTabSelected,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.golf_course), label: 'My Bag'),
-          NavigationDestination(icon: Icon(Icons.fitness_center), label: 'Range'),
-          NavigationDestination(icon: Icon(Icons.my_location), label: 'On Course'),
-          NavigationDestination(icon: Icon(Icons.scoreboard), label: 'Scorecard'),
-        ],
+    return PwaUpdateHost(
+      child: Scaffold(
+        body: _pages[_index],
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _onTabSelected,
+          destinations: const [
+            NavigationDestination(
+                icon: Icon(Icons.golf_course), label: 'My Bag'),
+            NavigationDestination(
+                icon: Icon(Icons.fitness_center), label: 'Range'),
+            NavigationDestination(
+                icon: Icon(Icons.my_location), label: 'On Course'),
+            NavigationDestination(
+                icon: Icon(Icons.scoreboard), label: 'Scorecard'),
+          ],
+        ),
       ),
     );
   }

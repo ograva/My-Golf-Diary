@@ -45,14 +45,18 @@ Replace `<owner>` with the GitHub owner from `gh repo view` (for this repo usual
 ```bash
 cd golf_diary_app
 dart run sqflite_common_ffi_web:setup
-flutter build web --release --base-href /My-Golf-Diary/ --no-wasm-dry-run
+./tool/build_web.sh --base-href /My-Golf-Diary/
 ```
+
+`tool/build_web.sh` compiles `APP_BUILD_ID` into the app and writes the same id to `build/web/app_build.json`. Installed PWAs compare those and ask before reloading onto the new publish.
 
 Verify:
 
 - `build/web/index.html` contains `<base href="/My-Golf-Diary/">`
+- `build/web/index.html` contains `<meta name="golf-diary-release" content="true">`
 - `build/web/manifest.json` exists and `orientation` is `portrait`
 - `build/web/sqlite3.wasm` and `build/web/sqflite_sw.js` exist
+- `build/web/pwa_service_worker.js` and `build/web/app_build.json` exist, and `app_build.json` `buildId` is non-empty
 
 ### 2. Publish an orphan `gh-pages` branch
 

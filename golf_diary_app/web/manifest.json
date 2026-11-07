@@ -1,11 +1,11 @@
 {
-    "name": "golf_diary_app",
-    "short_name": "golf_diary_app",
+    "name": "Golf Diary",
+    "short_name": "Golf Diary",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1A5E3A",
     "theme_color": "#1A5E3A",
-    "description": "A new Flutter project.",
+    "description": "Track your bag, rounds, and range practice.",
     "orientation": "portrait",
     "prefer_related_applications": false,
     "icons": [

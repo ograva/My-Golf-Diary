@@ -32,9 +32,13 @@ void main() {
       category: 'iron',
       avgDistance: 145,
       swingNotes: 'smooth tempo',
+      brand: 'Titleist',
+      model: 'T200',
     );
     final restored = Club.fromMap(club.toMap());
     expect(restored.id, club.id);
     expect(restored.swingNotes, 'smooth tempo');
+    expect(restored.brand, 'Titleist');
+    expect(restored.model, 'T200');
   });
 }

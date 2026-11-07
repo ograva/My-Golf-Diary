@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,24 +9,47 @@ import '../models/round_summary.dart';
 class LocalDatabaseService {
   static final LocalDatabaseService instance = LocalDatabaseService._init();
   static Database? _database;
+  static String _fileName = 'golf_diary.db';
 
   LocalDatabaseService._init();
 
+  /// Points the singleton at a throwaway file. Call [close] first if a database is open.
+  @visibleForTesting
+  static void debugSetFileName(String fileName) {
+    _fileName = fileName;
+  }
+
+  @visibleForTesting
+  static Future<void> debugClose() async {
+    final db = _database;
+    _database = null;
+    await db?.close();
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('golf_diary.db');
+    _database = await _initDB();
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
+  Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final path = join(dbPath, _fileName);
 
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE clubs ADD COLUMN brand TEXT');
+      await db.execute('ALTER TABLE clubs ADD COLUMN model TEXT');
+      await db.execute('ALTER TABLE range_drills ADD COLUMN venue_name TEXT');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -34,6 +58,8 @@ class LocalDatabaseService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
+        brand TEXT,
+        model TEXT,
         min_distance REAL DEFAULT 0.0,
         max_distance REAL DEFAULT 0.0,
         avg_distance REAL DEFAULT 0.0,
@@ -86,6 +112,7 @@ class LocalDatabaseService {
         max_yards REAL NOT NULL,
         avg_yards REAL NOT NULL,
         tempo_notes TEXT,
+        venue_name TEXT,
         timestamp INTEGER NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0
       )
@@ -124,6 +151,16 @@ class LocalDatabaseService {
     return result.map(Club.fromMap).toList();
   }
 
+  Future<void> insertClub(Club club) async {
+    final db = await database;
+    await db.insert('clubs', club.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> deleteClub(String clubId) async {
+    final db = await database;
+    await db.delete('clubs', where: 'id = ?', whereArgs: [clubId]);
+  }
+
   Future<void> updateClubSwingNotes(String clubId, String notes) async {
     final db = await database;
     await db.update(
@@ -160,6 +197,36 @@ class LocalDatabaseService {
         whereArgs: [log.clubId],
       );
     }
+  }
+
+  Future<List<RangeDrillSummary>> listRangeDrills() async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT range_drills.*, clubs.name AS club_name
+      FROM range_drills
+      LEFT JOIN clubs ON clubs.id = range_drills.club_id
+      ORDER BY range_drills.timestamp DESC
+    ''');
+    return rows.map((row) {
+      final name = row['club_name'] as String?;
+      return RangeDrillSummary(
+        drill: RangeDrillLog.fromMap(row),
+        clubName: (name == null || name.isEmpty) ? 'Removed club' : name,
+      );
+    }).toList();
+  }
+
+  /// Average yards for [clubId], oldest session first.
+  Future<List<double>> getClubYardageTrend(String clubId) async {
+    final db = await database;
+    final rows = await db.query(
+      'range_drills',
+      columns: ['avg_yards'],
+      where: 'club_id = ?',
+      whereArgs: [clubId],
+      orderBy: 'timestamp ASC',
+    );
+    return rows.map((row) => (row['avg_yards'] as num).toDouble()).toList();
   }
 
   Future<String?> getActiveRoundId() async {
@@ -260,7 +327,11 @@ class LocalDatabaseService {
   Future<String> ensureActiveRound({required String courseName}) async {
     final active = await getActiveRoundId();
     if (active != null) return active;
+    return startNewRound(courseName: courseName);
+  }
 
+  /// Always inserts a new round, even when another round is still in progress.
+  Future<String> startNewRound({required String courseName}) async {
     final roundId = 'round_${DateTime.now().millisecondsSinceEpoch}';
     final db = await database;
     await db.insert(
@@ -274,6 +345,16 @@ class LocalDatabaseService {
       ).toMap(),
     );
     return roundId;
+  }
+
+  Future<void> updateCourseName(String roundId, String courseName) async {
+    final db = await database;
+    await db.update(
+      'round_scores',
+      {'course_name': courseName, 'is_synced': 0},
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
   }
 
   Future<RoundScore?> getHoleScore(String roundId, int holeNumber) async {

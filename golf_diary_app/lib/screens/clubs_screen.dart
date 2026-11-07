@@ -11,101 +11,184 @@ class ClubsScreen extends StatefulWidget {
   State<ClubsScreen> createState() => ClubsScreenState();
 }
 
-/// Public so [HomeShell] can refresh after a range drill updates distances.
 class ClubsScreenState extends State<ClubsScreen> {
-  static const _categories = ['wood', 'hybrid', 'iron', 'wedge', 'putter'];
+  static const categories = ['wood', 'hybrid', 'iron', 'wedge', 'putter', 'other'];
 
   String _selectedCategory = 'wood';
   List<Club> _clubs = [];
-  bool _loading = true;
+  Map<String, List<double>> _trends = {};
+  final Map<String, TextEditingController> _noteControllers = {};
 
   @override
   void initState() {
     super.initState();
-    reloadClubs();
+    reload();
   }
 
-  Future<void> reloadClubs() => _loadClubs();
+  @override
+  void dispose() {
+    for (final c in _noteControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
-  Future<void> _loadClubs() async {
+  Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getClubsByCategory(_selectedCategory);
+    final trends = <String, List<double>>{};
+    for (final club in clubs) {
+      trends[club.id] = await LocalDatabaseService.instance.getClubYardageTrend(club.id);
+    }
     if (!mounted) return;
     setState(() {
       _clubs = clubs;
-      _loading = false;
+      _trends = trends;
+      for (final club in clubs) {
+        _noteControllers.putIfAbsent(club.id, () => TextEditingController(text: club.swingNotes));
+      }
     });
   }
 
-  Future<void> _openNotes(Club club) async {
-    final saved = await showModalBottomSheet<bool>(
+  Future<void> _saveNotes(Club club) async {
+    final notes = _noteControllers[club.id]?.text ?? '';
+    await LocalDatabaseService.instance.updateClubSwingNotes(club.id, notes);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved swing notes for ${club.name}'), backgroundColor: AppColors.green),
+      );
+    }
+  }
+
+  Future<void> _addClub() async {
+    final created = await showDialog<Club>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: _NotesSheet(club: club),
+      builder: (context) => _AddClubDialog(initialCategory: _selectedCategory),
+    );
+    if (created == null) return;
+    await LocalDatabaseService.instance.insertClub(created);
+    if (!mounted) return;
+    setState(() => _selectedCategory = created.category);
+    await reload();
+  }
+
+  Future<void> _removeClub(Club club) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove club'),
+        content: Text('Remove ${club.name} from your bag?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+        ],
       ),
     );
-    if (saved == true) {
-      await _loadClubs();
-    }
+    if (confirmed != true) return;
+    await LocalDatabaseService.instance.deleteClub(club.id);
+    _noteControllers.remove(club.id)?.dispose();
+    await reload();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Bag')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addClub,
+        icon: const Icon(Icons.add),
+        label: const Text('Add club'),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            height: 56,
+            height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              children: _categories.map((cat) {
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              children: categories.map((cat) {
                 final label = cat[0].toUpperCase() + cat.substring(1);
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    key: ValueKey('bag-category-chip-$cat'),
                     label: Text(label),
                     selected: _selectedCategory == cat,
-                    onSelected: _loading
-                        ? null
-                        : (_) {
-                            setState(() => _selectedCategory = cat);
-                            _loadClubs();
-                          },
+                    onSelected: (_) {
+                      setState(() => _selectedCategory = cat);
+                      reload();
+                    },
                   ),
                 );
               }).toList(),
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _clubs.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No clubs in this category',
-                          key: ValueKey('bag-empty-category'),
+            child: _clubs.isEmpty
+                ? const Center(child: Text('No clubs in this category yet. Add a club to get started.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    itemCount: _clubs.length,
+                    itemBuilder: (context, index) {
+                      final club = _clubs[index];
+                      final controller = _noteControllers[club.id]!;
+                      final identity = [club.brand, club.model].where((part) => part.trim().isNotEmpty).join(' · ');
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: Text(club.name, style: Theme.of(context).textTheme.titleLarge)),
+                                  IconButton(
+                                    tooltip: 'Remove club',
+                                    onPressed: () => _removeClub(club),
+                                    icon: const Icon(Icons.delete_outline),
+                                  ),
+                                ],
+                              ),
+                              if (identity.isNotEmpty) ...[
+                                Text(identity, style: Theme.of(context).textTheme.bodyMedium),
+                                const SizedBox(height: 8),
+                              ] else
+                                const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _StatChip(label: 'Min', value: '${club.minDistance.round()} yds'),
+                                  _StatChip(label: 'Avg', value: '${club.avgDistance.round()} yds'),
+                                  _StatChip(label: 'Max', value: '${club.maxDistance.round()} yds'),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              _YardageTrend(yards: _trends[club.id] ?? const []),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: controller,
+                                decoration: const InputDecoration(
+                                  labelText: 'Swing notes',
+                                  border: OutlineInputBorder(),
+                                ),
+                                minLines: 1,
+                                maxLines: 3,
+                                onSubmitted: (_) => _saveNotes(club),
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => _saveNotes(club),
+                                  child: const Text('Save notes'),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        itemCount: _clubs.length,
-                        itemBuilder: (context, index) {
-                          final club = _clubs[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _ClubGlanceCard(
-                              club: club,
-                              onTap: () => _openNotes(club),
-                            ),
-                          );
-                        },
-                      ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -113,148 +196,187 @@ class ClubsScreenState extends State<ClubsScreen> {
   }
 }
 
-class _ClubGlanceCard extends StatelessWidget {
-  const _ClubGlanceCard({required this.club, required this.onTap});
+class _AddClubDialog extends StatefulWidget {
+  const _AddClubDialog({required this.initialCategory});
 
-  final Club club;
-  final VoidCallback onTap;
+  final String initialCategory;
 
   @override
-  Widget build(BuildContext context) {
-    final note = club.swingNotes.trim();
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      key: ValueKey('bag-club-card-${club.id}'),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(club.name, style: Theme.of(context).textTheme.headlineSmall),
-                  ),
-                  Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _StatCol(label: 'MIN', yards: club.minDistance),
-                  _StatCol(label: 'AVG', yards: club.avgDistance),
-                  _StatCol(label: 'MAX', yards: club.maxDistance),
-                ],
-              ),
-              if (club.minDistance == 0 && club.avgDistance == 0 && club.maxDistance == 0) ...[
-                const SizedBox(height: 8),
-                Text('No distances yet', style: Theme.of(context).textTheme.bodySmall),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                note.isEmpty ? 'Add swing note' : note,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: note.isEmpty ? scheme.onSurfaceVariant : scheme.onSurface,
-                    ),
-              ),
-            ],
-          ),
-        ),
+  State<_AddClubDialog> createState() => _AddClubDialogState();
+}
+
+class _AddClubDialogState extends State<_AddClubDialog> {
+  late String _category = widget.initialCategory;
+  final _name = TextEditingController();
+  final _brand = TextEditingController();
+  final _model = TextEditingController();
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _brand.dispose();
+    _model.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Enter a club name');
+      return;
+    }
+    Navigator.pop(
+      context,
+      Club(
+        id: 'club_${DateTime.now().millisecondsSinceEpoch}',
+        name: name,
+        category: _category,
+        brand: _brand.text.trim(),
+        model: _model.text.trim(),
       ),
     );
   }
-}
-
-class _StatCol extends StatelessWidget {
-  const _StatCol({required this.label, required this.yards});
-
-  final String label;
-  final double yards;
 
   @override
   Widget build(BuildContext context) {
-    final value = yards == 0 ? '—' : '${yards.round()}';
-    return Column(
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 2),
-        Text(value, style: GolfTextStyles.yardage(context, fontSize: 20)),
-        Text('yds', style: Theme.of(context).textTheme.labelSmall),
+    return AlertDialog(
+      title: const Text('Add club'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Club name',
+                hintText: '7 iron, 60°, mini driver…',
+                errorText: _nameError,
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _category,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: ClubsScreenState.categories
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(cat[0].toUpperCase() + cat.substring(1))))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _category = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _brand,
+              decoration: const InputDecoration(labelText: 'Brand (optional)'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _model,
+              decoration: const InputDecoration(labelText: 'Model (optional)'),
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _submit, child: const Text('Add')),
       ],
     );
   }
 }
 
-class _NotesSheet extends StatefulWidget {
-  const _NotesSheet({required this.club});
+class _YardageTrend extends StatelessWidget {
+  const _YardageTrend({required this.yards});
 
-  final Club club;
-
-  @override
-  State<_NotesSheet> createState() => _NotesSheetState();
-}
-
-class _NotesSheetState extends State<_NotesSheet> {
-  late final TextEditingController _controller = TextEditingController(text: widget.club.swingNotes);
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await LocalDatabaseService.instance.updateClubSwingNotes(widget.club.id, _controller.text);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved swing notes for ${widget.club.name}')),
-      );
-      Navigator.of(context).pop(true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Couldn’t save notes for ${widget.club.name}')),
-      );
-    }
-  }
+  final List<double> yards;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(widget.club.name, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 12),
-            TextField(
-              key: ValueKey('bag-notes-field-${widget.club.id}'),
-              controller: _controller,
-              minLines: 3,
-              maxLines: 6,
-              decoration: const InputDecoration(labelText: 'Swing notes'),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              key: ValueKey('bag-save-notes-btn-${widget.club.id}'),
-              onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : 'Save notes'),
-            ),
-          ],
+    if (yards.length < 2) {
+      return Text(
+        'Not enough range sessions for a trend.',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    final first = yards.first.round();
+    final last = yards.last.round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Range trend', style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 48,
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _SparklinePainter(yards: yards, color: AppColors.green),
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text('$first → $last yds', style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({required this.yards, required this.color});
+
+  final List<double> yards;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (yards.length < 2) return;
+    final minY = yards.reduce((a, b) => a < b ? a : b);
+    final maxY = yards.reduce((a, b) => a > b ? a : b);
+    final span = (maxY - minY).abs() < 0.01 ? 1.0 : maxY - minY;
+    final path = Path();
+    for (var i = 0; i < yards.length; i++) {
+      final x = yards.length == 1 ? size.width / 2 : size.width * i / (yards.length - 1);
+      final y = size.height - ((yards[i] - minY) / span) * (size.height - 4) - 2;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter oldDelegate) {
+    return oldDelegate.yards != yards || oldDelegate.color != color;
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

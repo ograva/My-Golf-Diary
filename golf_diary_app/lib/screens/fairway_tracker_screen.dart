@@ -10,13 +10,14 @@ class FairwayTrackerScreen extends StatefulWidget {
   const FairwayTrackerScreen({super.key});
 
   @override
-  State<FairwayTrackerScreen> createState() => _FairwayTrackerScreenState();
+  State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
 }
 
-class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
+class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   static const _lies = ['tee', 'fairway', 'rough', 'bunker', 'green', 'penalty'];
 
   final _courseController = TextEditingController(text: 'Local Course');
+  final _courseFocus = FocusNode();
 
   List<Club> _clubs = [];
   String? _roundId;
@@ -28,35 +29,70 @@ class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   List<ShotRecord> _shots = [];
   int _roundTotal = 0;
   bool _busy = false;
-  bool _editingCourse = false;
-  bool _locationDenied = false;
-  bool _bootstrapFailed = false;
+  bool _courseReady = false;
 
   @override
   void initState() {
     super.initState();
+    _courseFocus.addListener(_onCourseFocus);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    _courseFocus.removeListener(_onCourseFocus);
+    _persistCourseName();
+    _courseFocus.dispose();
     _courseController.dispose();
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
-    try {
-      _clubs = await LocalDatabaseService.instance.getAllClubs();
-      _roundId = await LocalDatabaseService.instance.ensureActiveRound(
-        courseName: _courseController.text.trim(),
-      );
-      final stored = await LocalDatabaseService.instance.getCourseNameForRound(_roundId!);
-      _courseController.text = stored;
-      if (mounted) setState(() => _bootstrapFailed = false);
-      await _refreshHoleState();
-    } catch (_) {
-      if (mounted) setState(() => _bootstrapFailed = true);
+  void _onCourseFocus() {
+    if (!_courseFocus.hasFocus) {
+      _persistCourseName();
     }
+  }
+
+  Future<void> _bootstrap() async {
+    _clubs = await LocalDatabaseService.instance.getAllClubs();
+    _roundId = await LocalDatabaseService.instance.ensureActiveRound(
+      courseName: _courseController.text.trim().isEmpty ? 'Local Course' : _courseController.text.trim(),
+    );
+    await _loadCourseName();
+    _courseReady = true;
+    await _refreshHoleState();
+  }
+
+  Future<void> _loadCourseName() async {
+    if (_roundId == null) return;
+    final name = await LocalDatabaseService.instance.getCourseNameForRound(_roundId!);
+    if (!mounted || name.isEmpty) return;
+    _courseController.text = name;
+  }
+
+  Future<void> _persistCourseName() async {
+    if (!_courseReady) return;
+    final roundId = _roundId;
+    final name = _courseController.text.trim();
+    if (roundId == null || name.isEmpty) return;
+    await LocalDatabaseService.instance.updateCourseName(roundId, name);
+  }
+
+  /// Follows the latest in-progress round, including one started from the scorecard.
+  Future<void> reloadActiveRound() async {
+    final active = await LocalDatabaseService.instance.getActiveRoundId();
+    if (!mounted || active == null) return;
+    final changed = active != _roundId;
+    _roundId = active;
+    if (changed) {
+      _holeNumber = 1;
+      _lieType = 'tee';
+      _par = 4;
+    }
+    _clubs = await LocalDatabaseService.instance.getAllClubs();
+    await _loadCourseName();
+    _courseReady = true;
+    await _refreshHoleState();
   }
 
   Future<void> _refreshHoleState() async {
@@ -78,32 +114,12 @@ class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     });
   }
 
-  Future<void> _commitCourseName() async {
-    final name = _courseController.text.trim().isEmpty ? 'Local Course' : _courseController.text.trim();
-    _courseController.text = name;
-    setState(() => _editingCourse = false);
-    if (_roundId != null) {
-      await LocalDatabaseService.instance.updateRoundCourseName(_roundId!, name);
-    }
-  }
-
-  String _clubName(String id) {
-    for (final club in _clubs) {
-      if (club.id == id) return club.name;
-    }
-    return id;
-  }
-
-  String _label(String value) => value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
-
   Future<Position?> _readGps() async {
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    final denied = permission == LocationPermission.denied || permission == LocationPermission.deniedForever;
-    if (mounted) setState(() => _locationDenied = denied);
-    if (denied) {
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Location permission is required for shot tracking')),
@@ -112,27 +128,9 @@ class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       return null;
     }
 
-    try {
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Couldn’t read location. Shot not saved.')),
-        );
-      }
-      return null;
-    }
-  }
-
-  Future<void> _openLocationSettings() async {
-    final permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.deniedForever) {
-      await Geolocator.openAppSettings();
-    } else {
-      await Geolocator.requestPermission();
-    }
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
   }
 
   Future<void> _recordShot() async {
@@ -163,19 +161,13 @@ class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       holeNumber: _holeNumber,
       nextPar: 4,
     );
-    final finishedRound = _holeNumber >= 18;
-    if (!finishedRound) {
+    if (_holeNumber < 18) {
       setState(() {
         _holeNumber += 1;
         _lieType = 'tee';
       });
     }
     await _refreshHoleState();
-    if (finishedRound && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Round saved on this device')),
-      );
-    }
   }
 
   Future<void> _sync() async {
@@ -202,277 +194,178 @@ class _FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     final strokes = _holeScore?.strokes ?? _shots.length;
     final penalties = _holeScore?.penalties ?? 0;
     final holeScore = computeFinalScore(strokes: strokes, penalties: penalties);
-    final conceded = _holeScore?.conceded == 1;
-    final scheme = Theme.of(context).colorScheme;
-    final selected = _selectedClub;
-    final clubHeader = selected == null
-        ? 'CLUB'
-        : selected.avgDistance > 0
-            ? '${selected.name} · ${selected.avgDistance.round()} yds'
-            : selected.name;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('On Course'),
+        title: const Text('Fairway HUD'),
         actions: [
-          IconButton(
-            key: const ValueKey('oncourse-sync-btn'),
-            onPressed: _sync,
-            icon: const Icon(Icons.cloud_upload_outlined),
-            tooltip: 'Sync',
-          ),
+          IconButton(onPressed: _sync, icon: const Icon(Icons.cloud_upload_outlined), tooltip: 'Sync'),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _bootstrapFailed ? _bootstrap : _refreshHoleState,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                children: [
-                  if (_bootstrapFailed)
-                    Card(
-                      child: ListTile(
-                        title: const Text('Couldn’t start the round. Pull to retry.'),
-                        trailing: TextButton(onPressed: _bootstrap, child: const Text('Retry')),
-                      ),
-                    ),
-                  if (_locationDenied)
-                    Card(
-                      key: const ValueKey('oncourse-location-banner'),
-                      color: scheme.errorContainer,
-                      child: ListTile(
-                        title: Text(
-                          'Location is off for shot tracking.',
-                          style: TextStyle(color: scheme.onErrorContainer),
-                        ),
-                        trailing: TextButton(
-                          onPressed: _openLocationSettings,
-                          child: const Text('Open settings'),
-                        ),
-                      ),
-                    ),
-                  if (_editingCourse)
-                    TextField(
-                      key: const ValueKey('oncourse-course-name-field'),
-                      controller: _courseController,
-                      autofocus: true,
-                      decoration: const InputDecoration(labelText: 'Course name'),
-                      onSubmitted: (_) => _commitCourseName(),
-                      onEditingComplete: _commitCourseName,
-                    )
-                  else
-                    InkWell(
-                      key: const ValueKey('oncourse-course-name-field'),
-                      onTap: () => setState(() => _editingCourse = true),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _courseController.text,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            Icon(Icons.edit_outlined, color: scheme.onSurfaceVariant),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Hole $_holeNumber', style: Theme.of(context).textTheme.headlineSmall),
-                              Text('Par $_par', style: Theme.of(context).textTheme.titleMedium),
-                            ],
-                          ),
-                          if (conceded)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text('Gimme', style: Theme.of(context).textTheme.labelLarge),
-                            ),
-                          const SizedBox(height: 8),
-                          Text('Strokes $strokes · Penalties $penalties'),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Hole $holeScore', style: GolfTextStyles.tabularNum(context, fontSize: 18)),
-                              Text('Round $_roundTotal', style: GolfTextStyles.tabularNum(context, fontSize: 18)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('PAR', style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [3, 4, 5].map((p) {
-                      return ChoiceChip(
-                        key: ValueKey('oncourse-par-chip-$p'),
-                        label: Text('Par $p'),
-                        selected: _par == p,
-                        onSelected: (_) async {
-                          setState(() => _par = p);
-                          if (_roundId != null && _holeScore != null) {
-                            await LocalDatabaseService.instance.upsertHoleScore(
-                              _holeScore!.copyWith(par: p, isSynced: 0),
-                            );
-                          }
-                        },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _courseController,
+              focusNode: _courseFocus,
+              decoration: const InputDecoration(
+                labelText: 'Course name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _persistCourseName(),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Hole $_holeNumber', style: Theme.of(context).textTheme.headlineSmall),
+                Text('Round total: $_roundTotal', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [3, 4, 5].map((p) {
+                return ChoiceChip(
+                  label: Text('Par $p'),
+                  selected: _par == p,
+                  onSelected: (_) async {
+                    setState(() => _par = p);
+                    if (_roundId != null && _holeScore != null) {
+                      await LocalDatabaseService.instance.upsertHoleScore(
+                        _holeScore!.copyWith(par: p, isSynced: 0),
                       );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(clubHeader, style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 48,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: _clubs.map((club) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            key: ValueKey('oncourse-club-chip-${club.id}'),
-                            label: Text(club.name),
-                            selected: _selectedClub?.id == club.id,
-                            onSelected: (_) => setState(() => _selectedClub = club),
-                          ),
-                        );
-                      }).toList(),
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('Club', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _clubs.map((club) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(club.name),
+                      selected: _selectedClub?.id == club.id,
+                      onSelected: (_) => setState(() => _selectedClub = club),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('LIE', style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 48,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: _lies.map((lie) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            key: ValueKey('oncourse-lie-chip-$lie'),
-                            label: Text(_label(lie)),
-                            selected: _lieType == lie,
-                            onSelected: (_) => setState(() => _lieType = lie),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  if (_shots.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text('Shots this hole', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    ..._shots.map(
-                      (s) => ListTile(
-                        key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
-                        title: Text('Stroke ${s.strokeNumber} · ${_label(s.lieType)} · ${_clubName(s.clubId)}'),
-                        subtitle: Text(
-                          s.distanceYards > 0 ? '${s.distanceYards.round()} yds' : 'Distance pending',
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const ValueKey('oncourse-penalty-1-btn'),
-                          onPressed: _roundId == null
-                              ? null
-                              : () => LocalDatabaseService.instance
-                                  .incrementPenalties(_roundId!, _holeNumber, 1)
-                                  .then((_) => _refreshHoleState()),
-                          child: const Text('Penalty +1'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const ValueKey('oncourse-penalty-2-btn'),
-                          onPressed: _roundId == null
-                              ? null
-                              : () => LocalDatabaseService.instance
-                                  .incrementPenalties(_roundId!, _holeNumber, 2)
-                                  .then((_) => _refreshHoleState()),
-                          child: const Text('Penalty +2'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const ValueKey('oncourse-mulligan-btn'),
-                          onPressed: _roundId == null
-                              ? null
-                              : () => LocalDatabaseService.instance
-                                  .incrementMulligans(_roundId!, _holeNumber)
-                                  .then((_) => _refreshHoleState()),
-                          child: Text('Mulligan ${_holeScore?.mulligans ?? 0}'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const ValueKey('oncourse-concede-btn'),
-                          onPressed: _roundId == null
-                              ? null
-                              : () => LocalDatabaseService.instance
-                                  .concedeHole(_roundId!, _holeNumber)
-                                  .then((_) => _refreshHoleState()),
-                          child: const Text('Concede'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    key: const ValueKey('oncourse-finish-hole-btn'),
-                    onPressed: _roundId == null ? null : _finishHole,
-                    child: Text(_holeNumber >= 18 ? 'Finish round' : 'Finish hole'),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: FilledButton(
-            key: const ValueKey('oncourse-record-shot-btn'),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(64)),
-            onPressed: (_busy || _roundId == null || _selectedClub == null) ? null : _recordShot,
-            child: _busy
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: scheme.onPrimary),
-                  )
-                : const Text('Record shot at ball'),
-          ),
+            const SizedBox(height: 16),
+            const Text('Lie', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _lies.map((lie) {
+                  final label = lie[0].toUpperCase() + lie.substring(1);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: _lieType == lie,
+                      onSelected: (_) => setState(() => _lieType = lie),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 80,
+              child: ElevatedButton(
+                onPressed: _busy ? null : _recordShot,
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
+                child: _busy
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Record Shot at Ball', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _roundId == null
+                        ? null
+                        : () => LocalDatabaseService.instance.incrementPenalties(_roundId!, _holeNumber, 1).then((_) => _refreshHoleState()),
+                    child: const Text('Penalty +1'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _roundId == null
+                        ? null
+                        : () => LocalDatabaseService.instance.incrementPenalties(_roundId!, _holeNumber, 2).then((_) => _refreshHoleState()),
+                    child: const Text('Penalty +2'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _roundId == null
+                        ? null
+                        : () => LocalDatabaseService.instance.incrementMulligans(_roundId!, _holeNumber).then((_) => _refreshHoleState()),
+                    child: Text('Mulligans ${_holeScore?.mulligans ?? 0}'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _roundId == null
+                        ? null
+                        : () => LocalDatabaseService.instance.concedeHole(_roundId!, _holeNumber).then((_) => _refreshHoleState()),
+                    child: const Text('Concede / Gimme'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 72,
+              child: ElevatedButton(
+                onPressed: _finishHole,
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.amber, foregroundColor: Colors.black87),
+                child: Text(
+                  _holeNumber >= 18 ? 'Finish Round' : 'Finish Hole',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            if (_shots.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text('Shots this hole', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              ..._shots.map(
+                (s) => ListTile(
+                  dense: true,
+                  title: Text('Stroke ${s.strokeNumber} · ${s.lieType} · ${s.clubId}'),
+                  subtitle: Text(
+                    s.distanceYards > 0 ? '${s.distanceYards.round()} yds' : 'Distance pending',
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

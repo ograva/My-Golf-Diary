@@ -4,298 +4,248 @@ import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 
-/// Resolves a drill block. Empty min or max copies [avg]. Returns null when
-/// avg is missing or the three numbers are out of order.
-DrillYardageInput? resolveDrillYardages({
-  required String minText,
-  required String avgText,
-  required String maxText,
-}) {
-  final avg = double.tryParse(avgText.trim());
-  if (avg == null || avg < 0) return null;
-
-  double? optional(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return null;
-    return double.tryParse(trimmed);
-  }
-
-  final minParsed = optional(minText);
-  final maxParsed = optional(maxText);
-  if (minText.trim().isNotEmpty && minParsed == null) return null;
-  if (maxText.trim().isNotEmpty && maxParsed == null) return null;
-  if (minParsed != null && minParsed < 0) return null;
-  if (maxParsed != null && maxParsed < 0) return null;
-
-  final min = minParsed ?? avg;
-  final max = maxParsed ?? avg;
-  if (min > avg || avg > max) return null;
-  return DrillYardageInput(min: min, avg: avg, max: max);
-}
-
-class DrillYardageInput {
-  const DrillYardageInput({required this.min, required this.avg, required this.max});
-
-  final double min;
-  final double avg;
-  final double max;
-}
-
 class RangeDrillScreen extends StatefulWidget {
   const RangeDrillScreen({super.key});
 
   @override
-  State<RangeDrillScreen> createState() => _RangeDrillScreenState();
+  State<RangeDrillScreen> createState() => RangeDrillScreenState();
 }
 
-class _RangeDrillScreenState extends State<RangeDrillScreen> {
+class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<Club> _clubs = [];
+  List<RangeDrillSummary> _log = [];
   Club? _selectedClub;
   int _shotCounter = 0;
-  bool _loading = true;
-  bool _saving = false;
 
   final TextEditingController _minController = TextEditingController();
   final TextEditingController _maxController = TextEditingController();
   final TextEditingController _avgController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _venueController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    for (final controller in [_minController, _avgController, _maxController]) {
-      controller.addListener(_onFieldsChanged);
-    }
-    _loadClubs();
-  }
-
-  void _onFieldsChanged() {
-    if (mounted) setState(() {});
+    reload();
   }
 
   @override
   void dispose() {
-    for (final controller in [_minController, _avgController, _maxController]) {
-      controller.removeListener(_onFieldsChanged);
-      controller.dispose();
-    }
+    _minController.dispose();
+    _maxController.dispose();
+    _avgController.dispose();
     _notesController.dispose();
+    _venueController.dispose();
     super.dispose();
   }
 
-  DrillYardageInput? get _yardages => resolveDrillYardages(
-        minText: _minController.text,
-        avgText: _avgController.text,
-        maxText: _maxController.text,
-      );
-
-  Future<void> _loadClubs() async {
+  Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getAllClubs();
+    final log = await LocalDatabaseService.instance.listRangeDrills();
     if (!mounted) return;
     setState(() {
       _clubs = clubs.where((c) => c.category != 'putter').toList();
-      _loading = false;
-      if (_clubs.isEmpty) {
-        _selectedClub = null;
-        return;
-      }
-      final currentId = _selectedClub?.id;
-      final match = _clubs.where((c) => c.id == currentId);
-      if (match.isNotEmpty) {
-        _selectedClub = match.first;
-      } else {
+      _log = log;
+      if (_selectedClub == null && _clubs.isNotEmpty) {
         _selectedClub = _clubs.first;
         _notesController.text = _selectedClub!.swingNotes;
+      } else if (_selectedClub != null && !_clubs.any((c) => c.id == _selectedClub!.id)) {
+        _selectedClub = _clubs.isNotEmpty ? _clubs.first : null;
       }
     });
   }
 
   Future<void> _saveDrillSet() async {
-    final club = _selectedClub;
-    final yards = _yardages;
-    if (club == null || yards == null || _saving) return;
+    if (_selectedClub == null) return;
 
-    setState(() => _saving = true);
     final log = RangeDrillLog(
       id: 'drill_${DateTime.now().millisecondsSinceEpoch}',
-      clubId: club.id,
+      clubId: _selectedClub!.id,
       shotCount: _shotCounter > 0 ? _shotCounter : 10,
-      minYards: yards.min,
-      maxYards: yards.max,
-      avgYards: yards.avg,
+      minYards: double.tryParse(_minController.text) ?? 0.0,
+      maxYards: double.tryParse(_maxController.text) ?? 0.0,
+      avgYards: double.tryParse(_avgController.text) ?? 0.0,
       tempoNotes: _notesController.text,
+      venueName: _venueController.text.trim(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
-    try {
-      await LocalDatabaseService.instance.saveRangeDrill(log);
-      if (!mounted) return;
+    await LocalDatabaseService.instance.saveRangeDrill(log);
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved drill for ${club.name}. Bag avg updated.')),
+        SnackBar(
+          content: Text('Saved drill for ${_selectedClub!.name}!'),
+          backgroundColor: AppColors.green,
+        ),
       );
-      setState(() {
-        _shotCounter = 0;
-        _saving = false;
-      });
+      setState(() => _shotCounter = 0);
       _minController.clear();
       _maxController.clear();
       _avgController.clear();
-      await _loadClubs();
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Couldn’t save this drill.')),
-      );
+      await reload();
     }
   }
 
-  String _stat(double value) => value == 0 ? '—' : '${value.round()}';
+  String _formatWhen(int timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final suffix = date.hour >= 12 ? 'PM' : 'AM';
+    return '${date.month}/${date.day}/${date.year} $hour:$minute $suffix';
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final club = _selectedClub;
-    final orderError = _yardages == null && _avgController.text.trim().isNotEmpty
-        ? 'Min, average, and max must be numbers in order'
-        : null;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Range')),
-      body: club == null
-          ? const Center(
-              child: Text(
-                'Add clubs to the bag before a drill.',
-                key: ValueKey('range-empty-clubs'),
+      appBar: AppBar(title: const Text('Range Drill Instructor')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _venueController,
+              decoration: const InputDecoration(
+                labelText: 'Driving range or simulator',
+                hintText: 'Topgolf, local range, sim bay…',
+                border: OutlineInputBorder(),
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text('CLUB', style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 48,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: _clubs.map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          key: ValueKey('range-club-chip-${item.id}'),
-                          label: Text(item.name),
-                          selected: club.id == item.id,
-                          onSelected: (_) {
-                            setState(() {
-                              _selectedClub = item;
-                              _notesController.text = item.swingNotes;
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  key: const ValueKey('range-bag-baseline'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
+            Text('Select club', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _clubs.map((club) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(club.name),
+                      selected: _selectedClub?.id == club.id,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedClub = club;
+                          _notesController.text = club.swingNotes;
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              color: AppColors.amber.withOpacity(0.15),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
                       children: [
-                        Text(club.name, style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text('Bag now', style: Theme.of(context).textTheme.bodySmall),
-                        const SizedBox(height: 8),
-                        Text(
-                          'MIN ${_stat(club.minDistance)}   AVG ${_stat(club.avgDistance)}   MAX ${_stat(club.maxDistance)}',
-                          style: GolfTextStyles.yardage(context, fontSize: 16),
-                        ),
+                        Icon(Icons.lightbulb_outline, color: AppColors.amber),
+                        SizedBox(width: 8),
+                        Text('Swing Cue & Mechanics Note', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g., 3:1 tempo, pause at top, smooth transition',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  key: const ValueKey('range-tempo-field'),
-                  controller: _notesController,
-                  minLines: 1,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Tempo for this drill',
-                    helperText: 'A note here updates this club’s swing cue.',
-                  ),
-                ),
-                const SizedBox(height: 24),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  '$_shotCounter / 10',
-                  key: const ValueKey('range-shot-counter'),
-                  textAlign: TextAlign.center,
-                  style: GolfTextStyles.tabularNum(context, fontSize: 36),
+                  'Shots: $_shotCounter / 10',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  'Balls in this block. Leaving this at 0 saves the block as 10 balls.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                FilledButton.tonal(
-                  key: const ValueKey('range-shot-counter-increment'),
-                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(64)),
-                  onPressed: _shotCounter >= 10 ? null : () => setState(() => _shotCounter++),
-                  child: const Text('Hit'),
-                ),
-                const SizedBox(height: 24),
-                Text('This block (yds)', style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextField(
-                  key: const ValueKey('range-min-field'),
-                  controller: _minController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Min',
-                    suffixText: 'yds',
-                    hintText: club.minDistance == 0 ? null : '${club.minDistance.round()}',
-                    helperText: 'Empty min or max uses the average.',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  key: const ValueKey('range-avg-field'),
-                  controller: _avgController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Avg',
-                    suffixText: 'yds',
-                    hintText: club.avgDistance == 0 ? null : '${club.avgDistance.round()}',
-                    errorText: orderError,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  key: const ValueKey('range-max-field'),
-                  controller: _maxController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Max',
-                    suffixText: 'yds',
-                    hintText: club.maxDistance == 0 ? null : '${club.maxDistance.round()}',
-                  ),
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  key: const ValueKey('range-save-drill-btn'),
-                  onPressed: _yardages == null || _saving ? null : _saveDrillSet,
-                  child: Text(_saving ? 'Saving…' : 'Save drill'),
+                ElevatedButton.icon(
+                  onPressed: _shotCounter >= 10
+                      ? null
+                      : () => setState(() => _shotCounter++),
+                  icon: const Icon(Icons.sports_golf),
+                  label: const Text('Hit Shot'),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(140, 56)),
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _minController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Min (Yds)', border: OutlineInputBorder()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _avgController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Avg (Yds)', border: OutlineInputBorder()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _maxController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Max (Yds)', border: OutlineInputBorder()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 72,
+              child: ElevatedButton(
+                onPressed: _saveDrillSet,
+                child: const Text('Save Drill Session', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('Session log', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (_log.isEmpty)
+              const Text('Saved drills show up here, newest first.')
+            else
+              ..._log.map((entry) {
+                final drill = entry.drill;
+                final venue = drill.venueName.isEmpty ? 'Unnamed venue' : drill.venueName;
+                final notes = drill.tempoNotes.trim();
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    title: Text('${entry.clubName} · $venue'),
+                    subtitle: Text(
+                      '${_formatWhen(drill.timestamp)}\n'
+                      '${drill.shotCount} shots · min ${drill.minYards.round()} · '
+                      'avg ${drill.avgYards.round()} · max ${drill.maxYards.round()}'
+                      '${notes.isEmpty ? '' : '\n$notes'}',
+                    ),
+                    isThreeLine: true,
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
     );
   }
 }

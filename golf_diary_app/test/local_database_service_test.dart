@@ -33,6 +33,18 @@ void main() {
     expect(loaded.model, 'SM10');
     expect(loaded.category, 'wedge');
 
+    await db.updateClubIdentity(loaded.copyWith(
+      name: 'Lob wedge',
+      category: 'wedge',
+      brand: 'Cleveland',
+      model: 'RTX',
+    ));
+    final updated = (await db.getAllClubs()).firstWhere((club) => club.id == id);
+    expect(updated.name, 'Lob wedge');
+    expect(updated.brand, 'Cleveland');
+    expect(updated.model, 'RTX');
+    expect(updated.category, 'wedge');
+
     await db.deleteClub(id);
     expect((await db.getAllClubs()).any((club) => club.id == id), isFalse);
   });

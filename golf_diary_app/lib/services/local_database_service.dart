@@ -156,6 +156,23 @@ class LocalDatabaseService {
     await db.insert('clubs', club.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  /// Updates the club's name, brand, model, and category. Distances and swing notes stay put.
+  Future<void> updateClubIdentity(Club club) async {
+    final db = await database;
+    await db.update(
+      'clubs',
+      {
+        'name': club.name,
+        'category': club.category,
+        'brand': club.brand,
+        'model': club.model,
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [club.id],
+    );
+  }
+
   Future<void> deleteClub(String clubId) async {
     final db = await database;
     await db.delete('clubs', where: 'id = ?', whereArgs: [clubId]);

@@ -480,7 +480,9 @@ ThemeData buildGolfTheme({Brightness brightness = Brightness.light}) {
       backgroundColor: cs.primary,
       foregroundColor: cs.onPrimary,
       elevation:       2,
-      shape:           const CircleBorder(),
+      // Stadium keeps a round icon button circular and lets an extended
+      // "Add club" button show the plus beside the label. CircleBorder clips that icon.
+      shape:           const StadiumBorder(),
     ),
   );
 }

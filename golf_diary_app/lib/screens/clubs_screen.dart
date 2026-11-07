@@ -17,20 +17,11 @@ class ClubsScreenState extends State<ClubsScreen> {
   String _selectedCategory = 'wood';
   List<Club> _clubs = [];
   Map<String, List<double>> _trends = {};
-  final Map<String, TextEditingController> _noteControllers = {};
 
   @override
   void initState() {
     super.initState();
     reload();
-  }
-
-  @override
-  void dispose() {
-    for (final c in _noteControllers.values) {
-      c.dispose();
-    }
-    super.dispose();
   }
 
   Future<void> reload() async {
@@ -43,20 +34,25 @@ class ClubsScreenState extends State<ClubsScreen> {
     setState(() {
       _clubs = clubs;
       _trends = trends;
-      for (final club in clubs) {
-        _noteControllers.putIfAbsent(club.id, () => TextEditingController(text: club.swingNotes));
-      }
     });
   }
 
-  Future<void> _saveNotes(Club club) async {
-    final notes = _noteControllers[club.id]?.text ?? '';
+  Future<void> _saveNotes(Club club, String notes) async {
     await LocalDatabaseService.instance.updateClubSwingNotes(club.id, notes);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved swing notes for ${club.name}'), backgroundColor: AppColors.green),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved swing notes for ${club.name}'), backgroundColor: AppColors.green),
+    );
+    await reload();
+  }
+
+  Future<void> _editNotes(Club club) async {
+    final notes = await showDialog<String>(
+      context: context,
+      builder: (context) => SwingNotesDialog(club: club),
+    );
+    if (notes == null) return;
+    await _saveNotes(club, notes);
   }
 
   Future<void> _addClub() async {
@@ -71,21 +67,24 @@ class ClubsScreenState extends State<ClubsScreen> {
     await reload();
   }
 
-  Future<void> _removeClub(Club club) async {
-    final confirmed = await showDialog<bool>(
+  Future<void> _editClub(Club club) async {
+    final result = await showDialog<ClubEditResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove club'),
-        content: Text('Remove ${club.name} from your bag?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
-        ],
-      ),
+      builder: (context) => EditClubDialog(club: club),
     );
-    if (confirmed != true) return;
-    await LocalDatabaseService.instance.deleteClub(club.id);
-    _noteControllers.remove(club.id)?.dispose();
+    if (result == null || !mounted) return;
+    if (result.deleted) {
+      await LocalDatabaseService.instance.deleteClub(club.id);
+      await reload();
+      return;
+    }
+    final updated = result.club;
+    if (updated == null) return;
+    await LocalDatabaseService.instance.updateClubIdentity(updated);
+    if (!mounted) return;
+    if (updated.category != _selectedCategory) {
+      setState(() => _selectedCategory = updated.category);
+    }
     await reload();
   }
 
@@ -95,6 +94,8 @@ class ClubsScreenState extends State<ClubsScreen> {
       appBar: AppBar(title: const Text('My Bag')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addClub,
+        tooltip: 'Add club',
+        shape: const StadiumBorder(),
         icon: const Icon(Icons.add),
         label: const Text('Add club'),
       ),
@@ -107,7 +108,7 @@ class ClubsScreenState extends State<ClubsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: categories.map((cat) {
-                final label = cat[0].toUpperCase() + cat.substring(1);
+                final label = _categoryLabel(cat);
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
@@ -130,8 +131,8 @@ class ClubsScreenState extends State<ClubsScreen> {
                     itemCount: _clubs.length,
                     itemBuilder: (context, index) {
                       final club = _clubs[index];
-                      final controller = _noteControllers[club.id]!;
                       final identity = [club.brand, club.model].where((part) => part.trim().isNotEmpty).join(' · ');
+                      final notes = club.swingNotes.trim();
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: Padding(
@@ -139,15 +140,23 @@ class ClubsScreenState extends State<ClubsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(child: Text(club.name, style: Theme.of(context).textTheme.titleLarge)),
-                                  IconButton(
-                                    tooltip: 'Remove club',
-                                    onPressed: () => _removeClub(club),
-                                    icon: const Icon(Icons.delete_outline),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: InkWell(
+                                  onTap: () => _editClub(club),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Text(
+                                      club.name,
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            decoration: TextDecoration.underline,
+                                            decorationColor: Theme.of(context).colorScheme.primary,
+                                          ),
+                                    ),
                                   ),
-                                ],
+                                ),
                               ),
                               if (identity.isNotEmpty) ...[
                                 Text(identity, style: Theme.of(context).textTheme.bodyMedium),
@@ -165,22 +174,22 @@ class ClubsScreenState extends State<ClubsScreen> {
                               const SizedBox(height: 12),
                               _YardageTrend(yards: _trends[club.id] ?? const []),
                               const SizedBox(height: 12),
-                              TextField(
-                                controller: controller,
-                                decoration: const InputDecoration(
-                                  labelText: 'Swing notes',
-                                  border: OutlineInputBorder(),
-                                ),
-                                minLines: 1,
-                                maxLines: 3,
-                                onSubmitted: (_) => _saveNotes(club),
+                              Text('Swing notes', style: Theme.of(context).textTheme.labelMedium),
+                              const SizedBox(height: 4),
+                              Text(
+                                notes.isEmpty ? 'No swing notes' : club.swingNotes,
+                                style: notes.isEmpty
+                                    ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        )
+                                    : Theme.of(context).textTheme.bodyMedium,
                               ),
-                              const SizedBox(height: 8),
                               Align(
                                 alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () => _saveNotes(club),
-                                  child: const Text('Save notes'),
+                                child: TextButton.icon(
+                                  onPressed: () => _editNotes(club),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text('Edit notes'),
                                 ),
                               ),
                             ],
@@ -195,6 +204,180 @@ class ClubsScreenState extends State<ClubsScreen> {
     );
   }
 }
+
+@visibleForTesting
+class ClubEditResult {
+  const ClubEditResult.saved(this.club) : deleted = false;
+  const ClubEditResult.deleted() : club = null, deleted = true;
+
+  final Club? club;
+  final bool deleted;
+}
+
+@visibleForTesting
+class EditClubDialog extends StatefulWidget {
+  const EditClubDialog({super.key, required this.club});
+
+  final Club club;
+
+  @override
+  State<EditClubDialog> createState() => _EditClubDialogState();
+}
+
+class _EditClubDialogState extends State<EditClubDialog> {
+  late String _category = widget.club.category;
+  late final TextEditingController _name = TextEditingController(text: widget.club.name);
+  late final TextEditingController _brand = TextEditingController(text: widget.club.brand);
+  late final TextEditingController _model = TextEditingController(text: widget.club.model);
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _brand.dispose();
+    _model.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Enter a club name');
+      return;
+    }
+    Navigator.pop(
+      context,
+      ClubEditResult.saved(
+        widget.club.copyWith(
+          name: name,
+          category: _category,
+          brand: _brand.text.trim(),
+          model: _model.text.trim(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete club'),
+        content: Text('Delete ${widget.club.name} from your bag? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.pop(context, const ClubEditResult.deleted());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit club'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Club name',
+                errorText: _nameError,
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: ClubsScreenState.categories.contains(_category) ? _category : 'other',
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: ClubsScreenState.categories
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(_categoryLabel(cat))))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _category = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _brand,
+              decoration: const InputDecoration(labelText: 'Brand (optional)'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _model,
+              decoration: const InputDecoration(labelText: 'Model (optional)'),
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _confirmDelete,
+          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+          child: const Text('Delete'),
+        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _submit, child: const Text('Save')),
+      ],
+    );
+  }
+}
+
+@visibleForTesting
+class SwingNotesDialog extends StatefulWidget {
+  const SwingNotesDialog({super.key, required this.club});
+
+  final Club club;
+
+  @override
+  State<SwingNotesDialog> createState() => _SwingNotesDialogState();
+}
+
+class _SwingNotesDialogState extends State<SwingNotesDialog> {
+  late final TextEditingController _notes = TextEditingController(text: widget.club.swingNotes);
+
+  @override
+  void dispose() {
+    _notes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.club.name),
+      content: TextField(
+        controller: _notes,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'Swing notes',
+          alignLabelWithHint: true,
+        ),
+        minLines: 3,
+        maxLines: 6,
+        textCapitalization: TextCapitalization.sentences,
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _notes.text),
+          child: const Text('Save notes'),
+        ),
+      ],
+    );
+  }
+}
+
+String _categoryLabel(String cat) => cat.isEmpty ? cat : cat[0].toUpperCase() + cat.substring(1);
 
 class _AddClubDialog extends StatefulWidget {
   const _AddClubDialog({required this.initialCategory});
@@ -262,7 +445,7 @@ class _AddClubDialogState extends State<_AddClubDialog> {
               value: _category,
               decoration: const InputDecoration(labelText: 'Category'),
               items: ClubsScreenState.categories
-                  .map((cat) => DropdownMenuItem(value: cat, child: Text(cat[0].toUpperCase() + cat.substring(1))))
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(_categoryLabel(cat))))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _category = value);

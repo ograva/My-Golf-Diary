@@ -53,9 +53,19 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   }
 
   Future<void> _startNewRound() async {
-    await LocalDatabaseService.instance.ensureActiveRound(courseName: 'Local Course');
-    setState(() => _selectedRoundId = null);
+    final courseName = await showDialog<String>(
+      context: context,
+      builder: (context) => const _NewRoundDialog(),
+    );
+    if (courseName == null || !mounted) return;
+    final roundId = await LocalDatabaseService.instance.startNewRound(courseName: courseName);
+    if (!mounted) return;
+    setState(() => _selectedRoundId = roundId);
     await loadScorecard();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Started round at $courseName'), backgroundColor: AppColors.green),
+    );
   }
 
   RoundScore? _holeRow(int holeNumber) {
@@ -156,6 +166,46 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _NewRoundDialog extends StatefulWidget {
+  const _NewRoundDialog();
+
+  @override
+  State<_NewRoundDialog> createState() => _NewRoundDialogState();
+}
+
+class _NewRoundDialogState extends State<_NewRoundDialog> {
+  final _controller = TextEditingController(text: 'Local Course');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+    Navigator.pop(context, name.isEmpty ? 'Local Course' : name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Start new round'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(labelText: 'Course name'),
+        textCapitalization: TextCapitalization.words,
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _submit, child: const Text('Start')),
+      ],
     );
   }
 }

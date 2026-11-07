@@ -8,11 +8,12 @@ class RangeDrillScreen extends StatefulWidget {
   const RangeDrillScreen({super.key});
 
   @override
-  State<RangeDrillScreen> createState() => _RangeDrillScreenState();
+  State<RangeDrillScreen> createState() => RangeDrillScreenState();
 }
 
-class _RangeDrillScreenState extends State<RangeDrillScreen> {
+class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<Club> _clubs = [];
+  List<RangeDrillSummary> _log = [];
   Club? _selectedClub;
   int _shotCounter = 0;
 
@@ -20,11 +21,12 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
   final TextEditingController _maxController = TextEditingController();
   final TextEditingController _avgController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _venueController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadClubs();
+    reload();
   }
 
   @override
@@ -33,17 +35,22 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
     _maxController.dispose();
     _avgController.dispose();
     _notesController.dispose();
+    _venueController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadClubs() async {
+  Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getAllClubs();
+    final log = await LocalDatabaseService.instance.listRangeDrills();
     if (!mounted) return;
     setState(() {
       _clubs = clubs.where((c) => c.category != 'putter').toList();
+      _log = log;
       if (_selectedClub == null && _clubs.isNotEmpty) {
         _selectedClub = _clubs.first;
         _notesController.text = _selectedClub!.swingNotes;
+      } else if (_selectedClub != null && !_clubs.any((c) => c.id == _selectedClub!.id)) {
+        _selectedClub = _clubs.isNotEmpty ? _clubs.first : null;
       }
     });
   }
@@ -59,6 +66,7 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
       maxYards: double.tryParse(_maxController.text) ?? 0.0,
       avgYards: double.tryParse(_avgController.text) ?? 0.0,
       tempoNotes: _notesController.text,
+      venueName: _venueController.text.trim(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
@@ -75,8 +83,16 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
       _minController.clear();
       _maxController.clear();
       _avgController.clear();
-      _loadClubs();
+      await reload();
     }
+  }
+
+  String _formatWhen(int timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final suffix = date.hour >= 12 ? 'PM' : 'AM';
+    return '${date.month}/${date.day}/${date.year} $hour:$minute $suffix';
   }
 
   @override
@@ -88,6 +104,16 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            TextField(
+              controller: _venueController,
+              decoration: const InputDecoration(
+                labelText: 'Driving range or simulator',
+                hintText: 'Topgolf, local range, sim bay…',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
             Text('Select club', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             SizedBox(
@@ -193,6 +219,30 @@ class _RangeDrillScreenState extends State<RangeDrillScreen> {
                 child: const Text('Save Drill Session', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
+            const SizedBox(height: 24),
+            Text('Session log', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (_log.isEmpty)
+              const Text('Saved drills show up here, newest first.')
+            else
+              ..._log.map((entry) {
+                final drill = entry.drill;
+                final venue = drill.venueName.isEmpty ? 'Unnamed venue' : drill.venueName;
+                final notes = drill.tempoNotes.trim();
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    title: Text('${entry.clubName} · $venue'),
+                    subtitle: Text(
+                      '${_formatWhen(drill.timestamp)}\n'
+                      '${drill.shotCount} shots · min ${drill.minYards.round()} · '
+                      'avg ${drill.avgYards.round()} · max ${drill.maxYards.round()}'
+                      '${notes.isEmpty ? '' : '\n$notes'}',
+                    ),
+                    isThreeLine: true,
+                  ),
+                );
+              }),
           ],
         ),
       ),

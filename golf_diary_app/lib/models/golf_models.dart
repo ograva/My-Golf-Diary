@@ -2,6 +2,8 @@ class Club {
   final String id;
   final String name;
   final String category;
+  final String brand;
+  final String model;
   final double minDistance;
   final double maxDistance;
   final double avgDistance;
@@ -12,6 +14,8 @@ class Club {
     required this.id,
     required this.name,
     required this.category,
+    this.brand = '',
+    this.model = '',
     this.minDistance = 0.0,
     this.maxDistance = 0.0,
     this.avgDistance = 0.0,
@@ -22,6 +26,8 @@ class Club {
   Club copyWith({
     String? name,
     String? category,
+    String? brand,
+    String? model,
     double? minDistance,
     double? maxDistance,
     double? avgDistance,
@@ -32,6 +38,8 @@ class Club {
       id: id,
       name: name ?? this.name,
       category: category ?? this.category,
+      brand: brand ?? this.brand,
+      model: model ?? this.model,
       minDistance: minDistance ?? this.minDistance,
       maxDistance: maxDistance ?? this.maxDistance,
       avgDistance: avgDistance ?? this.avgDistance,
@@ -45,6 +53,8 @@ class Club {
       'id': id,
       'name': name,
       'category': category,
+      'brand': brand,
+      'model': model,
       'min_distance': minDistance,
       'max_distance': maxDistance,
       'avg_distance': avgDistance,
@@ -58,6 +68,8 @@ class Club {
       id: map['id'] as String,
       name: map['name'] as String,
       category: map['category'] as String,
+      brand: map['brand'] as String? ?? '',
+      model: map['model'] as String? ?? '',
       minDistance: (map['min_distance'] as num?)?.toDouble() ?? 0.0,
       maxDistance: (map['max_distance'] as num?)?.toDouble() ?? 0.0,
       avgDistance: (map['avg_distance'] as num?)?.toDouble() ?? 0.0,
@@ -231,6 +243,7 @@ class RangeDrillLog {
   final double maxYards;
   final double avgYards;
   final String tempoNotes;
+  final String venueName;
   final int timestamp;
   final int isSynced;
 
@@ -242,6 +255,7 @@ class RangeDrillLog {
     required this.maxYards,
     required this.avgYards,
     this.tempoNotes = '',
+    this.venueName = '',
     required this.timestamp,
     this.isSynced = 0,
   });
@@ -255,6 +269,7 @@ class RangeDrillLog {
       'max_yards': maxYards,
       'avg_yards': avgYards,
       'tempo_notes': tempoNotes,
+      'venue_name': venueName,
       'timestamp': timestamp,
       'is_synced': isSynced,
     };
@@ -269,10 +284,19 @@ class RangeDrillLog {
       maxYards: (map['max_yards'] as num).toDouble(),
       avgYards: (map['avg_yards'] as num).toDouble(),
       tempoNotes: map['tempo_notes'] as String? ?? '',
+      venueName: map['venue_name'] as String? ?? '',
       timestamp: map['timestamp'] as int,
       isSynced: map['is_synced'] as int? ?? 0,
     );
   }
+}
+
+/// A saved range session plus the club name shown in the chronological log.
+class RangeDrillSummary {
+  const RangeDrillSummary({required this.drill, required this.clubName});
+
+  final RangeDrillLog drill;
+  final String clubName;
 }
 
 /// Gross score for a hole: tracked strokes plus penalty strokes.

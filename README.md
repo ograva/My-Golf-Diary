@@ -51,11 +51,17 @@ flutter run
 
 Allow location when the phone asks, if you want the distance between shots.
 
-A cloud copy is optional. The diary already works on the phone. If you connect Firebase later, **On Course** can upload what you have logged. Until you sign in, that copy is stored under the name `local_user`.
+A cloud copy is optional. The diary already works with no signal. The cloud icon on each tab syncs with Firestore database `my-golf-diary` after you turn on **Anonymous** sign-in in the Firebase console and deploy [`firestore.rules`](firestore.rules):
+
+```bash
+firebase deploy --only firestore:my-golf-diary
+```
+
+The first sync signs in anonymously. Clubs, rounds, shots, and range sessions then download and upload under `users/{uid}/...`. A newer `updatedAtMs` wins. Deleting a club tells other devices to drop it. The web app stores the same SQLite diary in IndexedDB and uses this sync. Data written earlier under `users/local_user` is not moved.
 
 ## Browser / PWA storage
 
-On the web build, the same SQLite diary runs inside the browser (WASM + IndexedDB). Clubs, notes, rounds, and range sessions stay on that browser and survive a refresh. A new browser, cleared site storage, or the installed Android APK starts its own diary.
+On the web build, the same SQLite diary runs inside the browser (WASM + IndexedDB). Clubs, notes, rounds, and range sessions stay on that browser and survive a refresh. Sync copies them to Firestore so another browser or the Android app signed into the same anonymous user can restore them. A new browser without that user starts its own diary until it syncs.
 
 Before `flutter build web` or `flutter run -d chrome`, generate the web SQLite assets once (or after upgrading `sqflite_common_ffi_web`):
 

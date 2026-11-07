@@ -4,6 +4,7 @@ import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/range_session_log.dart';
+import '../widgets/sync_cloud_button.dart';
 
 class RangeDrillScreen extends StatefulWidget {
   const RangeDrillScreen({super.key});
@@ -99,7 +100,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
         ? 'No range sessions for ${_selectedClub!.name} yet.'
         : 'Saved drills show up here, newest first.';
     return Scaffold(
-      appBar: AppBar(title: const Text('Range Drill Instructor')),
+      appBar: AppBar(title: const Text('Range Drill Instructor'), actions: const [SyncCloudButton()]),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

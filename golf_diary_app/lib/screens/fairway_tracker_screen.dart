@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../models/golf_models.dart';
-import '../services/cloud_sync_service.dart';
 import '../services/local_database_service.dart';
+import '../widgets/sync_cloud_button.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
@@ -201,25 +201,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     await _refreshHoleState();
   }
 
-  Future<void> _sync() async {
-    const userId = 'local_user';
-    final sync = CloudSyncService(userId: userId);
-    if (!sync.isAvailable) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Firebase not configured — local data is saved on device')),
-        );
-      }
-      return;
-    }
-    final count = await sync.syncAll();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Synced $count records to cloud')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final strokes = _holeScore?.strokes ?? _shots.length;
@@ -230,7 +211,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       appBar: AppBar(
         title: const Text('Fairway HUD'),
         actions: [
-          IconButton(onPressed: _sync, icon: const Icon(Icons.cloud_upload_outlined), tooltip: 'Sync'),
+          const SyncCloudButton(),
         ],
       ),
       body: SingleChildScrollView(

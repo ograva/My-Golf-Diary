@@ -568,8 +568,10 @@ class LocalDatabaseService {
     required String lieType,
     required double currentLat,
     required double currentLon,
+    double? distanceYards,
   }) async {
     final db = await database;
+    final simulator = distanceYards != null;
 
     final prevShotMaps = await db.query(
       'shots',
@@ -585,25 +587,27 @@ class LocalDatabaseService {
       final prevShot = ShotRecord.fromMap(prevShotMaps.first);
       strokeNumber = prevShot.strokeNumber + 1;
 
-      final distanceMeters = Geolocator.distanceBetween(
-        prevShot.startLat,
-        prevShot.startLon,
-        currentLat,
-        currentLon,
-      );
-      final distanceYards = distanceMeters * 1.09361;
+      if (!simulator) {
+        final distanceMeters = Geolocator.distanceBetween(
+          prevShot.startLat,
+          prevShot.startLon,
+          currentLat,
+          currentLon,
+        );
+        final traveledYards = distanceMeters * 1.09361;
 
-      await db.update(
-        'shots',
-        {
-          'end_lat': currentLat,
-          'end_lon': currentLon,
-          'distance_yards': distanceYards.roundToDouble(),
-          'is_synced': 0,
-        },
-        where: 'id = ?',
-        whereArgs: [prevShot.id],
-      );
+        await db.update(
+          'shots',
+          {
+            'end_lat': currentLat,
+            'end_lon': currentLon,
+            'distance_yards': traveledYards.roundToDouble(),
+            'is_synced': 0,
+          },
+          where: 'id = ?',
+          whereArgs: [prevShot.id],
+        );
+      }
     }
 
     final newShot = ShotRecord(
@@ -613,8 +617,9 @@ class LocalDatabaseService {
       strokeNumber: strokeNumber,
       clubId: clubId,
       lieType: lieType,
-      startLat: currentLat,
-      startLon: currentLon,
+      startLat: simulator ? 0 : currentLat,
+      startLon: simulator ? 0 : currentLon,
+      distanceYards: simulator ? distanceYards.roundToDouble() : 0,
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 

@@ -17,6 +17,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   static const _lies = ['tee', 'fairway', 'rough', 'bunker', 'green', 'penalty'];
 
   final _courseController = TextEditingController(text: 'Local Course');
+  final _yardsController = TextEditingController();
   final _courseFocus = FocusNode();
 
   List<Club> _clubs = [];
@@ -30,6 +31,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   int _roundTotal = 0;
   bool _busy = false;
   bool _courseReady = false;
+  bool _simulator = false;
+  String? _yardsError;
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     _persistCourseName();
     _courseFocus.dispose();
     _courseController.dispose();
+    _yardsController.dispose();
     super.dispose();
   }
 
@@ -133,21 +137,48 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     );
   }
 
+  double? _typedYards() {
+    final parsed = double.tryParse(_yardsController.text.trim());
+    if (parsed == null || parsed <= 0) {
+      setState(() => _yardsError = 'Enter a distance greater than 0');
+      return null;
+    }
+    setState(() => _yardsError = null);
+    return parsed.roundToDouble();
+  }
+
   Future<void> _recordShot() async {
-    if (_roundId == null || _selectedClub == null || _busy) return;
+    if (_busy) return;
+    final typedYards = _simulator ? _typedYards() : null;
+    if (_simulator && typedYards == null) return;
+    if (_roundId == null || _selectedClub == null) return;
+
     setState(() => _busy = true);
     try {
-      final position = await _readGps();
-      if (position == null) return;
+      if (_simulator) {
+        await LocalDatabaseService.instance.recordFairwayHit(
+          roundId: _roundId!,
+          holeNumber: _holeNumber,
+          clubId: _selectedClub!.id,
+          lieType: _lieType,
+          currentLat: 0,
+          currentLon: 0,
+          distanceYards: typedYards,
+        );
+        _yardsController.clear();
+      } else {
+        final position = await _readGps();
+        if (position == null) return;
 
-      await LocalDatabaseService.instance.recordFairwayHit(
-        roundId: _roundId!,
-        holeNumber: _holeNumber,
-        clubId: _selectedClub!.id,
-        lieType: _lieType,
-        currentLat: position.latitude,
-        currentLon: position.longitude,
-      );
+        await LocalDatabaseService.instance.recordFairwayHit(
+          roundId: _roundId!,
+          holeNumber: _holeNumber,
+          clubId: _selectedClub!.id,
+          lieType: _lieType,
+          currentLat: position.latitude,
+          currentLon: position.longitude,
+        );
+      }
       await _refreshHoleState();
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -217,6 +248,39 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
               textCapitalization: TextCapitalization.words,
               onSubmitted: (_) => _persistCourseName(),
             ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Course'),
+                  selected: !_simulator,
+                  onSelected: (_) => setState(() {
+                    _simulator = false;
+                    _yardsError = null;
+                  }),
+                ),
+                ChoiceChip(
+                  label: const Text('Simulator'),
+                  selected: _simulator,
+                  onSelected: (_) => setState(() => _simulator = true),
+                ),
+              ],
+            ),
+            if (_simulator) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _yardsController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Distance travelled (yds)',
+                  errorText: _yardsError,
+                ),
+                onChanged: (_) {
+                  if (_yardsError != null) setState(() => _yardsError = null);
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -292,7 +356,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
                 child: _busy
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Record Shot at Ball', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    : Text(
+                        _simulator ? 'Record shot' : 'Record Shot at Ball',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
               ),
             ),
             const SizedBox(height: 16),

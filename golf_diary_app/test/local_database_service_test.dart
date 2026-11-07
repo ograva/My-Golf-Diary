@@ -99,6 +99,70 @@ void main() {
     expect(holes.every((hole) => hole.courseName == 'Pebble Beach'), isTrue);
   });
 
+  test('simulator fairway hit stores typed yards and leaves the previous shot', () async {
+    final roundId = await db.startNewRound(courseName: 'Sim');
+    final driver = (await db.getAllClubs()).firstWhere((club) => club.id == 'driver');
+
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 1,
+      clubId: driver.id,
+      lieType: 'tee',
+      currentLat: 1,
+      currentLon: 2,
+      distanceYards: 247.2,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 1,
+      clubId: '7iron',
+      lieType: 'fairway',
+      currentLat: 9,
+      currentLon: 9,
+      distanceYards: 150.8,
+    );
+
+    final shots = await db.getShotsForHole(roundId, 1);
+    expect(shots, hasLength(2));
+    expect(shots.first.distanceYards, 247);
+    expect(shots.first.startLat, 0);
+    expect(shots.first.startLon, 0);
+    expect(shots.first.strokeNumber, 1);
+    expect(shots.last.distanceYards, 151);
+    expect(shots.last.startLat, 0);
+    expect(shots.last.strokeNumber, 2);
+    expect((await db.getHoleScore(roundId, 1))!.strokes, 2);
+    expect((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').avgDistance, driver.avgDistance);
+  });
+
+  test('GPS fairway hit still closes the previous shot and leaves the new one pending', () async {
+    final roundId = await db.startNewRound(courseName: 'Outdoor');
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 1,
+      clubId: 'driver',
+      lieType: 'tee',
+      currentLat: 37.0,
+      currentLon: -122.0,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 1,
+      clubId: '7iron',
+      lieType: 'fairway',
+      currentLat: 37.002,
+      currentLon: -122.0,
+    );
+
+    final shots = await db.getShotsForHole(roundId, 1);
+    expect(shots.first.distanceYards, greaterThan(0));
+    expect(shots.first.endLat, 37.002);
+    expect(shots.last.distanceYards, 0);
+    expect(shots.last.startLat, 37.002);
+  });
+
   test('startNewRound creates a different round while another is still active', () async {
     final first = await db.ensureActiveRound(courseName: 'Morning');
     await Future<void>.delayed(const Duration(milliseconds: 5));

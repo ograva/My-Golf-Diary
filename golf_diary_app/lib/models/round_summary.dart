@@ -4,17 +4,22 @@ class RoundSummary {
     required this.courseName,
     required this.holesRecorded,
     required this.startedAtMs,
+    this.completedAtMs,
   });
 
   final String roundId;
   final String courseName;
   final int holesRecorded;
   final int startedAtMs;
+  final int? completedAtMs;
+
+  bool get isCompleted => completedAtMs != null;
 
   String get label {
     final date = DateTime.fromMillisecondsSinceEpoch(startedAtMs);
     final d = '${date.month}/${date.day}';
-    return '$courseName · $d';
+    final status = isCompleted ? '' : ' · in progress';
+    return '$courseName · $d$status';
   }
 }
 

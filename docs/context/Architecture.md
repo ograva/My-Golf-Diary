@@ -14,7 +14,7 @@
 
 **My Golf Diary** is a **local-first** Flutter app under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`). **On Course** uses **GPS** (`geolocator`): each **`ShotRecord`** stores ball position; segment distance is **Haversine** via `Geolocator.distanceBetween` (meters) converted to **yards** before save.
 
-**Scoring** is **`round_scores`** (per hole). Optional **Firebase** pushes dirty rows to **Firestore** under **`users/{userId}/{table}/{docId}`** (`CloudSyncService`)—upload-only; no pull-merge in v1.
+**Scoring** is **`round_scores`** (per hole). Optional **Firebase** syncs dirty rows with Firestore database **`my-golf-diary`** under **`users/{uid}/{table}/{docId}`**. Sync is pull-then-push, last-write-wins on `updatedAtMs`. Web SQLite (IndexedDB) uses the same path.
 
 ```mermaid
 flowchart LR
@@ -78,7 +78,7 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, **version 1** (`LocalDatabaseService._initDB`).
+**DB:** `golf_diary.db`, **version 3** (`LocalDatabaseService._initDB`). Version 3 adds `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
 
 ### Tables (summary)
 
@@ -126,20 +126,26 @@ Changing this math requires **Version History** + migration if schema changes.
 
 ## 6. Sync & External Services
 
-- **Init:** `initializeFirebase()` in `main.dart` / `cloud_sync_service.dart`—fails soft; app runs local-only.
-- **Configure:** `flutterfire configure` under `golf_diary_app/`.
+- **Init:** `initializeFirebase()` in `main.dart` / `cloud_sync_service.dart` uses [`firebase_options.dart`](../../golf_diary_app/lib/firebase_options.dart). Failure is soft; the app stays local-only.
+- **Database:** named Firestore database `my-golf-diary` via `FirebaseFirestore.instanceFor(databaseId: ...)`. Do not write the `(default)` database.
+- **Identity:** Firebase **Anonymous Auth**. `SyncIdentity.ensureSignedIn()` supplies `users/{uid}`. Enable Anonymous sign-in in the Firebase console before the first sync.
+- **Client config:** `firebase_options.dart` holds the public web client config (API key is not a server secret). Re-run `flutterfire configure` when Android or iOS apps are registered.
 
-**CloudSyncService**
+**CloudSyncService.syncFull**
 
-- `userId`: **`local_user`** in fairway HUD until auth (PRD).
-- Tables: `clubs`, `shots`, `round_scores`, `range_drills` — rows with `is_synced = 0` →  
-  `FirebaseFirestore.instance.collection('users').doc(userId).collection(table).doc(id).set(row, merge: true)`, then **`markSynced`**.
+1. **Pull** every doc in `users/{uid}/{table}` for `clubs`, `shots`, `round_scores`, `range_drills`.
+2. **Last-write-wins:** remote `updatedAtMs` newer than local `updated_at_ms` replaces the row (`is_synced = 1`). A remote `deleted: true` tombstone removes the local row. An equal or older remote leaves the local row.
+3. **Push** rows with `is_synced = 0`. A failed write stays dirty. A pushed tombstone is then removed locally; the cloud doc stays so other devices can see the delete.
 
-**v1:** one-device push only; no conflict resolution or Firestore → SQLite pull.
+Club delete is a tombstone (`deleted = 1`), not an immediate local `DELETE`, so the next sync can tell other devices.
 
-### Firestore security rules (production)
+### Firestore security rules
 
-Use **per-user isolation** (adjust if you nest data differently):
+Rules live in [`firestore.rules`](../../firestore.rules) and [`firebase.json`](../../firebase.json) targets database `my-golf-diary`. Deploy them on that database, not `(default)`:
+
+```bash
+firebase deploy --only firestore:my-golf-diary
+```
 
 ```
 rules_version = '2';
@@ -152,22 +158,22 @@ service cloud.firestore {
 }
 ```
 
-**Pre-auth:** use **emulator** with test rules, or **Anonymous Auth** and set `userId` to `Auth.uid`. **Do not** ship `allow read, write: if true` on user paths.
+**Do not** ship `allow read, write: if true` on user paths. Rows previously stored under `users/local_user` are not migrated.
 
 ---
 
 ## 7. Security & Privacy
 
 - SQLite at rest = OS defaults; no app-level encryption in v1.
-- No API keys committed; use FlutterFire-generated config per platform.
-- Sync exposes data to cloud—**rules + auth** before production use.
+- `firebase_options.dart` is public client config. Do not commit server credentials or service-account JSON.
+- Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
 
 ---
 
 ## 8. Performance, Platform & Testing
 
 - **GPS:** one `getCurrentPosition` per “Record Shot”—no streaming loop.
-- **DB:** v1 has no `onUpgrade`; future migrations bump version with upgrade handlers.
+- **DB:** version 3. `onUpgrade` adds v2 club brand/model and range venue, then v3 sync columns.
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -203,3 +209,4 @@ Background location **not** required for current flows.
 | :--- | :--- | :--- | :--- |
 | 0.1 | — | — | Stub |
 | 1.0 | 2026-11-06 | Watson | Full tech spec: strokes vs shots, yards, RNGE→club, Firestore rules, iOS plist |
+| 1.1 | 2026-11-07 | Watson | Named Firestore `my-golf-diary`, anonymous auth, pull-then-push LWW, tombstones |

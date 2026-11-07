@@ -1,50 +1,99 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import '../firebase_options.dart';
+import 'diary_remote.dart';
 import 'local_database_service.dart';
+import 'sync_constants.dart';
+import 'sync_identity.dart';
+import 'sync_merge.dart';
 
-/// Pushes locally dirty rows to Firestore under users/{userId}/...
+class SyncResult {
+  const SyncResult({this.pushed = 0, this.failed = 0, this.pulled = 0});
+
+  final int pushed;
+  final int failed;
+  final int pulled;
+}
+
+/// Pulls newer Firestore rows, then pushes dirty local rows.
 class CloudSyncService {
   CloudSyncService({
     required this.userId,
     LocalDatabaseService? database,
-  }) : _db = database ?? LocalDatabaseService.instance;
+    DiaryRemote? remote,
+  })  : _db = database ?? LocalDatabaseService.instance,
+        _remote = remote;
 
   final String userId;
   final LocalDatabaseService _db;
+  final DiaryRemote? _remote;
 
-  static const _tables = ['clubs', 'shots', 'round_scores', 'range_drills'];
+  bool get isAvailable => _remote != null || Firebase.apps.isNotEmpty;
 
-  bool get isAvailable => Firebase.apps.isNotEmpty;
+  DiaryRemote get _store => _remote ?? FirestoreDiaryRemote();
 
-  Future<int> syncAll() async {
-    if (!isAvailable) return 0;
-
-    var pushed = 0;
-    for (final table in _tables) {
-      pushed += await _syncTable(table);
-    }
-    return pushed;
+  Future<SyncResult> syncFull() async {
+    if (!isAvailable) return const SyncResult();
+    final pulled = await pullAll();
+    final push = await syncAll();
+    return SyncResult(pushed: push.pushed, failed: push.failed, pulled: pulled);
   }
 
-  Future<int> _syncTable(String table) async {
-    final firestore = FirebaseFirestore.instance;
-    final collection = firestore.collection('users').doc(userId).collection(table);
-    final rows = await _db.getUnsynced(table);
+  Future<int> pullAll() async {
+    if (!isAvailable) return 0;
+    var applied = 0;
+    for (final table in kSyncTables) {
+      final remoteRows = await _store.listDocuments(userId, table);
+      for (final remote in remoteRows) {
+        if (await _db.applyRemoteRow(table, remote)) applied += 1;
+      }
+    }
+    await _db.setLastPulledAt(DateTime.now().millisecondsSinceEpoch);
+    return applied;
+  }
 
+  Future<SyncResult> syncAll() async {
+    if (!isAvailable) return const SyncResult();
+    var pushed = 0;
+    var failed = 0;
+    for (final table in kSyncTables) {
+      final outcome = await _syncTable(table);
+      pushed += outcome.pushed;
+      failed += outcome.failed;
+    }
+    return SyncResult(pushed: pushed, failed: failed);
+  }
+
+  Future<SyncResult> _syncTable(String table) async {
+    final rows = await _db.prepareUnsyncedForPush(table);
+    var pushed = 0;
+    var failed = 0;
     for (final row in rows) {
       final id = row['id'] as String;
-      await collection.doc(id).set(row, SetOptions(merge: true));
-      await _db.markSynced(table, id);
+      final updatedAt = readUpdatedAtMs(row);
+      final payload = <String, dynamic>{
+        ...row,
+        'updated_at_ms': updatedAt,
+        'updatedAtMs': updatedAt,
+        'deleted': readDeleted(row),
+      };
+      try {
+        await _store.setDocument(userId, table, id, payload);
+        await _db.finishPush(table, id, row);
+        pushed += 1;
+      } catch (_) {
+        failed += 1;
+      }
     }
-    return rows.length;
+    return SyncResult(pushed: pushed, failed: failed);
   }
 }
 
 Future<bool> initializeFirebase() async {
   if (Firebase.apps.isNotEmpty) return true;
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await SyncIdentity.ensureSignedIn();
     return true;
   } catch (_) {
     return false;

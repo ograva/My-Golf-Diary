@@ -104,19 +104,23 @@ As **Riley**, I want **min/max/avg + notes + save** so **the session is recorded
 
 ### SYNC — Cloud sync (optional)
 
-**Overview:** Firestore push of unsynced rows for `clubs`, `shots`, `round_scores`, `range_drills` under `users/{userId}/...`; default user id until auth.
+**Overview:** Bidirectional sync of `clubs`, `shots`, `round_scores`, and `range_drills` with Firestore database `my-golf-diary` under `users/{uid}/...`. The same path serves the phone and the web PWA (IndexedDB). Anonymous Auth supplies `uid`.
 
 **SYNC-001 — Firebase optional at launch**  
 As **any user**, I want **app to run without Firebase** so **local always works**.  
-**AC:** (1) Init failure doesn’t crash app. (2) `CloudSyncService.isAvailable` reflects Firebase. (3) README configure path stays valid. (4) No secrets in repo.
+**AC:** (1) Init failure doesn’t crash app. (2) `CloudSyncService.isAvailable` reflects Firebase or an injected remote. (3) README configure path stays valid. (4) No server secrets in repo. Public client config may live in `firebase_options.dart`.
 
-**SYNC-002 — Manual upload**  
-As **Rory**, I want **sync from HUD** when online.  
-**AC:** (1) If unavailable → snackbar “local only”. (2) If available → run `syncAll` + count message. (3) Rows marked synced after push. (4) No infinite dup push in normal path.
+**SYNC-002 — Manual sync**  
+As **Rory**, I want **sync from any tab** when online.  
+**AC:** (1) If unavailable → snackbar “local only”. (2) If available → `syncFull` reports pulled and pushed counts. (3) Successful pushes are marked synced. A failed write stays dirty. (4) No infinite dup push in the normal path.
 
-**SYNC-003 — Identity placeholder**  
-As **product**, we need **documented `userId`** until auth.  
-**AC:** (1) Default id (e.g. `local_user`) called out in README/Architecture. (2) Path stays `users/{userId}/...`. (3) Real auth = future epic. (4) Migration ownership listed in §7.
+**SYNC-003 — Anonymous identity**  
+As **product**, each install syncs as its Firebase anonymous user.  
+**AC:** (1) `SyncIdentity.ensureSignedIn()` is the user id. (2) Path stays `users/{uid}/...` on database `my-golf-diary`. (3) Linking Google or email is a later epic. (4) Old `users/local_user` data is not migrated automatically.
+
+**SYNC-004 — Pull and last-write-wins**  
+As **Rory**, I want **another browser or phone to pick up my diary**.  
+**AC:** (1) Pull applies a remote row only when its `updatedAtMs` is newer. (2) A remote tombstone removes the local row. (3) Deleting a club uploads a tombstone before the local row disappears. (4) PWA and mobile share this behavior.
 
 ---
 
@@ -153,7 +157,7 @@ As **product**, we need **documented `userId`** until auth.
 3. **Social** / live leaderboards / multiplayer real-time sync.  
 4. **Auto** launch-monitor **Bluetooth** (manual/sim entry v1).  
 5. **Watch-first** capture.  
-6. **Web** client.
+6. A separate non-Flutter web client. The Flutter PWA is in scope for sync.
 
 ---
 
@@ -165,10 +169,10 @@ As **product**, we need **documented `userId`** until auth.
 | RNGE aggregates: overwrite vs blend vs history-only? | Watson |
 | Source of truth if shot count ≠ scorecard strokes? | Watson (document in Architecture) |
 | iOS **Info.plist** location strings | Watson |
-| Auth migration from `local_user` | Product + Watson |
+| Linking anonymous uid to Google or email, and migrating `local_user` | Product + Watson |
 | Analytics for Brief KPIs | Jason + Watson |
 
-**Dependency:** Optional Firebase via `flutterfire configure`; `initializeFirebase` in `main.dart`.
+**Dependency:** Firebase project `novusinc-8df79`, Firestore database `my-golf-diary`, Anonymous Auth enabled, and `firestore.rules` deployed to that database. `initializeFirebase` in `main.dart`.
 
 ---
 
@@ -190,3 +194,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | Ver | Date | Summary |
 | :--- | :--- | :--- |
 | 1.0 | 2026-11-06 | From ProjectBrief v1.0 + code surfaces |
+| 1.1 | 2026-11-07 | SYNC-004 pull/merge, anonymous uid, PWA in scope for sync |

@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "my-golf-diary",
+      "rules": "firestore.rules"
+    }
+  ]
+}

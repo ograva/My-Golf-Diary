@@ -4,6 +4,7 @@ import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/range_session_log.dart';
+import '../widgets/sync_cloud_button.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key});
@@ -103,7 +104,7 @@ class ClubsScreenState extends State<ClubsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Bag')),
+      appBar: AppBar(title: const Text('My Bag'), actions: const [SyncCloudButton()]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addClub,
         tooltip: 'Add club',

@@ -4,6 +4,7 @@ import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sync_cloud_button.dart';
 import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
@@ -96,7 +97,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final courseName = _totals?.courseName ?? 'No round selected';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Scorecard')),
+      appBar: AppBar(title: const Text('Scorecard'), actions: const [SyncCloudButton()]),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(key: ValueKey('scorecard-loading')),

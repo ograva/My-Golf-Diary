@@ -50,3 +50,22 @@ flutter precache --linux
   cd golf_diary_app
   flutter pub get
 )
+
+# uv and the Graphify CLI. Login shells skip ~/.bashrc, so expose the
+# binaries from /usr/local/bin. The PyPI package is graphifyy; the command
+# is graphify. `graphify cursor install` registers the Cursor rule/skill.
+UV_BIN="${HOME}/.local/bin"
+if ! command -v uv >/dev/null 2>&1; then
+  curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh
+fi
+sudo ln -sfn "${UV_BIN}/uv" /usr/local/bin/uv
+sudo ln -sfn "${UV_BIN}/uvx" /usr/local/bin/uvx
+export PATH="/usr/local/bin:${UV_BIN}:${PATH}"
+
+uv tool install graphifyy
+sudo ln -sfn "${UV_BIN}/graphify" /usr/local/bin/graphify
+if [ -x "${UV_BIN}/graphify-mcp" ]; then
+  sudo ln -sfn "${UV_BIN}/graphify-mcp" /usr/local/bin/graphify-mcp
+fi
+
+graphify cursor install

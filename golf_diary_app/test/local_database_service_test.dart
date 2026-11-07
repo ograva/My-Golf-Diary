@@ -189,4 +189,40 @@ void main() {
     expect(earlier.single.courseName, 'Morning');
     expect((await db.getScoresForRound(second)).single.courseName, 'Afternoon');
   });
+
+  test('finish hole advances the resume hole and deleting a shot renumbers', () async {
+    final roundId = await db.startNewRound(courseName: 'Resume');
+    expect(await db.currentHoleNumber(roundId), 1);
+    await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
+    expect(await db.currentHoleNumber(roundId), 2);
+
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 2,
+      clubId: 'driver',
+      lieType: 'tee',
+      currentLat: 0,
+      currentLon: 0,
+      distanceYards: 200,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 2,
+      clubId: '7iron',
+      lieType: 'tee',
+      currentLat: 0,
+      currentLon: 0,
+      distanceYards: 140,
+    );
+    final first = (await db.getShotsForHole(roundId, 2)).first;
+    await db.updateShotDetails(shotId: first.id, clubId: 'driver', lieType: 'rough');
+    expect((await db.getShotsForHole(roundId, 2)).first.lieType, 'rough');
+
+    await db.deleteShot(first);
+    final left = await db.getShotsForHole(roundId, 2);
+    expect(left, hasLength(1));
+    expect(left.single.strokeNumber, 1);
+    expect((await db.getHoleScore(roundId, 2))!.strokes, 1);
+  });
 }

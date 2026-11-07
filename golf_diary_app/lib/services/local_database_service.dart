@@ -455,6 +455,48 @@ class LocalDatabaseService {
     await upsertHoleScore(score);
   }
 
+  /// Highest hole row on the round. Finish Hole creates that row, so On Course resumes there.
+  Future<int> currentHoleNumber(String roundId) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      'SELECT MAX(hole_number) AS hole FROM round_scores WHERE round_id = ?',
+      [roundId],
+    );
+    return (rows.first['hole'] as int?) ?? 1;
+  }
+
+  Future<void> updateShotDetails({
+    required String shotId,
+    required String clubId,
+    required String lieType,
+  }) async {
+    final db = await database;
+    await db.update(
+      'shots',
+      {'club_id': clubId, 'lie_type': lieType, 'is_synced': 0},
+      where: 'id = ?',
+      whereArgs: [shotId],
+    );
+  }
+
+  /// Removes a shot and renumbers the strokes left on that hole.
+  Future<void> deleteShot(ShotRecord shot) async {
+    final db = await database;
+    await db.delete('shots', where: 'id = ?', whereArgs: [shot.id]);
+    final remaining = await getShotsForHole(shot.roundId, shot.holeNumber);
+    for (var i = 0; i < remaining.length; i++) {
+      final stroke = i + 1;
+      if (remaining[i].strokeNumber == stroke) continue;
+      await db.update(
+        'shots',
+        {'stroke_number': stroke, 'is_synced': 0},
+        where: 'id = ?',
+        whereArgs: [remaining[i].id],
+      );
+    }
+    await syncStrokeCountFromShots(shot.roundId, shot.holeNumber);
+  }
+
   Future<List<ShotRecord>> getShotsForHole(String roundId, int holeNumber) async {
     final db = await database;
     final rows = await db.query(

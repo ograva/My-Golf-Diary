@@ -23,6 +23,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   List<Club> _clubs = [];
   String? _roundId;
   int _holeNumber = 1;
+  int _maxHole = 1;
   int _par = 4;
   Club? _selectedClub;
   String _lieType = 'tee';
@@ -64,6 +65,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     );
     await _loadCourseName();
     _courseReady = true;
+    await _restoreHole();
     await _refreshHoleState();
   }
 
@@ -86,17 +88,48 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   Future<void> reloadActiveRound() async {
     final active = await LocalDatabaseService.instance.getActiveRoundId();
     if (!mounted || active == null) return;
-    final changed = active != _roundId;
     _roundId = active;
-    if (changed) {
-      _holeNumber = 1;
-      _lieType = 'tee';
-      _par = 4;
-    }
     _clubs = await LocalDatabaseService.instance.getAllClubs();
     await _loadCourseName();
     _courseReady = true;
+    await _restoreHole();
     await _refreshHoleState();
+  }
+
+  Future<void> _restoreHole() async {
+    if (_roundId == null) return;
+    final hole = await LocalDatabaseService.instance.currentHoleNumber(_roundId!);
+    if (!mounted) return;
+    setState(() {
+      _maxHole = hole;
+      _holeNumber = hole;
+      _lieType = 'tee';
+    });
+  }
+
+  Future<void> _stepHole(int delta) async {
+    final next = _holeNumber + delta;
+    if (next < 1 || next > _maxHole) return;
+    setState(() {
+      _holeNumber = next;
+      _lieType = 'tee';
+    });
+    await _refreshHoleState();
+  }
+
+  String _clubName(String clubId) {
+    for (final club in _clubs) {
+      if (club.id == clubId) return club.name;
+    }
+    return clubId;
+  }
+
+  Future<void> _editShot(ShotRecord shot) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => ShotEditDialog(shot: shot, clubs: _clubs, lies: _lies),
+    );
+    if (saved == true) await _refreshHoleState();
   }
 
   Future<void> _refreshHoleState() async {
@@ -195,6 +228,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     if (_holeNumber < 18) {
       setState(() {
         _holeNumber += 1;
+        _maxHole = _holeNumber;
         _lieType = 'tee';
       });
     }
@@ -283,9 +317,21 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
             ],
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Hole $_holeNumber', style: Theme.of(context).textTheme.headlineSmall),
+                IconButton(
+                  key: const Key('on-course-hole-previous'),
+                  tooltip: 'Previous hole',
+                  onPressed: _holeNumber > 1 ? () => _stepHole(-1) : null,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text('Hole $_holeNumber', key: const Key('on-course-hole-label'), style: Theme.of(context).textTheme.headlineSmall),
+                IconButton(
+                  key: const Key('on-course-hole-next'),
+                  tooltip: 'Next hole',
+                  onPressed: _holeNumber < _maxHole ? () => _stepHole(1) : null,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+                const Spacer(),
                 Text('Round total: $_roundTotal', style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
@@ -424,17 +470,105 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
               const SizedBox(height: 8),
               ..._shots.map(
                 (s) => ListTile(
+                  key: ValueKey('on-course-shot-${s.id}'),
                   dense: true,
-                  title: Text('Stroke ${s.strokeNumber} · ${s.lieType} · ${s.clubId}'),
+                  onTap: () => _editShot(s),
+                  title: Text('Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}'),
                   subtitle: Text(
                     s.distanceYards > 0 ? '${s.distanceYards.round()} yds' : 'Distance pending',
                   ),
+                  trailing: const Icon(Icons.edit_outlined),
                 ),
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+@visibleForTesting
+class ShotEditDialog extends StatefulWidget {
+  const ShotEditDialog({super.key, required this.shot, required this.clubs, required this.lies});
+
+  final ShotRecord shot;
+  final List<Club> clubs;
+  final List<String> lies;
+
+  @override
+  State<ShotEditDialog> createState() => _ShotEditDialogState();
+}
+
+class _ShotEditDialogState extends State<ShotEditDialog> {
+  late String _lie = widget.shot.lieType;
+  late String _clubId = widget.shot.clubId;
+
+  Future<void> _save() async {
+    await LocalDatabaseService.instance.updateShotDetails(
+      shotId: widget.shot.id,
+      clubId: _clubId,
+      lieType: _lie,
+    );
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  Future<void> _delete() async {
+    await LocalDatabaseService.instance.deleteShot(widget.shot);
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clubs = widget.clubs.any((club) => club.id == _clubId)
+        ? widget.clubs
+        : [...widget.clubs, Club(id: _clubId, name: _clubId, category: 'other')];
+    return AlertDialog(
+      title: Text('Stroke ${widget.shot.strokeNumber}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _clubId,
+              decoration: const InputDecoration(labelText: 'Club'),
+              items: clubs
+                  .map((club) => DropdownMenuItem(value: club.id, child: Text(club.name)))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _clubId = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: widget.lies.map((lie) {
+                final label = lie[0].toUpperCase() + lie.substring(1);
+                return ChoiceChip(
+                  label: Text(label),
+                  selected: _lie == lie,
+                  onSelected: (_) => setState(() => _lie = lie),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('on-course-shot-delete'),
+          onPressed: _delete,
+          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+          child: const Text('Delete shot'),
+        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          key: const Key('on-course-shot-save'),
+          onPressed: _save,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

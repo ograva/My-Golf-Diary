@@ -78,6 +78,21 @@ void main() {
     expect(log.first.clubName, '7 Iron');
     expect(log.last.drill.venueName, 'Topgolf');
     expect(await db.getClubYardageTrend(club.id), [140, 150]);
+
+    final driver = (await db.getAllClubs()).firstWhere((item) => item.id == 'driver');
+    await db.saveRangeDrill(RangeDrillLog(
+      id: 'drill_driver',
+      clubId: driver.id,
+      shotCount: 10,
+      minYards: 200,
+      maxYards: 240,
+      avgYards: 220,
+      timestamp: 3000,
+    ));
+
+    final ironOnly = await db.listRangeDrills(clubId: club.id);
+    expect(ironOnly.map((entry) => entry.drill.id), ['drill_new', 'drill_old']);
+    expect(await db.listRangeDrills(clubId: 'missing'), isEmpty);
   });
 
   test('updateCourseName rewrites every hole in the round', () async {

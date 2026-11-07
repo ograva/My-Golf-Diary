@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/range_session_log.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key});
@@ -44,6 +45,17 @@ class ClubsScreenState extends State<ClubsScreen> {
       SnackBar(content: Text('Saved swing notes for ${club.name}'), backgroundColor: AppColors.green),
     );
     await reload();
+  }
+
+  Future<void> _showRangeLogs(Club club) async {
+    final sessions = await LocalDatabaseService.instance.listRangeDrills(clubId: club.id);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => ClubRangeLogSheet(club: club, sessions: sessions),
+    );
   }
 
   Future<void> _editNotes(Club club) async {
@@ -184,13 +196,26 @@ class ClubsScreenState extends State<ClubsScreen> {
                                         )
                                     : Theme.of(context).textTheme.bodyMedium,
                               ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () => _editNotes(club),
-                                  icon: const Icon(Icons.edit_outlined),
-                                  label: const Text('Edit notes'),
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: TextButton.icon(
+                                      key: ValueKey('bag-range-logs-${club.id}'),
+                                      onPressed: () => _showRangeLogs(club),
+                                      icon: const Icon(Icons.history),
+                                      label: Text(
+                                        'Range logs (${_trends[club.id]?.length ?? 0})',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () => _editNotes(club),
+                                    icon: const Icon(Icons.edit_outlined),
+                                    label: const Text('Edit notes'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -200,6 +225,49 @@ class ClubsScreenState extends State<ClubsScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+class ClubRangeLogSheet extends StatelessWidget {
+  const ClubRangeLogSheet({super.key, required this.club, required this.sessions});
+
+  final Club club;
+  final List<RangeDrillSummary> sessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height * 0.6;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: SizedBox(
+          height: height,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(club.name, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Past range sessions',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: RangeSessionLog(
+                    sessions: sessions,
+                    showClubName: false,
+                    emptyMessage: 'No range sessions for ${club.name} yet.',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

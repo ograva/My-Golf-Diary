@@ -216,14 +216,16 @@ class LocalDatabaseService {
     }
   }
 
-  Future<List<RangeDrillSummary>> listRangeDrills() async {
+  /// Newest session first. [clubId] limits the log to one club.
+  Future<List<RangeDrillSummary>> listRangeDrills({String? clubId}) async {
     final db = await database;
     final rows = await db.rawQuery('''
       SELECT range_drills.*, clubs.name AS club_name
       FROM range_drills
       LEFT JOIN clubs ON clubs.id = range_drills.club_id
+      ${clubId == null ? '' : 'WHERE range_drills.club_id = ?'}
       ORDER BY range_drills.timestamp DESC
-    ''');
+    ''', clubId == null ? null : [clubId]);
     return rows.map((row) {
       final name = row['club_name'] as String?;
       return RangeDrillSummary(

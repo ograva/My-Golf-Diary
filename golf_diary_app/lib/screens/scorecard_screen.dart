@@ -96,47 +96,52 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final courseName = _totals?.courseName ?? 'No round selected';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scorecard'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: loadScorecard),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Scorecard')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(key: ValueKey('scorecard-loading')),
+            )
           : RefreshIndicator(
               onRefresh: loadScorecard,
               child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_recentRounds.isEmpty)
                     Card(
+                      key: const ValueKey('scorecard-empty-state'),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text('No rounds yet. Track shots on the On Course tab or start a round here.'),
+                            const Text(
+                              'No rounds yet. Track shots on On Course or start a round here.',
+                            ),
                             const SizedBox(height: 12),
-                            ElevatedButton(onPressed: _startNewRound, child: const Text('Start new round')),
+                            FilledButton(
+                              key: const ValueKey('scorecard-new-round-btn'),
+                              onPressed: _startNewRound,
+                              child: const Text('Start new round'),
+                            ),
                           ],
                         ),
                       ),
                     )
                   else ...[
-                    Text(courseName, style: Theme.of(context).textTheme.titleLarge),
+                    Text(courseName, style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     if (_recentRounds.length > 1)
                       SizedBox(
-                        height: 40,
+                        height: 48,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: _recentRounds.map((summary) {
-                            final label = summary.label;
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
-                                label: Text(label, overflow: TextOverflow.ellipsis),
+                                key: ValueKey('scorecard-round-chip-${summary.roundId}'),
+                                label: Text(summary.label, overflow: TextOverflow.ellipsis),
                                 selected: _selectedRoundId == summary.roundId,
                                 onSelected: (_) {
                                   setState(() => _selectedRoundId = summary.roundId);
@@ -149,15 +154,13 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                     const SizedBox(height: 12),
                     _SummaryBanner(totals: _totals),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap any hole to enter or edit scores manually.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 12),
-                    _ScorecardTable(holeRow: _holeRow, onHoleTap: _editHole),
+                    const SizedBox(height: 16),
+                    _NineGrid(title: 'FRONT 9', startHole: 1, holeRow: _holeRow, onHoleTap: _editHole),
+                    const SizedBox(height: 16),
+                    _NineGrid(title: 'BACK 9', startHole: 10, holeRow: _holeRow, onHoleTap: _editHole),
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
+                      key: const ValueKey('scorecard-new-round-btn'),
                       onPressed: _startNewRound,
                       icon: const Icon(Icons.add),
                       label: const Text('Start new round'),
@@ -217,12 +220,10 @@ class _SummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (totals == null) {
-      return const SizedBox.shrink();
-    }
+    if (totals == null) return const SizedBox.shrink();
     final t = totals!;
     return Card(
-      color: AppColors.amber.withOpacity(0.12),
+      key: const ValueKey('scorecard-summary-banner'),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -230,9 +231,9 @@ class _SummaryBanner extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _SummaryCell(label: 'Out', value: '${t.frontNineScore}', sub: _toParLabel(t.frontNineToPar)),
-                _SummaryCell(label: 'In', value: '${t.backNineScore}', sub: _toParLabel(t.backNineToPar)),
-                _SummaryCell(label: 'Total', value: '${t.totalScore}', sub: _toParLabel(t.totalToPar)),
+                _SummaryCell(label: 'OUT', value: '${t.frontNineScore}', toPar: t.frontNineToPar),
+                _SummaryCell(label: 'IN', value: '${t.backNineScore}', toPar: t.backNineToPar),
+                _SummaryCell(label: 'TOT', value: '${t.totalScore}', toPar: t.totalToPar),
               ],
             ),
             if (t.penaltiesTotal > 0 || t.mulligansTotal > 0) ...[
@@ -247,80 +248,72 @@ class _SummaryBanner extends StatelessWidget {
       ),
     );
   }
-
-  String _toParLabel(int toPar) {
-    if (toPar == 0) return 'E';
-    if (toPar > 0) return '+$toPar';
-    return '$toPar';
-  }
 }
 
 class _SummaryCell extends StatelessWidget {
-  const _SummaryCell({required this.label, required this.value, required this.sub});
+  const _SummaryCell({required this.label, required this.value, required this.toPar});
 
   final String label;
   final String value;
-  final String sub;
+  final int toPar;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Text(label, style: Theme.of(context).textTheme.labelMedium),
-        Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-        Text(sub, style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+        Text(value, style: GolfTextStyles.tabularNum(context, fontSize: 28)),
+        Text(_toParLabel(toPar), style: _deltaStyle(context, toPar)),
       ],
     );
   }
 }
 
-class _ScorecardTable extends StatelessWidget {
-  const _ScorecardTable({required this.holeRow, required this.onHoleTap});
+class _NineGrid extends StatelessWidget {
+  const _NineGrid({
+    required this.title,
+    required this.startHole,
+    required this.holeRow,
+    required this.onHoleTap,
+  });
 
+  final String title;
+  final int startHole;
   final RoundScore? Function(int holeNumber) holeRow;
   final Future<void> Function(int holeNumber) onHoleTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          const _ScorecardHeaderRow(),
-          const Divider(height: 1),
-          for (var hole = 1; hole <= 18; hole++) ...[
-            _ScorecardDataRow(hole: hole, row: holeRow(hole), onTap: () => onHoleTap(hole)),
-            if (hole == 9) const Divider(height: 1, thickness: 2),
-          ],
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        for (var row = 0; row < 3; row++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                for (var col = 0; col < 3; col++) ...[
+                  if (col > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: _HoleTile(
+                      hole: startHole + row * 3 + col,
+                      row: holeRow(startHole + row * 3 + col),
+                      onTap: () => onHoleTap(startHole + row * 3 + col),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _ScorecardHeaderRow extends StatelessWidget {
-  const _ScorecardHeaderRow();
-
-  @override
-  Widget build(BuildContext context) {
-    const style = TextStyle(fontWeight: FontWeight.bold, fontSize: 13);
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          Expanded(flex: 2, child: Text('Hole', style: style)),
-          Expanded(child: Text('Par', style: style, textAlign: TextAlign.center)),
-          Expanded(child: Text('Str', style: style, textAlign: TextAlign.center)),
-          Expanded(child: Text('Pen', style: style, textAlign: TextAlign.center)),
-          Expanded(child: Text('Tot', style: style, textAlign: TextAlign.center)),
-          Expanded(child: Text('+/-', style: style, textAlign: TextAlign.center)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ScorecardDataRow extends StatelessWidget {
-  const _ScorecardDataRow({required this.hole, required this.row, required this.onTap});
+class _HoleTile extends StatelessWidget {
+  const _HoleTile({required this.hole, required this.row, required this.onTap});
 
   final int hole;
   final RoundScore? row;
@@ -328,75 +321,67 @@ class _ScorecardDataRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final played = row != null && isHolePlayed(row!);
+    final conceded = row?.conceded == 1;
     final par = row?.par ?? 4;
-    final strokes = row?.strokes ?? 0;
-    final penalties = row?.penalties ?? 0;
     final total = row != null ? effectiveHoleScore(row!) : 0;
     final toPar = played ? total - par : null;
-    final conceded = row?.conceded == 1;
 
-    Color? rowColor;
+    Color? fill;
     if (conceded) {
-      rowColor = Colors.grey.shade200;
-    } else if (played && toPar != null) {
-      if (toPar <= -1) rowColor = Colors.blue.shade50;
-      if (toPar >= 1) rowColor = Colors.orange.shade50;
+      fill = scheme.surfaceContainerHigh;
+    } else if (played && toPar != null && toPar < 0) {
+      fill = scheme.primaryContainer;
+    } else if (played && toPar != null && toPar > 0) {
+      fill = scheme.errorContainer;
     }
 
-    String toParText = '—';
-    if (toPar != null) {
-      if (toPar == 0) {
-        toParText = 'E';
-      } else if (toPar > 0) {
-        toParText = '+$toPar';
-      } else {
-        toParText = '$toPar';
-      }
-    }
+    final bottom = conceded
+        ? 'Gimme'
+        : toPar == null
+            ? '—'
+            : _toParLabel(toPar);
 
     return Material(
-      color: rowColor,
+      color: fill ?? scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
+        key: ValueKey('scorecard-hole-tile-$hole'),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 72,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                flex: 2,
-                child: Row(
-                  children: [
-                    Text('$hole${conceded ? ' *' : ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade600),
-                  ],
-                ),
+              Text('$hole', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                played ? '$total' : '—',
+                style: GolfTextStyles.tabularNum(context, fontSize: 20),
               ),
-          Expanded(child: Text(played || row != null ? '$par' : '—', textAlign: TextAlign.center)),
-          Expanded(child: Text(played ? '$strokes' : '—', textAlign: TextAlign.center)),
-          Expanded(child: Text(penalties > 0 ? '$penalties' : '—', textAlign: TextAlign.center)),
-          Expanded(
-            child: Text(
-              played ? '$total' : '—',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              toParText,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: toPar != null && toPar > 0 ? Colors.deepOrange : AppColors.green,
+              Text(
+                bottom,
+                style: conceded
+                    ? Theme.of(context).textTheme.labelSmall
+                    : (toPar == null ? Theme.of(context).textTheme.labelSmall : _deltaStyle(context, toPar)),
               ),
-            ),
-          ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+String _toParLabel(int toPar) {
+  if (toPar == 0) return 'E';
+  if (toPar > 0) return '+$toPar';
+  return '$toPar';
+}
+
+TextStyle _deltaStyle(BuildContext context, int toPar) {
+  if (toPar < 0) return GolfTextStyles.scorePositive(context, fontSize: 12);
+  if (toPar > 0) return GolfTextStyles.scoreNegative(context, fontSize: 12);
+  return GolfTextStyles.tabularNum(context, fontSize: 12, fontWeight: FontWeight.w600);
 }

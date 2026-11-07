@@ -128,7 +128,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       return null;
     }
 
-    return Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
   }
 
   Future<void> _recordShot() async {

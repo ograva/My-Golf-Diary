@@ -1,0 +1,21 @@
+---
+description: My Golf Diary — planning docs, app root, persona usage
+alwaysApply: true
+---
+
+# My Golf Diary — project context
+
+- **App code:** [`golf_diary_app/`](../../golf_diary_app/) (Flutter/Dart). Run `flutter pub get` and `flutter run` from that directory.
+- **Planning docs (canonical):**
+  - [`docs/context/ProjectBrief.md`](../../docs/context/ProjectBrief.md) — strategy & scope (Mary)
+  - [`docs/context/PRD.md`](../../docs/context/PRD.md) — requirements & modules (Jason)
+  - [`docs/context/Architecture.md`](../../docs/context/Architecture.md) — stack, structure, **Constraints & non-negotiables** (Watson)
+- **Stack rules:** There is no separate `CONSTRAINTS.md`; follow **§ Constraints & non-negotiables** in `Architecture.md`.
+
+## Using cohort personas in Cursor
+
+1. In Chat or Composer, **@**-mention the persona file under [`cohorts/`](../../cohorts/) (e.g. `@cohorts/jason.agent.md`).
+2. Before executing their workflow, read the **prerequisite** `docs/context/*.md` files listed in that cohort (typically `ProjectBrief` → `PRD` → `Architecture`).
+3. **Handoffs:** cohort YAML may list `handoffs` with suggested prompts — copy the prompt into a new turn and @ the next persona when moving downstream.
+
+See [`AGENTS.md`](../../AGENTS.md) for the full roster and doc flow.

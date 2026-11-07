@@ -9,20 +9,46 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
+  google_fonts: ^9.0.0       # Playfair Display · Inter · Roboto Mono
   sqflite: ^2.3.0
   path: ^1.9.0
-  geolocator: ^11.0.0
-  firebase_core: ^2.30.0
-  cloud_firestore: ^4.17.0
+  geolocator: ^14.1.2
+  firebase_core: ^5.1.0
+  cloud_firestore: ^7.1.0
   provider: ^6.1.2
+  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^1.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  sqflite_common_ffi: ^2.3.3
-  sqlite3: ^2.4.0
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  sqlite3: ^3.9.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/app-icon.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#1A5E3A"
+  adaptive_icon_foreground: assets/images/app-icon.png
+  web:
+    generate: true
+    image_path: assets/images/app-icon.png
+    background_color: "#1A5E3A"
+    theme_color: "#1A5E3A"
+  windows:
+    generate: true
+    image_path: assets/images/app-icon.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/images/app-icon.png
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/app-icon.png

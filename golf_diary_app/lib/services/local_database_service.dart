@@ -39,7 +39,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -57,6 +57,10 @@ class LocalDatabaseService {
         await db.execute('ALTER TABLE $table ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0');
       }
       await _createSyncState(db);
+    }
+    if (oldVersion < 4) {
+      await _createGolfRoundsTable(db);
+      await _backfillGolfRounds(db);
     }
   }
 
@@ -163,6 +167,7 @@ class LocalDatabaseService {
       )
     ''');
     await _createSyncState(db);
+    await _createGolfRoundsTable(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -295,21 +300,101 @@ class LocalDatabaseService {
 
   Future<String?> getActiveRoundId() async {
     final db = await database;
-    final rows = await db.rawQuery('''
-      SELECT round_id, MAX(hole_number) as max_hole
-      FROM round_scores
-      WHERE deleted = 0
-      GROUP BY round_id
-      ORDER BY round_id DESC
-      LIMIT 1
-    ''');
-    if (rows.isEmpty) return null;
-    final roundId = rows.first['round_id'] as String;
-    final hole18 = await getHoleScore(roundId, 18);
-    if (hole18 != null && hole18.finalScore > 0) {
-      return null;
+    final rows = await db.query(
+      'golf_rounds',
+      columns: ['round_id'],
+      where: 'deleted = 0 AND completed_at_ms IS NULL',
+      orderBy: 'started_at_ms DESC',
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return rows.first['round_id'] as String;
     }
-    return roundId;
+    return null;
+  }
+
+  /// True when the round has GPS shots or any hole marked as played on the card.
+  Future<bool> roundHasMeaningfulPlay(String roundId) async {
+    final db = await database;
+    final shotCount = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM shots WHERE round_id = ? AND deleted = 0',
+        [roundId],
+      ),
+    );
+    if ((shotCount ?? 0) > 0) return true;
+    final holes = await getScoresForRound(roundId);
+    return holes.any(isHolePlayed);
+  }
+
+  /// Finalizes open holes and marks the round saved for scorecard history.
+  Future<void> completeRound(String roundId) async {
+    final holes = await getScoresForRound(roundId);
+    for (final hole in holes) {
+      if (!isHolePlayed(hole) || hole.finalScore > 0) continue;
+      final score = computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
+      await upsertHoleScore(hole.copyWith(finalScore: score, isSynced: 0));
+    }
+    final db = await database;
+    final now = _nowMs();
+    final meta = await db.query(
+      'golf_rounds',
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (meta.isEmpty) {
+      final courseName = holes.isNotEmpty ? holes.first.courseName : await getCourseNameForRound(roundId);
+      await _registerGolfRound(
+        db,
+        roundId: roundId,
+        courseName: courseName,
+        startedAtMs: _roundIdToMs(roundId) > 0 ? _roundIdToMs(roundId) : now,
+      );
+    }
+    await db.update(
+      'golf_rounds',
+      _dirty({'completed_at_ms': now}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  /// Removes an in-progress round the golfer chose not to keep.
+  Future<void> discardRound(String roundId) async {
+    final db = await database;
+    final now = _nowMs();
+    await db.update(
+      'golf_rounds',
+      _dirty({'deleted': 1}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+    await db.update(
+      'round_scores',
+      _dirty({'deleted': 1}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+    await db.update(
+      'shots',
+      _dirty({'deleted': 1}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  Future<bool> isRoundCompleted(String roundId) async {
+    final db = await database;
+    final rows = await db.query(
+      'golf_rounds',
+      columns: ['completed_at_ms'],
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return false;
+    return rows.first['completed_at_ms'] != null;
   }
 
   Future<List<RoundScore>> getScoresForRound(String roundId) async {
@@ -326,22 +411,24 @@ class LocalDatabaseService {
   Future<List<RoundSummary>> listRecentRounds({int limit = 10}) async {
     final db = await database;
     final rows = await db.rawQuery('''
-      SELECT round_id, course_name, COUNT(*) as holes_recorded
-      FROM round_scores
-      WHERE deleted = 0
-      GROUP BY round_id
-      ORDER BY round_id DESC
+      SELECT g.round_id, g.course_name, g.started_at_ms, g.completed_at_ms,
+             COUNT(rs.id) as holes_recorded
+      FROM golf_rounds g
+      LEFT JOIN round_scores rs ON rs.round_id = g.round_id AND rs.deleted = 0
+      WHERE g.deleted = 0
+      GROUP BY g.round_id
+      ORDER BY g.started_at_ms DESC
       LIMIT ?
     ''', [limit]);
 
     return rows.map((row) {
       final roundId = row['round_id'] as String;
-      final ms = _roundIdToMs(roundId);
       return RoundSummary(
         roundId: roundId,
         courseName: row['course_name'] as String,
         holesRecorded: row['holes_recorded'] as int,
-        startedAtMs: ms,
+        startedAtMs: row['started_at_ms'] as int,
+        completedAtMs: row['completed_at_ms'] as int?,
       );
     }).toList();
   }
@@ -398,7 +485,8 @@ class LocalDatabaseService {
 
   /// Always inserts a new round, even when another round is still in progress.
   Future<String> startNewRound({required String courseName}) async {
-    final roundId = 'round_${DateTime.now().millisecondsSinceEpoch}';
+    final startedAtMs = DateTime.now().millisecondsSinceEpoch;
+    final roundId = 'round_$startedAtMs';
     final db = await database;
     await db.insert(
       'round_scores',
@@ -409,6 +497,12 @@ class LocalDatabaseService {
         holeNumber: 1,
         par: 4,
       ).toMap()),
+    );
+    await _registerGolfRound(
+      db,
+      roundId: roundId,
+      courseName: courseName,
+      startedAtMs: startedAtMs,
     );
     return roundId;
   }
@@ -611,7 +705,10 @@ class LocalDatabaseService {
       final score = computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
       await upsertHoleScore(hole.copyWith(finalScore: score, isSynced: 0));
     }
-    if (holeNumber >= 18) return;
+    if (holeNumber >= 18) {
+      await completeRound(roundId);
+      return;
+    }
 
     if (hole == null) return;
 
@@ -798,6 +895,12 @@ class LocalDatabaseService {
 
     final row = _sqliteRow(table, remote, remoteUpdated);
     await db.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    if (table == 'round_scores') {
+      final roundId = row['round_id'] as String?;
+      if (roundId != null) {
+        await _ensureGolfRoundFromScores(db, roundId);
+      }
+    }
     return true;
   }
 
@@ -812,6 +915,98 @@ class LocalDatabaseService {
     row['deleted'] = 0;
     row['is_synced'] = 1;
     return row;
+  }
+
+  Future<void> _createGolfRoundsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS golf_rounds (
+        round_id TEXT PRIMARY KEY,
+        course_name TEXT NOT NULL,
+        started_at_ms INTEGER NOT NULL,
+        completed_at_ms INTEGER,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> _backfillGolfRounds(Database db) async {
+    final rows = await db.rawQuery('''
+      SELECT round_id, course_name, COUNT(*) as hole_count
+      FROM round_scores
+      WHERE deleted = 0
+      GROUP BY round_id
+    ''');
+    for (final row in rows) {
+      final roundId = row['round_id'] as String;
+      final courseName = row['course_name'] as String;
+      final startedAtMs = _roundIdToMs(roundId);
+      final hole18 = await db.query(
+        'round_scores',
+        where: 'round_id = ? AND hole_number = 18 AND deleted = 0',
+        whereArgs: [roundId],
+        limit: 1,
+      );
+      final completed = hole18.isNotEmpty && (hole18.first['final_score'] as int? ?? 0) > 0;
+      await db.insert(
+        'golf_rounds',
+        {
+          'round_id': roundId,
+          'course_name': courseName,
+          'started_at_ms': startedAtMs > 0 ? startedAtMs : _nowMs(),
+          'completed_at_ms': completed ? startedAtMs : null,
+          'is_synced': 0,
+          'updated_at_ms': _nowMs(),
+          'deleted': 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+  }
+
+  Future<void> _registerGolfRound(
+    Database db, {
+    required String roundId,
+    required String courseName,
+    required int startedAtMs,
+  }) async {
+    await db.insert(
+      'golf_rounds',
+      _newRow({
+        'round_id': roundId,
+        'course_name': courseName,
+        'started_at_ms': startedAtMs,
+        'completed_at_ms': null,
+      }),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  Future<void> _ensureGolfRoundFromScores(Database db, String roundId) async {
+    final existing = await db.query(
+      'golf_rounds',
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) return;
+    final rows = await db.query(
+      'round_scores',
+      columns: ['course_name'],
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return;
+    final courseName = rows.first['course_name'] as String;
+    final startedAtMs = _roundIdToMs(roundId);
+    await _registerGolfRound(
+      db,
+      roundId: roundId,
+      courseName: courseName,
+      startedAtMs: startedAtMs > 0 ? startedAtMs : _nowMs(),
+    );
   }
 
   static const _columns = {

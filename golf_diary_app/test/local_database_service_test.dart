@@ -225,4 +225,33 @@ void main() {
     expect(left.single.strokeNumber, 1);
     expect((await db.getHoleScore(roundId, 2))!.strokes, 1);
   });
+
+  test('completeRound saves in-progress play and clears active round', () async {
+    final roundId = await db.startNewRound(courseName: 'Save Me');
+    await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 2,
+      clubId: 'driver',
+      lieType: 'tee',
+      currentLat: 0,
+      currentLon: 0,
+      distanceYards: 210,
+    );
+    expect(await db.roundHasMeaningfulPlay(roundId), isTrue);
+    await db.completeRound(roundId);
+    expect(await db.getActiveRoundId(), isNull);
+    expect(await db.isRoundCompleted(roundId), isTrue);
+    expect((await db.listRecentRounds()).any((r) => r.roundId == roundId), isTrue);
+    final hole2 = await db.getHoleScore(roundId, 2);
+    expect(hole2!.finalScore, greaterThan(0));
+  });
+
+  test('discardRound removes round from recent list', () async {
+    final roundId = await db.startNewRound(courseName: 'Trash');
+    await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
+    await db.discardRound(roundId);
+    expect(await db.getActiveRoundId(), isNull);
+    expect((await db.listRecentRounds()).any((r) => r.roundId == roundId), isFalse);
+  });
 }

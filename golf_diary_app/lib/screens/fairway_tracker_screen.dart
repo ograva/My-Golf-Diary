@@ -220,6 +220,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
   Future<void> _finishHole() async {
     if (_roundId == null) return;
+    final finishingRound = _holeNumber >= 18;
     await LocalDatabaseService.instance.finishHole(
       roundId: _roundId!,
       holeNumber: _holeNumber,
@@ -233,6 +234,14 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       });
     }
     await _refreshHoleState();
+    if (finishingRound && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Round saved on this device'),
+          backgroundColor: AppColors.green,
+        ),
+      );
+    }
   }
 
   @override

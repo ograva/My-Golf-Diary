@@ -4,6 +4,7 @@ import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/sync_cloud_button.dart';
 import 'scorecard_hole_editor.dart';
 
@@ -54,12 +55,26 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   }
 
   Future<void> _startNewRound() async {
+    final db = LocalDatabaseService.instance;
+    final activeId = await db.getActiveRoundId();
+    if (activeId != null && await db.roundHasMeaningfulPlay(activeId)) {
+      final course = await db.getCourseNameForRound(activeId);
+      if (!mounted) return;
+      final choice = await showSaveRoundBeforeNewDialog(context: context, courseName: course);
+      if (choice == null || choice == SaveRoundBeforeNewChoice.cancel) return;
+      if (choice == SaveRoundBeforeNewChoice.saveAndStartNew) {
+        await db.completeRound(activeId);
+      } else {
+        await db.discardRound(activeId);
+      }
+    }
+
     final courseName = await showDialog<String>(
       context: context,
       builder: (context) => const _NewRoundDialog(),
     );
     if (courseName == null || !mounted) return;
-    final roundId = await LocalDatabaseService.instance.startNewRound(courseName: courseName);
+    final roundId = await db.startNewRound(courseName: courseName);
     if (!mounted) return;
     setState(() => _selectedRoundId = roundId);
     await loadScorecard();
@@ -131,6 +146,15 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                     )
                   else ...[
                     Text(courseName, style: Theme.of(context).textTheme.headlineSmall),
+                    if (_selectedRoundId != null &&
+                        _recentRounds.any((r) => r.roundId == _selectedRoundId && !r.isCompleted))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'In progress — finish holes on On Course or save via Start new round',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     if (_recentRounds.length > 1)
                       SizedBox(

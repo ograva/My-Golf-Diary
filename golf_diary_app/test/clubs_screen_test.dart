@@ -35,15 +35,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Add club keeps a visible plus icon beside the label', (tester) async {
+  testWidgets('Add club button is a plus icon on the left side of the header without label text', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: ClubsScreen()));
     await tester.pump();
 
-    final fab = tester.widget<FloatingActionButton>(find.byType(FloatingActionButton));
-    expect(fab.shape, isA<StadiumBorder>());
-    expect(find.byIcon(Icons.add), findsOneWidget);
-    expect(find.text('Add club'), findsOneWidget);
-    expect(tester.getSize(find.byIcon(Icons.add)).shortestSide, greaterThan(8));
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.text('Add club'), findsNothing);
+
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.leading, isA<IconButton>());
+
+    final addBtnFinder = find.byKey(const Key('add-club-button'));
+    expect(addBtnFinder, findsOneWidget);
+    expect(
+      find.descendant(of: addBtnFinder, matching: find.byIcon(Icons.add)),
+      findsOneWidget,
+    );
+
+    final addCenter = tester.getCenter(addBtnFinder);
+    final titleCenter = tester.getCenter(find.text('My Bag'));
+    expect(addCenter.dx, lessThan(titleCenter.dx));
+
+    await tester.tap(addBtnFinder);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AlertDialog, 'Add club'), findsOneWidget);
   });
 
   testWidgets('Edit club dialog saves name, brand, model, and category', (tester) async {

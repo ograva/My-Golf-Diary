@@ -104,13 +104,15 @@ class ClubsScreenState extends State<ClubsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Bag'), actions: const [SyncCloudButton()]),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addClub,
-        tooltip: 'Add club',
-        shape: const StadiumBorder(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add club'),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('add-club-button'),
+          tooltip: 'Add club',
+          onPressed: _addClub,
+          icon: const Icon(Icons.add),
+        ),
+        title: const Text('My Bag'),
+        actions: const [SyncCloudButton()],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,7 +142,7 @@ class ClubsScreenState extends State<ClubsScreen> {
             child: _clubs.isEmpty
                 ? const Center(child: Text('No clubs in this category yet. Add a club to get started.'))
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    padding: const EdgeInsets.all(16),
                     itemCount: _clubs.length,
                     itemBuilder: (context, index) {
                       final club = _clubs[index];

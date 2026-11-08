@@ -9,6 +9,7 @@
 | [docs/context/ProjectBrief.md](docs/context/ProjectBrief.md) | Mary | Problem, personas, scope, risks |
 | [docs/context/PRD.md](docs/context/PRD.md) | Jason | Features, module prefixes, NFRs, journeys |
 | [docs/context/Architecture.md](docs/context/Architecture.md) | Watson | Stack, folder map, data/sync, **constraints** (no separate CONSTRAINTS.md) |
+| [docs/context/PH_Golf_Venues.md](docs/context/PH_Golf_Venues.md) | Reference | Philippines golf courses, hole-by-hole par (H1–H18), driving ranges & simulator shops |
 
 ## Roster
 

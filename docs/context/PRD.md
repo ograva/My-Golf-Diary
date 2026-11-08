@@ -195,3 +195,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | :--- | :--- | :--- |
 | 1.0 | 2026-11-06 | From ProjectBrief v1.0 + code surfaces |
 | 1.1 | 2026-11-07 | SYNC-004 pull/merge, anonymous uid, PWA in scope for sync |
+| 1.2 | 2026-11-08 | Reference [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) lookup table for CRSE, SCOR, and RNGE |

@@ -41,4 +41,64 @@ void main() {
     expect(restored.brand, 'Titleist');
     expect(restored.model, 'T200');
   });
+
+  test('sortClubs orders driver first, woods and hybrids incrementally, irons 2-9, wedges P/G/S, putter last', () {
+    final unsorted = [
+      Club(id: 'putter', name: 'Putter', category: 'putter', avgDistance: 300),
+      Club(id: 'sw', name: 'Sand Wedge', category: 'wedge', avgDistance: 90),
+      Club(id: '9i', name: '9 Iron', category: 'iron', avgDistance: 130),
+      Club(id: '5w', name: '5 Wood', category: 'wood', avgDistance: 210),
+      Club(id: 'gw', name: 'Gap Wedge', category: 'wedge', avgDistance: 100),
+      Club(id: '4h', name: '4 Hybrid', category: 'hybrid', avgDistance: 185),
+      Club(id: '2i', name: '2 Iron', category: 'iron', avgDistance: 200),
+      Club(id: 'pw', name: 'Pitching Wedge', category: 'wedge', avgDistance: 115),
+      Club(id: '3w', name: '3 Wood', category: 'wood', avgDistance: 235),
+      Club(id: '3h', name: '3 Hybrid', category: 'hybrid', avgDistance: 195),
+      Club(id: '7i', name: '7 Iron', category: 'iron', avgDistance: 155),
+      Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 0),
+      Club(id: '5i', name: '5 Iron', category: 'iron', avgDistance: 175),
+    ];
+
+    final sorted = sortClubs(unsorted);
+    expect(
+      sorted.map((c) => c.name).toList(),
+      [
+        'Driver',
+        '3 Wood',
+        '5 Wood',
+        '3 Hybrid',
+        '4 Hybrid',
+        '2 Iron',
+        '5 Iron',
+        '7 Iron',
+        '9 Iron',
+        'Pitching Wedge',
+        'Gap Wedge',
+        'Sand Wedge',
+        'Putter',
+      ],
+    );
+  });
+
+  test('sortClubs orders irons 2 through 9 and wedge variants intuitively', () {
+    final irons = [
+      for (final n in [8, 3, 6, 2, 9, 4, 7, 5])
+        Club(id: '${n}i', name: '$n Iron', category: 'iron'),
+    ];
+    expect(
+      sortClubs(irons).map((c) => c.name).toList(),
+      ['2 Iron', '3 Iron', '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron'],
+    );
+
+    final wedges = [
+      Club(id: 'lw', name: 'Lob Wedge', category: 'wedge'),
+      Club(id: 'sw', name: 'Sand Wedge', category: 'wedge'),
+      Club(id: 'pw', name: 'Pitching Wedge', category: 'wedge'),
+      Club(id: 'gw', name: 'Gap Wedge', category: 'wedge'),
+    ];
+    expect(
+      sortClubs(wedges).map((c) => c.name).toList(),
+      ['Pitching Wedge', 'Gap Wedge', 'Sand Wedge', 'Lob Wedge'],
+    );
+  });
 }

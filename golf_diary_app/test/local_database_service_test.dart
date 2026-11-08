@@ -49,6 +49,62 @@ void main() {
     expect((await db.getAllClubs()).any((club) => club.id == id), isFalse);
   });
 
+  test('getClubsByCategory and getAllClubs sort clubs intuitively regardless of distance', () async {
+    await db.insertClub(Club(id: '5iron', name: '5 Iron', category: 'iron', avgDistance: 0));
+    await db.insertClub(Club(id: '2iron', name: '2 Iron', category: 'iron', avgDistance: 0));
+    await db.insertClub(Club(id: '8iron', name: '8 Iron', category: 'iron', avgDistance: 200));
+    await db.insertClub(Club(id: 'sw', name: 'Sand Wedge', category: 'wedge', avgDistance: 120));
+    await db.insertClub(Club(id: 'gw', name: 'Gap Wedge', category: 'wedge', avgDistance: 0));
+    await db.insertClub(Club(id: '4hybrid', name: '4 Hybrid', category: 'hybrid', avgDistance: 190));
+
+    final irons = await db.getClubsByCategory('iron');
+    expect(
+      irons.map((c) => c.name).toList(),
+      ['2 Iron', '5 Iron', '7 Iron', '8 Iron', '9 Iron'],
+    );
+
+    final wedges = await db.getClubsByCategory('wedge');
+    expect(
+      wedges.map((c) => c.name).toList(),
+      ['Pitching Wedge', 'Gap Wedge', 'Sand Wedge'],
+    );
+
+    final woods = await db.getClubsByCategory('wood');
+    expect(
+      woods.map((c) => c.name).toList(),
+      ['Driver', '3 Wood', '5 Wood'],
+    );
+
+    final hybrids = await db.getClubsByCategory('hybrid');
+    expect(
+      hybrids.map((c) => c.name).toList(),
+      ['3 Hybrid', '4 Hybrid'],
+    );
+
+    final all = await db.getAllClubs();
+    expect(all.first.name, 'Driver');
+    expect(all.last.name, 'Putter');
+    expect(
+      all.map((c) => c.name).toList(),
+      [
+        'Driver',
+        '3 Wood',
+        '5 Wood',
+        '3 Hybrid',
+        '4 Hybrid',
+        '2 Iron',
+        '5 Iron',
+        '7 Iron',
+        '8 Iron',
+        '9 Iron',
+        'Pitching Wedge',
+        'Gap Wedge',
+        'Sand Wedge',
+        'Putter',
+      ],
+    );
+  });
+
   test('range drills are newest first and the yardage trend stays chronological', () async {
     final club = (await db.getAllClubs()).firstWhere((item) => item.id == '7iron');
     await db.saveRangeDrill(RangeDrillLog(

@@ -313,3 +313,175 @@ int effectiveHoleScore(RoundScore hole) {
 bool isHolePlayed(RoundScore hole) {
   return hole.finalScore > 0 || hole.strokes > 0 || hole.conceded == 1;
 }
+
+/// Compares two [Club]s in standard golf bag order:
+/// Driver first, then woods numbered incrementally, hybrids numbered
+/// incrementally, irons 2–9+, wedges (pitching, gap, sand, lob), other, and
+/// putter last after all.
+int compareClubs(Club a, Club b) {
+  return _ClubSortKey.fromClub(a).compareTo(_ClubSortKey.fromClub(b));
+}
+
+/// Returns a new list of [clubs] sorted in intuitive golf bag order.
+List<Club> sortClubs(Iterable<Club> clubs) {
+  final sorted = clubs.toList();
+  sorted.sort(compareClubs);
+  return sorted;
+}
+
+class _ClubSortKey implements Comparable<_ClubSortKey> {
+  const _ClubSortKey({
+    required this.groupRank,
+    required this.primaryRank,
+    required this.secondaryRank,
+    required this.normalizedName,
+    required this.id,
+  });
+
+  factory _ClubSortKey.fromClub(Club club) {
+    final lower = club.name.trim().toLowerCase();
+    final category = club.category.trim().toLowerCase();
+
+    final isPutter = category == 'putter' || RegExp(r'\bputter\b').hasMatch(lower);
+    final isMiniDriver = RegExp(r'\bmini\s*-?\s*driver\b').hasMatch(lower);
+    final isDriver = !isMiniDriver &&
+        (lower == 'driver' ||
+            lower == 'dr' ||
+            RegExp(r'^1\s*-?\s*(?:w|wood)\b').hasMatch(lower) ||
+            RegExp(r'\bdriver\b').hasMatch(lower));
+
+    final int groupRank;
+    if (isPutter) {
+      groupRank = 5;
+    } else if (isDriver || isMiniDriver || category == 'wood') {
+      groupRank = 0;
+    } else if (category == 'hybrid') {
+      groupRank = 1;
+    } else if (category == 'iron') {
+      groupRank = 2;
+    } else if (category == 'wedge') {
+      groupRank = 3;
+    } else {
+      groupRank = 4;
+    }
+
+    if (isDriver) {
+      return _ClubSortKey(
+        groupRank: groupRank,
+        primaryRank: 0.0,
+        secondaryRank: 0.0,
+        normalizedName: lower,
+        id: club.id,
+      );
+    }
+
+    if (isMiniDriver) {
+      return _ClubSortKey(
+        groupRank: groupRank,
+        primaryRank: 0.5,
+        secondaryRank: 0.0,
+        normalizedName: lower,
+        id: club.id,
+      );
+    }
+
+    final wedgeRank = _wedgeTypeRank(lower);
+    if (wedgeRank != null) {
+      return _ClubSortKey(
+        groupRank: groupRank,
+        primaryRank: wedgeRank,
+        secondaryRank: _extractClubNumber(lower) ?? 0.0,
+        normalizedName: lower,
+        id: club.id,
+      );
+    }
+
+    final number = _extractClubNumber(lower);
+    if (number != null) {
+      return _ClubSortKey(
+        groupRank: groupRank,
+        primaryRank: number,
+        secondaryRank: category == 'wedge' ? 1.0 : 0.0,
+        normalizedName: lower,
+        id: club.id,
+      );
+    }
+
+    return _ClubSortKey(
+      groupRank: groupRank,
+      primaryRank: 999.0,
+      secondaryRank: 0.0,
+      normalizedName: lower,
+      id: club.id,
+    );
+  }
+
+  final int groupRank;
+  final double primaryRank;
+  final double secondaryRank;
+  final String normalizedName;
+  final String id;
+
+  static double? _wedgeTypeRank(String lower) {
+    if (RegExp(r'\b(pitching|pw|p\s*-?\s*wedge)\b').hasMatch(lower) || lower == 'p') {
+      return 46.0;
+    }
+    if (RegExp(r'\b(gap|gw|g\s*-?\s*wedge|approach|aw|a\s*-?\s*wedge|attack|uw|u\s*-?\s*wedge|utility\s+wedge)\b')
+            .hasMatch(lower) ||
+        lower == 'g' ||
+        lower == 'a') {
+      return 51.0;
+    }
+    if (RegExp(r'\b(sand|sw|s\s*-?\s*wedge)\b').hasMatch(lower) || lower == 's') {
+      return 55.0;
+    }
+    if (RegExp(r'\b(lob|lw|l\s*-?\s*wedge)\b').hasMatch(lower) || lower == 'l') {
+      return 59.5;
+    }
+    return null;
+  }
+
+  static const _wordNumbers = <String, double>{
+    'one': 1.0,
+    'two': 2.0,
+    'three': 3.0,
+    'four': 4.0,
+    'five': 5.0,
+    'six': 6.0,
+    'seven': 7.0,
+    'eight': 8.0,
+    'nine': 9.0,
+    'ten': 10.0,
+    'eleven': 11.0,
+  };
+
+  static double? _extractClubNumber(String lower) {
+    final digitMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(lower);
+    if (digitMatch != null) {
+      final value = double.tryParse(digitMatch.group(1)!);
+      if (value != null) {
+        final isHighLaunch = RegExp(r'\b\d+\s*(?:hl|high\s+launch)\b').hasMatch(lower);
+        return isHighLaunch ? value + 0.5 : value;
+      }
+    }
+    for (final entry in _wordNumbers.entries) {
+      if (RegExp('\\b${entry.key}\\b').hasMatch(lower)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  @override
+  int compareTo(_ClubSortKey other) {
+    final groupCmp = groupRank.compareTo(other.groupRank);
+    if (groupCmp != 0) return groupCmp;
+    final primaryCmp = primaryRank.compareTo(other.primaryRank);
+    if (primaryCmp != 0) return primaryCmp;
+    final secondaryCmp = secondaryRank.compareTo(other.secondaryRank);
+    if (secondaryCmp != 0) return secondaryCmp;
+    final nameCmp = normalizedName.compareTo(other.normalizedName);
+    if (nameCmp != 0) return nameCmp;
+    return id.compareTo(other.id);
+  }
+}

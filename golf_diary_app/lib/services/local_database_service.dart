@@ -187,8 +187,8 @@ class LocalDatabaseService {
 
   Future<List<Club>> getAllClubs() async {
     final db = await database;
-    final result = await db.query('clubs', where: 'deleted = 0', orderBy: 'avg_distance DESC');
-    return result.map(Club.fromMap).toList();
+    final result = await db.query('clubs', where: 'deleted = 0');
+    return sortClubs(result.map(Club.fromMap));
   }
 
   Future<List<Club>> getClubsByCategory(String category) async {
@@ -197,9 +197,8 @@ class LocalDatabaseService {
       'clubs',
       where: 'category = ? AND deleted = 0',
       whereArgs: [category],
-      orderBy: 'avg_distance DESC',
     );
-    return result.map(Club.fromMap).toList();
+    return sortClubs(result.map(Club.fromMap));
   }
 
   Future<void> insertClub(Club club) async {

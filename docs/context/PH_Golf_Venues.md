@@ -22,9 +22,12 @@ flowchart LR
 ```
 
 ### Module Bindings (PRD prefixes)
-- **`CRSE` (`fairway_tracker_screen.dart`)**: Course picker or auto-complete chip list matching `name`. When a recognized course is active, hole progression automatically presets `_par` to the hole's official par.
+- **`CRSE` (`fairway_tracker_screen.dart`)**: Course picker or auto-complete chip list matching `name`. When a recognized course is active, hole progression automatically presets `_par` to the hole's official par. For courses with surveyed pin positions, see companion dataset [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) for remaining distance to green calculations.
 - **`SCOR` (`scorecard_screen.dart`, `scorecard_hole_editor.dart`)**: When starting a new round (`startNewRound`), par for holes 1–18 can default to the course's scorecard par rather than flat par 4.
 - **`RNGE` (`range_drill_screen.dart`)**: Simulator bay and driving range picker for `venue_name`.
+
+### Companion Datasets
+- **Hole-by-Hole GPS Coordinates**: [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) provides surveyed Tee and Green/Pin latitude and longitude for 18 course layouts across the Philippines.
 
 ---
 

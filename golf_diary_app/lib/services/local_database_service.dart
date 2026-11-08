@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import 'sync_merge.dart';
@@ -53,8 +54,10 @@ class LocalDatabaseService {
     }
     if (oldVersion < 3) {
       for (final table in ['clubs', 'shots', 'round_scores', 'range_drills']) {
-        await db.execute('ALTER TABLE $table ADD COLUMN updated_at_ms INTEGER NOT NULL DEFAULT 0');
-        await db.execute('ALTER TABLE $table ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+            'ALTER TABLE $table ADD COLUMN updated_at_ms INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+            'ALTER TABLE $table ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0');
       }
       await _createSyncState(db);
     }
@@ -173,15 +176,24 @@ class LocalDatabaseService {
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
       Club(id: '3wood', name: '3 Wood', category: 'wood', avgDistance: 200),
       Club(id: '5wood', name: '5 Wood', category: 'wood', avgDistance: 185),
-      Club(id: '3hybrid', name: '3 Hybrid', category: 'hybrid', avgDistance: 175),
+      Club(
+          id: '3hybrid',
+          name: '3 Hybrid',
+          category: 'hybrid',
+          avgDistance: 175),
       Club(id: '7iron', name: '7 Iron', category: 'iron', avgDistance: 145),
       Club(id: '9iron', name: '9 Iron', category: 'iron', avgDistance: 125),
-      Club(id: 'pw', name: 'Pitching Wedge', category: 'wedge', avgDistance: 110),
+      Club(
+          id: 'pw',
+          name: 'Pitching Wedge',
+          category: 'wedge',
+          avgDistance: 110),
       Club(id: 'putter', name: 'Putter', category: 'putter', avgDistance: 0),
     ];
 
     for (final club in starterBag) {
-      await db.insert('clubs', {...club.toMap(), 'updated_at_ms': 0, 'deleted': 0});
+      await db
+          .insert('clubs', {...club.toMap(), 'updated_at_ms': 0, 'deleted': 0});
     }
   }
 
@@ -203,7 +215,8 @@ class LocalDatabaseService {
 
   Future<void> insertClub(Club club) async {
     final db = await database;
-    await db.insert('clubs', _newRow(club.toMap()), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('clubs', _newRow(club.toMap()),
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// Updates the club's name, brand, model, and category. Distances and swing notes stay put.
@@ -224,7 +237,8 @@ class LocalDatabaseService {
 
   Future<void> deleteClub(String clubId) async {
     final db = await database;
-    await db.update('clubs', _dirty({'deleted': 1}), where: 'id = ?', whereArgs: [clubId]);
+    await db.update('clubs', _dirty({'deleted': 1}),
+        where: 'id = ?', whereArgs: [clubId]);
   }
 
   Future<void> updateClubSwingNotes(String clubId, String notes) async {
@@ -239,16 +253,21 @@ class LocalDatabaseService {
 
   Future<void> saveRangeDrill(RangeDrillLog log) async {
     final db = await database;
-    await db.insert('range_drills', _newRow(log.toMap()), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('range_drills', _newRow(log.toMap()),
+        conflictAlgorithm: ConflictAlgorithm.replace);
 
-    final clubData = await db.query('clubs', where: 'id = ?', whereArgs: [log.clubId]);
+    final clubData =
+        await db.query('clubs', where: 'id = ?', whereArgs: [log.clubId]);
     if (clubData.isNotEmpty) {
       final club = Club.fromMap(clubData.first);
       final newMin = club.minDistance == 0
           ? log.minYards
           : (club.minDistance < log.minYards ? club.minDistance : log.minYards);
-      final newMax = club.maxDistance > log.maxYards ? club.maxDistance : log.maxYards;
-      final newAvg = club.avgDistance == 0 ? log.avgYards : ((club.avgDistance + log.avgYards) / 2);
+      final newMax =
+          club.maxDistance > log.maxYards ? club.maxDistance : log.maxYards;
+      final newAvg = club.avgDistance == 0
+          ? log.avgYards
+          : ((club.avgDistance + log.avgYards) / 2);
 
       await db.update(
         'clubs',
@@ -256,7 +275,8 @@ class LocalDatabaseService {
           'min_distance': newMin,
           'max_distance': newMax,
           'avg_distance': newAvg,
-          'swing_notes': log.tempoNotes.isNotEmpty ? log.tempoNotes : club.swingNotes,
+          'swing_notes':
+              log.tempoNotes.isNotEmpty ? log.tempoNotes : club.swingNotes,
         }),
         where: 'id = ?',
         whereArgs: [log.clubId],
@@ -331,7 +351,8 @@ class LocalDatabaseService {
     final holes = await getScoresForRound(roundId);
     for (final hole in holes) {
       if (!isHolePlayed(hole) || hole.finalScore > 0) continue;
-      final score = computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
+      final score =
+          computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
       await upsertHoleScore(hole.copyWith(finalScore: score, isSynced: 0));
     }
     final db = await database;
@@ -343,7 +364,9 @@ class LocalDatabaseService {
       limit: 1,
     );
     if (meta.isEmpty) {
-      final courseName = holes.isNotEmpty ? holes.first.courseName : await getCourseNameForRound(roundId);
+      final courseName = holes.isNotEmpty
+          ? holes.first.courseName
+          : await getCourseNameForRound(roundId);
       await _registerGolfRound(
         db,
         roundId: roundId,
@@ -433,7 +456,8 @@ class LocalDatabaseService {
   }
 
   int _roundIdToMs(String roundId) {
-    final suffix = roundId.startsWith('round_') ? roundId.substring(6) : roundId;
+    final suffix =
+        roundId.startsWith('round_') ? roundId.substring(6) : roundId;
     return int.tryParse(suffix) ?? 0;
   }
 
@@ -483,7 +507,9 @@ class LocalDatabaseService {
   }
 
   /// Always inserts a new round, even when another round is still in progress.
-  Future<String> startNewRound({required String courseName}) async {
+  /// [par] is hole 1. Callers pass a catalog card par when the course is known.
+  Future<String> startNewRound(
+      {required String courseName, int par = 4}) async {
     final startedAtMs = DateTime.now().millisecondsSinceEpoch;
     final roundId = 'round_$startedAtMs';
     final db = await database;
@@ -494,7 +520,7 @@ class LocalDatabaseService {
         roundId: roundId,
         courseName: courseName,
         holeNumber: 1,
-        par: 4,
+        par: par,
       ).toMap()),
     );
     await _registerGolfRound(
@@ -507,13 +533,53 @@ class LocalDatabaseService {
   }
 
   Future<void> updateCourseName(String roundId, String courseName) async {
+    await _renameRound(roundId, courseName);
+  }
+
+  /// Renames the round, then sets par on holes that have not been played.
+  /// A published card supplies each hole. Any other name returns unplayed holes to par 4.
+  /// Played holes keep the par already stored.
+  Future<void> applyCoursePar(String roundId, String courseName) async {
+    await updateCourseName(roundId, courseName);
+    final holes = await getScoresForRound(roundId);
     final db = await database;
-    await db.update(
-      'round_scores',
-      _dirty({'course_name': courseName}),
-      where: 'round_id = ?',
-      whereArgs: [roundId],
-    );
+    for (final hole in holes) {
+      if (isHolePlayed(hole)) continue;
+      final par = PhGolfCatalog.parForHole(courseName, hole.holeNumber) ?? 4;
+      if (hole.par == par) continue;
+      await db.update(
+        'round_scores',
+        _dirty({'par': par}),
+        where: 'id = ?',
+        whereArgs: [hole.id],
+      );
+    }
+  }
+
+  Future<List<String>> distinctCourseNames({int limit = 8}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT course_name
+      FROM golf_rounds
+      WHERE deleted = 0 AND TRIM(course_name) != ''
+      GROUP BY course_name
+      ORDER BY MAX(started_at_ms) DESC
+      LIMIT ?
+    ''', [limit]);
+    return [for (final row in rows) row['course_name'] as String];
+  }
+
+  Future<List<String>> distinctVenueNames({int limit = 8}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT venue_name
+      FROM range_drills
+      WHERE deleted = 0 AND venue_name IS NOT NULL AND TRIM(venue_name) != ''
+      GROUP BY venue_name
+      ORDER BY MAX(timestamp) DESC
+      LIMIT ?
+    ''', [limit]);
+    return [for (final row in rows) row['venue_name'] as String];
   }
 
   Future<RoundScore?> getHoleScore(String roundId, int holeNumber) async {
@@ -538,11 +604,21 @@ class LocalDatabaseService {
   }
 
   Future<void> updateRoundCourseName(String roundId, String courseName) async {
-    final db = await database;
     final name = courseName.trim().isEmpty ? 'Local Course' : courseName.trim();
+    await _renameRound(roundId, name);
+  }
+
+  Future<void> _renameRound(String roundId, String courseName) async {
+    final db = await database;
     await db.update(
       'round_scores',
-      _dirty({'course_name': name}),
+      _dirty({'course_name': courseName}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+    await db.update(
+      'golf_rounds',
+      _dirty({'course_name': courseName}),
       where: 'round_id = ?',
       whereArgs: [roundId],
     );
@@ -637,7 +713,8 @@ class LocalDatabaseService {
     await syncStrokeCountFromShots(shot.roundId, shot.holeNumber);
   }
 
-  Future<List<ShotRecord>> getShotsForHole(String roundId, int holeNumber) async {
+  Future<List<ShotRecord>> getShotsForHole(
+      String roundId, int holeNumber) async {
     final db = await database;
     final rows = await db.query(
       'shots',
@@ -656,19 +733,22 @@ class LocalDatabaseService {
     final strokes = shots.length;
     final updated = hole.copyWith(
       strokes: strokes,
-      finalScore: computeFinalScore(strokes: strokes, penalties: hole.penalties),
+      finalScore:
+          computeFinalScore(strokes: strokes, penalties: hole.penalties),
       isSynced: 0,
     );
     await upsertHoleScore(updated);
   }
 
-  Future<void> incrementPenalties(String roundId, int holeNumber, int delta) async {
+  Future<void> incrementPenalties(
+      String roundId, int holeNumber, int delta) async {
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole == null) return;
     final penalties = (hole.penalties + delta).clamp(0, 99);
     final updated = hole.copyWith(
       penalties: penalties,
-      finalScore: computeFinalScore(strokes: hole.strokes, penalties: penalties),
+      finalScore:
+          computeFinalScore(strokes: hole.strokes, penalties: penalties),
       isSynced: 0,
     );
     await upsertHoleScore(updated);
@@ -677,7 +757,8 @@ class LocalDatabaseService {
   Future<void> incrementMulligans(String roundId, int holeNumber) async {
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole == null) return;
-    await upsertHoleScore(hole.copyWith(mulligans: hole.mulligans + 1, isSynced: 0));
+    await upsertHoleScore(
+        hole.copyWith(mulligans: hole.mulligans + 1, isSynced: 0));
   }
 
   Future<void> concedeHole(String roundId, int holeNumber) async {
@@ -687,7 +768,8 @@ class LocalDatabaseService {
     final updated = hole.copyWith(
       conceded: 1,
       strokes: maxConceded,
-      finalScore: computeFinalScore(strokes: maxConceded, penalties: hole.penalties),
+      finalScore:
+          computeFinalScore(strokes: maxConceded, penalties: hole.penalties),
       isSynced: 0,
     );
     await upsertHoleScore(updated);
@@ -697,14 +779,16 @@ class LocalDatabaseService {
     required String roundId,
     required int holeNumber,
     required int nextPar,
+    int holeCount = 18,
   }) async {
     await syncStrokeCountFromShots(roundId, holeNumber);
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole != null && hole.conceded == 0) {
-      final score = computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
+      final score =
+          computeFinalScore(strokes: hole.strokes, penalties: hole.penalties);
       await upsertHoleScore(hole.copyWith(finalScore: score, isSynced: 0));
     }
-    if (holeNumber >= 18) {
+    if (holeNumber >= holeCount) {
       await completeRound(roundId);
       return;
     }
@@ -742,7 +826,8 @@ class LocalDatabaseService {
     if (active.isNotEmpty) {
       final current = RoundScore.fromMap(active.first);
       if (current.finalScore == 0 && current.strokes > 0) {
-        total += computeFinalScore(strokes: current.strokes, penalties: current.penalties);
+        total += computeFinalScore(
+            strokes: current.strokes, penalties: current.penalties);
       }
     }
     return total;
@@ -809,7 +894,8 @@ class LocalDatabaseService {
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
-    await db.insert('shots', _newRow(newShot.toMap()), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('shots', _newRow(newShot.toMap()),
+        conflictAlgorithm: ConflictAlgorithm.replace);
     await syncStrokeCountFromShots(roundId, holeNumber);
   }
 
@@ -819,7 +905,8 @@ class LocalDatabaseService {
   }
 
   /// Gives legacy dirty rows a timestamp before they are uploaded.
-  Future<List<Map<String, dynamic>>> prepareUnsyncedForPush(String table) async {
+  Future<List<Map<String, dynamic>>> prepareUnsyncedForPush(
+      String table) async {
     final db = await database;
     final rows = await getUnsynced(table);
     final prepared = <Map<String, dynamic>>[];
@@ -846,7 +933,8 @@ class LocalDatabaseService {
     await db.update(table, {'is_synced': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> finishPush(String table, String id, Map<String, dynamic> row) async {
+  Future<void> finishPush(
+      String table, String id, Map<String, dynamic> row) async {
     if (readDeleted(row)) {
       final db = await database;
       await db.delete(table, where: 'id = ?', whereArgs: [id]);
@@ -877,11 +965,14 @@ class LocalDatabaseService {
     final id = remote['id'] as String?;
     if (id == null || id.isEmpty) return false;
     final db = await database;
-    final localRows = await db.query(table, where: 'id = ?', whereArgs: [id], limit: 1);
+    final localRows =
+        await db.query(table, where: 'id = ?', whereArgs: [id], limit: 1);
     final remoteUpdated = readUpdatedAtMs(remote);
     final action = decideMerge(
       localExists: localRows.isNotEmpty,
-      localUpdatedAtMs: localRows.isEmpty ? 0 : (localRows.first['updated_at_ms'] as int? ?? 0),
+      localUpdatedAtMs: localRows.isEmpty
+          ? 0
+          : (localRows.first['updated_at_ms'] as int? ?? 0),
       remoteUpdatedAtMs: remoteUpdated,
     );
     if (action == MergeAction.keepLocal) return false;
@@ -903,11 +994,16 @@ class LocalDatabaseService {
     return true;
   }
 
-  Map<String, Object?> _sqliteRow(String table, Map<String, dynamic> remote, int updatedAt) {
+  Map<String, Object?> _sqliteRow(
+      String table, Map<String, dynamic> remote, int updatedAt) {
     final allowed = _columns[table]!;
     final row = <String, Object?>{};
     for (final column in allowed) {
-      if (column == 'updated_at_ms' || column == 'deleted' || column == 'is_synced') continue;
+      if (column == 'updated_at_ms' ||
+          column == 'deleted' ||
+          column == 'is_synced') {
+        continue;
+      }
       if (remote.containsKey(column)) row[column] = remote[column];
     }
     row['updated_at_ms'] = updatedAt;
@@ -947,7 +1043,8 @@ class LocalDatabaseService {
         whereArgs: [roundId],
         limit: 1,
       );
-      final completed = hole18.isNotEmpty && (hole18.first['final_score'] as int? ?? 0) > 0;
+      final completed =
+          hole18.isNotEmpty && (hole18.first['final_score'] as int? ?? 0) > 0;
       await db.insert(
         'golf_rounds',
         {

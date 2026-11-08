@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
@@ -56,7 +57,9 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
   void initState() {
     super.initState();
     final row = widget.existing;
-    _par = row?.par ?? 4;
+    _par = row?.par ??
+        PhGolfCatalog.parForHole(widget.courseName, widget.holeNumber) ??
+        4;
     _strokes = row?.strokes ?? 0;
     if (row != null && row.conceded == 1) {
       _strokes = row.par * 2;
@@ -67,7 +70,8 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
     _holeComplete = row != null && (row.finalScore > 0 || _conceded);
   }
 
-  int get _previewTotal => computeFinalScore(strokes: _strokes, penalties: _penalties);
+  int get _previewTotal =>
+      computeFinalScore(strokes: _strokes, penalties: _penalties);
 
   bool get _showDelta => _strokes > 0 || _conceded;
 
@@ -127,7 +131,9 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
-            Text('GROSS', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelLarge),
+            Text('GROSS',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelLarge),
             Text(
               '$_previewTotal',
               key: const ValueKey('hole-editor-gross'),
@@ -188,8 +194,10 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               value: _mulligans,
               decKey: const ValueKey('hole-editor-mulligans-dec'),
               incKey: const ValueKey('hole-editor-mulligans-inc'),
-              onDecrement: () => setState(() => _mulligans = (_mulligans - 1).clamp(0, 20)),
-              onIncrement: () => setState(() => _mulligans = (_mulligans + 1).clamp(0, 20)),
+              onDecrement: () =>
+                  setState(() => _mulligans = (_mulligans - 1).clamp(0, 20)),
+              onIncrement: () =>
+                  setState(() => _mulligans = (_mulligans + 1).clamp(0, 20)),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
@@ -213,7 +221,8 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               title: const Text('Mark hole complete'),
               subtitle: Text('Locks score on card ($_previewTotal gross)'),
               value: _holeComplete,
-              onChanged: _conceded ? null : (v) => setState(() => _holeComplete = v),
+              onChanged:
+                  _conceded ? null : (v) => setState(() => _holeComplete = v),
             ),
             const SizedBox(height: 16),
             FilledButton(

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/sync_cloud_button.dart';
+import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
@@ -60,7 +62,8 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     if (activeId != null && await db.roundHasMeaningfulPlay(activeId)) {
       final course = await db.getCourseNameForRound(activeId);
       if (!mounted) return;
-      final choice = await showSaveRoundBeforeNewDialog(context: context, courseName: course);
+      final choice = await showSaveRoundBeforeNewDialog(
+          context: context, courseName: course);
       if (choice == null || choice == SaveRoundBeforeNewChoice.cancel) return;
       if (choice == SaveRoundBeforeNewChoice.saveAndStartNew) {
         await db.completeRound(activeId);
@@ -69,18 +72,25 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       }
     }
 
+    final recentCourses = await db.distinctCourseNames();
+    if (!mounted) return;
     final courseName = await showDialog<String>(
       context: context,
-      builder: (context) => const _NewRoundDialog(),
+      builder: (context) => _NewRoundDialog(recentNames: recentCourses),
     );
     if (courseName == null || !mounted) return;
-    final roundId = await db.startNewRound(courseName: courseName);
+    final roundId = await db.startNewRound(
+      courseName: courseName,
+      par: PhGolfCatalog.parForHole(courseName, 1) ?? 4,
+    );
     if (!mounted) return;
     setState(() => _selectedRoundId = roundId);
     await loadScorecard();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Started round at $courseName'), backgroundColor: AppColors.green),
+      SnackBar(
+          content: Text('Started round at $courseName'),
+          backgroundColor: AppColors.green),
     );
   }
 
@@ -92,7 +102,17 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   }
 
   String get _courseName =>
-      _totals?.courseName ?? (_holes.isNotEmpty ? _holes.first.courseName : 'Local Course');
+      _totals?.courseName ??
+      (_holes.isNotEmpty ? _holes.first.courseName : 'Local Course');
+
+  int get _holesOnCard => PhGolfCatalog.holeCount(_courseName);
+
+  int? _unplayedPar(int hole) {
+    if (PhGolfCatalog.matchCourse(_courseName)?.holePars == null) return null;
+    final row = _holeRow(hole);
+    if (row != null) return row.par;
+    return PhGolfCatalog.parForHole(_courseName, hole);
+  }
 
   Future<void> _editHole(int holeNumber) async {
     final roundId = _selectedRoundId;
@@ -112,10 +132,12 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final courseName = _totals?.courseName ?? 'No round selected';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Scorecard'), actions: const [SyncCloudButton()]),
+      appBar: AppBar(
+          title: const Text('Scorecard'), actions: const [SyncCloudButton()]),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(key: ValueKey('scorecard-loading')),
+              child:
+                  CircularProgressIndicator(key: ValueKey('scorecard-loading')),
             )
           : RefreshIndicator(
               onRefresh: loadScorecard,
@@ -145,9 +167,19 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                     )
                   else ...[
-                    Text(courseName, style: Theme.of(context).textTheme.headlineSmall),
+                    Text(courseName,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                    if (PhGolfCatalog.courseCaption(_courseName) != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          PhGolfCatalog.courseCaption(_courseName)!,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     if (_selectedRoundId != null &&
-                        _recentRounds.any((r) => r.roundId == _selectedRoundId && !r.isCompleted))
+                        _recentRounds.any((r) =>
+                            r.roundId == _selectedRoundId && !r.isCompleted))
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -165,11 +197,14 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
-                                key: ValueKey('scorecard-round-chip-${summary.roundId}'),
-                                label: Text(summary.label, overflow: TextOverflow.ellipsis),
+                                key: ValueKey(
+                                    'scorecard-round-chip-${summary.roundId}'),
+                                label: Text(summary.label,
+                                    overflow: TextOverflow.ellipsis),
                                 selected: _selectedRoundId == summary.roundId,
                                 onSelected: (_) {
-                                  setState(() => _selectedRoundId = summary.roundId);
+                                  setState(
+                                      () => _selectedRoundId = summary.roundId);
                                   loadScorecard();
                                 },
                               ),
@@ -180,9 +215,23 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                     const SizedBox(height: 12),
                     _SummaryBanner(totals: _totals),
                     const SizedBox(height: 16),
-                    _NineGrid(title: 'FRONT 9', startHole: 1, holeRow: _holeRow, onHoleTap: _editHole),
-                    const SizedBox(height: 16),
-                    _NineGrid(title: 'BACK 9', startHole: 10, holeRow: _holeRow, onHoleTap: _editHole),
+                    _NineGrid(
+                      title: 'FRONT 9',
+                      startHole: 1,
+                      holeRow: _holeRow,
+                      unplayedPar: _unplayedPar,
+                      onHoleTap: _editHole,
+                    ),
+                    if (_holesOnCard > 9) ...[
+                      const SizedBox(height: 16),
+                      _NineGrid(
+                        title: 'BACK 9',
+                        startHole: 10,
+                        holeRow: _holeRow,
+                        unplayedPar: _unplayedPar,
+                        onHoleTap: _editHole,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       key: const ValueKey('scorecard-new-round-btn'),
@@ -199,7 +248,9 @@ class ScorecardScreenState extends State<ScorecardScreen> {
 }
 
 class _NewRoundDialog extends StatefulWidget {
-  const _NewRoundDialog();
+  const _NewRoundDialog({required this.recentNames});
+
+  final List<String> recentNames;
 
   @override
   State<_NewRoundDialog> createState() => _NewRoundDialogState();
@@ -223,15 +274,19 @@ class _NewRoundDialogState extends State<_NewRoundDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Start new round'),
-      content: TextField(
+      content: VenueNameField(
         controller: _controller,
+        labelText: 'Course name',
+        recentNames: widget.recentNames,
+        catalogNames: PhGolfCatalog.courseNames,
+        captionFor: PhGolfCatalog.courseCaption,
         autofocus: true,
-        decoration: const InputDecoration(labelText: 'Course name'),
-        textCapitalization: TextCapitalization.words,
         onSubmitted: (_) => _submit(),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         ElevatedButton(onPressed: _submit, child: const Text('Start')),
       ],
     );
@@ -256,9 +311,18 @@ class _SummaryBanner extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _SummaryCell(label: 'OUT', value: '${t.frontNineScore}', toPar: t.frontNineToPar),
-                _SummaryCell(label: 'IN', value: '${t.backNineScore}', toPar: t.backNineToPar),
-                _SummaryCell(label: 'TOT', value: '${t.totalScore}', toPar: t.totalToPar),
+                _SummaryCell(
+                    label: 'OUT',
+                    value: '${t.frontNineScore}',
+                    toPar: t.frontNineToPar),
+                _SummaryCell(
+                    label: 'IN',
+                    value: '${t.backNineScore}',
+                    toPar: t.backNineToPar),
+                _SummaryCell(
+                    label: 'TOT',
+                    value: '${t.totalScore}',
+                    toPar: t.totalToPar),
               ],
             ),
             if (t.penaltiesTotal > 0 || t.mulligansTotal > 0) ...[
@@ -276,7 +340,8 @@ class _SummaryBanner extends StatelessWidget {
 }
 
 class _SummaryCell extends StatelessWidget {
-  const _SummaryCell({required this.label, required this.value, required this.toPar});
+  const _SummaryCell(
+      {required this.label, required this.value, required this.toPar});
 
   final String label;
   final String value;
@@ -299,12 +364,14 @@ class _NineGrid extends StatelessWidget {
     required this.title,
     required this.startHole,
     required this.holeRow,
+    required this.unplayedPar,
     required this.onHoleTap,
   });
 
   final String title;
   final int startHole;
   final RoundScore? Function(int holeNumber) holeRow;
+  final int? Function(int holeNumber) unplayedPar;
   final Future<void> Function(int holeNumber) onHoleTap;
 
   @override
@@ -325,6 +392,7 @@ class _NineGrid extends StatelessWidget {
                     child: _HoleTile(
                       hole: startHole + row * 3 + col,
                       row: holeRow(startHole + row * 3 + col),
+                      unplayedPar: unplayedPar(startHole + row * 3 + col),
                       onTap: () => onHoleTap(startHole + row * 3 + col),
                     ),
                   ),
@@ -338,10 +406,16 @@ class _NineGrid extends StatelessWidget {
 }
 
 class _HoleTile extends StatelessWidget {
-  const _HoleTile({required this.hole, required this.row, required this.onTap});
+  const _HoleTile({
+    required this.hole,
+    required this.row,
+    required this.unplayedPar,
+    required this.onTap,
+  });
 
   final int hole;
   final RoundScore? row;
+  final int? unplayedPar;
   final VoidCallback onTap;
 
   @override
@@ -365,7 +439,7 @@ class _HoleTile extends StatelessWidget {
     final bottom = conceded
         ? 'Gimme'
         : toPar == null
-            ? '—'
+            ? (unplayedPar == null ? '—' : 'Par $unplayedPar')
             : _toParLabel(toPar);
 
     return Material(
@@ -389,7 +463,9 @@ class _HoleTile extends StatelessWidget {
                 bottom,
                 style: conceded
                     ? Theme.of(context).textTheme.labelSmall
-                    : (toPar == null ? Theme.of(context).textTheme.labelSmall : _deltaStyle(context, toPar)),
+                    : (toPar == null
+                        ? Theme.of(context).textTheme.labelSmall
+                        : _deltaStyle(context, toPar)),
               ),
             ],
           ),
@@ -408,5 +484,6 @@ String _toParLabel(int toPar) {
 TextStyle _deltaStyle(BuildContext context, int toPar) {
   if (toPar < 0) return GolfTextStyles.scorePositive(context, fontSize: 12);
   if (toPar > 0) return GolfTextStyles.scoreNegative(context, fontSize: 12);
-  return GolfTextStyles.tabularNum(context, fontSize: 12, fontWeight: FontWeight.w600);
+  return GolfTextStyles.tabularNum(context,
+      fontSize: 12, fontWeight: FontWeight.w600);
 }

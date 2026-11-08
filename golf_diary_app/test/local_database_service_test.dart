@@ -39,7 +39,8 @@ void main() {
       brand: 'Cleveland',
       model: 'RTX',
     ));
-    final updated = (await db.getAllClubs()).firstWhere((club) => club.id == id);
+    final updated =
+        (await db.getAllClubs()).firstWhere((club) => club.id == id);
     expect(updated.name, 'Lob wedge');
     expect(updated.brand, 'Cleveland');
     expect(updated.model, 'RTX');
@@ -49,13 +50,21 @@ void main() {
     expect((await db.getAllClubs()).any((club) => club.id == id), isFalse);
   });
 
-  test('getClubsByCategory and getAllClubs sort clubs intuitively regardless of distance', () async {
-    await db.insertClub(Club(id: '5iron', name: '5 Iron', category: 'iron', avgDistance: 0));
-    await db.insertClub(Club(id: '2iron', name: '2 Iron', category: 'iron', avgDistance: 0));
-    await db.insertClub(Club(id: '8iron', name: '8 Iron', category: 'iron', avgDistance: 200));
-    await db.insertClub(Club(id: 'sw', name: 'Sand Wedge', category: 'wedge', avgDistance: 120));
-    await db.insertClub(Club(id: 'gw', name: 'Gap Wedge', category: 'wedge', avgDistance: 0));
-    await db.insertClub(Club(id: '4hybrid', name: '4 Hybrid', category: 'hybrid', avgDistance: 190));
+  test(
+      'getClubsByCategory and getAllClubs sort clubs intuitively regardless of distance',
+      () async {
+    await db.insertClub(
+        Club(id: '5iron', name: '5 Iron', category: 'iron', avgDistance: 0));
+    await db.insertClub(
+        Club(id: '2iron', name: '2 Iron', category: 'iron', avgDistance: 0));
+    await db.insertClub(
+        Club(id: '8iron', name: '8 Iron', category: 'iron', avgDistance: 200));
+    await db.insertClub(Club(
+        id: 'sw', name: 'Sand Wedge', category: 'wedge', avgDistance: 120));
+    await db.insertClub(
+        Club(id: 'gw', name: 'Gap Wedge', category: 'wedge', avgDistance: 0));
+    await db.insertClub(Club(
+        id: '4hybrid', name: '4 Hybrid', category: 'hybrid', avgDistance: 190));
 
     final irons = await db.getClubsByCategory('iron');
     expect(
@@ -105,8 +114,11 @@ void main() {
     );
   });
 
-  test('range drills are newest first and the yardage trend stays chronological', () async {
-    final club = (await db.getAllClubs()).firstWhere((item) => item.id == '7iron');
+  test(
+      'range drills are newest first and the yardage trend stays chronological',
+      () async {
+    final club =
+        (await db.getAllClubs()).firstWhere((item) => item.id == '7iron');
     await db.saveRangeDrill(RangeDrillLog(
       id: 'drill_old',
       clubId: club.id,
@@ -135,7 +147,8 @@ void main() {
     expect(log.last.drill.venueName, 'Topgolf');
     expect(await db.getClubYardageTrend(club.id), [140, 150]);
 
-    final driver = (await db.getAllClubs()).firstWhere((item) => item.id == 'driver');
+    final driver =
+        (await db.getAllClubs()).firstWhere((item) => item.id == 'driver');
     await db.saveRangeDrill(RangeDrillLog(
       id: 'drill_driver',
       clubId: driver.id,
@@ -170,9 +183,11 @@ void main() {
     expect(holes.every((hole) => hole.courseName == 'Pebble Beach'), isTrue);
   });
 
-  test('simulator fairway hit stores typed yards and leaves the previous shot', () async {
+  test('simulator fairway hit stores typed yards and leaves the previous shot',
+      () async {
     final roundId = await db.startNewRound(courseName: 'Sim');
-    final driver = (await db.getAllClubs()).firstWhere((club) => club.id == 'driver');
+    final driver =
+        (await db.getAllClubs()).firstWhere((club) => club.id == 'driver');
 
     await db.recordFairwayHit(
       roundId: roundId,
@@ -204,10 +219,16 @@ void main() {
     expect(shots.last.startLat, 0);
     expect(shots.last.strokeNumber, 2);
     expect((await db.getHoleScore(roundId, 1))!.strokes, 2);
-    expect((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').avgDistance, driver.avgDistance);
+    expect(
+        (await db.getAllClubs())
+            .firstWhere((club) => club.id == 'driver')
+            .avgDistance,
+        driver.avgDistance);
   });
 
-  test('GPS fairway hit still closes the previous shot and leaves the new one pending', () async {
+  test(
+      'GPS fairway hit still closes the previous shot and leaves the new one pending',
+      () async {
     final roundId = await db.startNewRound(courseName: 'Outdoor');
     await db.recordFairwayHit(
       roundId: roundId,
@@ -234,7 +255,8 @@ void main() {
     expect(shots.last.startLat, 37.002);
   });
 
-  test('startNewRound creates a different round while another is still active', () async {
+  test('startNewRound creates a different round while another is still active',
+      () async {
     final first = await db.ensureActiveRound(courseName: 'Morning');
     await Future<void>.delayed(const Duration(milliseconds: 5));
     final second = await db.startNewRound(courseName: 'Afternoon');
@@ -246,7 +268,8 @@ void main() {
     expect((await db.getScoresForRound(second)).single.courseName, 'Afternoon');
   });
 
-  test('finish hole advances the resume hole and deleting a shot renumbers', () async {
+  test('finish hole advances the resume hole and deleting a shot renumbers',
+      () async {
     final roundId = await db.startNewRound(courseName: 'Resume');
     expect(await db.currentHoleNumber(roundId), 1);
     await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
@@ -272,7 +295,8 @@ void main() {
       distanceYards: 140,
     );
     final first = (await db.getShotsForHole(roundId, 2)).first;
-    await db.updateShotDetails(shotId: first.id, clubId: 'driver', lieType: 'rough');
+    await db.updateShotDetails(
+        shotId: first.id, clubId: 'driver', lieType: 'rough');
     expect((await db.getShotsForHole(roundId, 2)).first.lieType, 'rough');
 
     await db.deleteShot(first);
@@ -282,7 +306,8 @@ void main() {
     expect((await db.getHoleScore(roundId, 2))!.strokes, 1);
   });
 
-  test('completeRound saves in-progress play and clears active round', () async {
+  test('completeRound saves in-progress play and clears active round',
+      () async {
     final roundId = await db.startNewRound(courseName: 'Save Me');
     await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
     await db.recordFairwayHit(
@@ -298,9 +323,58 @@ void main() {
     await db.completeRound(roundId);
     expect(await db.getActiveRoundId(), isNull);
     expect(await db.isRoundCompleted(roundId), isTrue);
-    expect((await db.listRecentRounds()).any((r) => r.roundId == roundId), isTrue);
+    expect(
+        (await db.listRecentRounds()).any((r) => r.roundId == roundId), isTrue);
     final hole2 = await db.getHoleScore(roundId, 2);
     expect(hole2!.finalScore, greaterThan(0));
+  });
+
+  test('applyCoursePar sets unplayed holes from the card and keeps played pars',
+      () async {
+    final roundId = await db.startNewRound(
+        courseName: 'Club Intramuros Golf Course', par: 3);
+    expect((await db.getHoleScore(roundId, 1))!.par, 3);
+
+    await db.saveManualHoleScore(
+      roundId: roundId,
+      courseName: 'Club Intramuros Golf Course',
+      holeNumber: 2,
+      par: 5,
+      strokes: 4,
+      penalties: 0,
+      holeComplete: true,
+    );
+
+    await db.applyCoursePar(roundId, 'Wack Wack Golf & Country Club — East');
+    expect((await db.getHoleScore(roundId, 1))!.par, 4);
+    expect((await db.getHoleScore(roundId, 1))!.courseName,
+        'Wack Wack Golf & Country Club — East');
+    expect((await db.getHoleScore(roundId, 2))!.par, 5);
+
+    await db.applyCoursePar(roundId, 'Club Intramuros Golf Course');
+    expect((await db.getHoleScore(roundId, 1))!.par, 3);
+    expect((await db.getHoleScore(roundId, 2))!.par, 5);
+
+    await db.applyCoursePar(roundId, 'My Backyard');
+    expect((await db.getHoleScore(roundId, 1))!.par, 4);
+    expect((await db.getHoleScore(roundId, 2))!.par, 5);
+    expect((await db.listRecentRounds()).first.courseName, 'My Backyard');
+  });
+
+  test('finishHole on a 9-hole card completes at hole 9', () async {
+    final roundId = await db.startNewRound(
+      courseName: 'Philippine Army Golf Club (Kagitingan)',
+      par: 4,
+    );
+    await db.finishHole(
+        roundId: roundId, holeNumber: 1, nextPar: 3, holeCount: 9);
+    expect(await db.isRoundCompleted(roundId), isFalse);
+    expect((await db.getHoleScore(roundId, 2))!.par, 3);
+
+    await db.finishHole(
+        roundId: roundId, holeNumber: 9, nextPar: 4, holeCount: 9);
+    expect(await db.isRoundCompleted(roundId), isTrue);
+    expect(await db.getHoleScore(roundId, 10), isNull);
   });
 
   test('discardRound removes round from recent list', () async {
@@ -308,6 +382,7 @@ void main() {
     await db.finishHole(roundId: roundId, holeNumber: 1, nextPar: 4);
     await db.discardRound(roundId);
     expect(await db.getActiveRoundId(), isNull);
-    expect((await db.listRecentRounds()).any((r) => r.roundId == roundId), isFalse);
+    expect((await db.listRecentRounds()).any((r) => r.roundId == roundId),
+        isFalse);
   });
 }

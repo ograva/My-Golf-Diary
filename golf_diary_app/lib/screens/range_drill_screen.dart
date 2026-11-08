@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/sync_cloud_button.dart';
+import '../widgets/venue_name_field.dart';
 
 class RangeDrillScreen extends StatefulWidget {
   const RangeDrillScreen({super.key});
@@ -16,6 +18,7 @@ class RangeDrillScreen extends StatefulWidget {
 class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<Club> _clubs = [];
   List<RangeDrillSummary> _log = [];
+  List<String> _recentVenues = [];
   Club? _selectedClub;
   int _shotCounter = 0;
   bool _logThisClubOnly = true;
@@ -45,14 +48,17 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getAllClubs();
     final log = await LocalDatabaseService.instance.listRangeDrills();
+    final venues = await LocalDatabaseService.instance.distinctVenueNames();
     if (!mounted) return;
     setState(() {
       _clubs = clubs.where((c) => c.category != 'putter').toList();
       _log = log;
+      _recentVenues = venues;
       if (_selectedClub == null && _clubs.isNotEmpty) {
         _selectedClub = _clubs.first;
         _notesController.text = _selectedClub!.swingNotes;
-      } else if (_selectedClub != null && !_clubs.any((c) => c.id == _selectedClub!.id)) {
+      } else if (_selectedClub != null &&
+          !_clubs.any((c) => c.id == _selectedClub!.id)) {
         _selectedClub = _clubs.isNotEmpty ? _clubs.first : null;
       }
     });
@@ -94,26 +100,28 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   Widget build(BuildContext context) {
     final thisClubOnly = _logThisClubOnly && _selectedClub != null;
     final visibleLog = thisClubOnly
-        ? _log.where((entry) => entry.drill.clubId == _selectedClub!.id).toList()
+        ? _log
+            .where((entry) => entry.drill.clubId == _selectedClub!.id)
+            .toList()
         : _log;
     final emptyLogMessage = thisClubOnly
         ? 'No range sessions for ${_selectedClub!.name} yet.'
         : 'Saved drills show up here, newest first.';
     return Scaffold(
-      appBar: AppBar(title: const Text('Range Drill Instructor'), actions: const [SyncCloudButton()]),
+      appBar: AppBar(
+          title: const Text('Range Drill Instructor'),
+          actions: const [SyncCloudButton()]),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
+            VenueNameField(
               controller: _venueController,
-              decoration: const InputDecoration(
-                labelText: 'Driving range or simulator',
-                hintText: 'Topgolf, local range, sim bay…',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.words,
+              labelText: 'Driving range or simulator',
+              hintText: 'Topgolf, local range, sim bay…',
+              recentNames: _recentVenues,
+              catalogNames: PhGolfCatalog.rangeAndSimNames,
             ),
             const SizedBox(height: 16),
             Text('Select club', style: Theme.of(context).textTheme.titleSmall),
@@ -142,7 +150,8 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             const SizedBox(height: 16),
             Card(
               color: AppColors.amber.withOpacity(0.15),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -152,14 +161,16 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                       children: [
                         Icon(Icons.lightbulb_outline, color: AppColors.amber),
                         SizedBox(width: 8),
-                        Text('Swing Cue & Mechanics Note', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Swing Cue & Mechanics Note',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _notesController,
                       decoration: const InputDecoration(
-                        hintText: 'e.g., 3:1 tempo, pause at top, smooth transition',
+                        hintText:
+                            'e.g., 3:1 tempo, pause at top, smooth transition',
                         border: InputBorder.none,
                       ),
                     ),
@@ -173,7 +184,8 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               children: [
                 Text(
                   'Shots: $_shotCounter / 10',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 ElevatedButton.icon(
                   onPressed: _shotCounter >= 10
@@ -181,7 +193,8 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                       : () => setState(() => _shotCounter++),
                   icon: const Icon(Icons.sports_golf),
                   label: const Text('Hit Shot'),
-                  style: ElevatedButton.styleFrom(minimumSize: const Size(140, 56)),
+                  style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(140, 56)),
                 ),
               ],
             ),
@@ -191,24 +204,30 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                 Expanded(
                   child: TextField(
                     controller: _minController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Min (Yds)', border: OutlineInputBorder()),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Min (Yds)', border: OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _avgController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Avg (Yds)', border: OutlineInputBorder()),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Avg (Yds)', border: OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _maxController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Max (Yds)', border: OutlineInputBorder()),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Max (Yds)', border: OutlineInputBorder()),
                   ),
                 ),
               ],
@@ -218,12 +237,16 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               height: 72,
               child: ElevatedButton(
                 onPressed: _saveDrillSet,
-                child: const Text('Save Drill Session', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text('Save Drill Session',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              thisClubOnly ? 'Session log · ${_selectedClub!.name}' : 'Session log',
+              thisClubOnly
+                  ? 'Session log · ${_selectedClub!.name}'
+                  : 'Session log',
               key: const Key('range-session-log-title'),
               style: Theme.of(context).textTheme.titleMedium,
             ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
 import '../widgets/sync_cloud_button.dart';
+import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
@@ -14,7 +16,14 @@ class FairwayTrackerScreen extends StatefulWidget {
 }
 
 class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
-  static const _lies = ['tee', 'fairway', 'rough', 'bunker', 'green', 'penalty'];
+  static const _lies = [
+    'tee',
+    'fairway',
+    'rough',
+    'bunker',
+    'green',
+    'penalty'
+  ];
 
   final _courseController = TextEditingController(text: 'Local Course');
   final _yardsController = TextEditingController();
@@ -24,7 +33,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   String? _roundId;
   int _holeNumber = 1;
   int _maxHole = 1;
+  int _holeCount = 18;
   int _par = 4;
+  String _appliedCourseName = 'Local Course';
+  List<String> _recentCourses = [];
   Club? _selectedClub;
   String _lieType = 'tee';
   RoundScore? _holeScore;
@@ -60,8 +72,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
   Future<void> _bootstrap() async {
     _clubs = await LocalDatabaseService.instance.getAllClubs();
+    _recentCourses = await LocalDatabaseService.instance.distinctCourseNames();
     _roundId = await LocalDatabaseService.instance.ensureActiveRound(
-      courseName: _courseController.text.trim().isEmpty ? 'Local Course' : _courseController.text.trim(),
+      courseName: _courseController.text.trim().isEmpty
+          ? 'Local Course'
+          : _courseController.text.trim(),
     );
     await _loadCourseName();
     _courseReady = true;
@@ -71,9 +86,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
   Future<void> _loadCourseName() async {
     if (_roundId == null) return;
-    final name = await LocalDatabaseService.instance.getCourseNameForRound(_roundId!);
+    final name =
+        await LocalDatabaseService.instance.getCourseNameForRound(_roundId!);
     if (!mounted || name.isEmpty) return;
     _courseController.text = name;
+    _appliedCourseName = name;
+    _holeCount = PhGolfCatalog.holeCount(name);
   }
 
   Future<void> _persistCourseName() async {
@@ -81,7 +99,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     final roundId = _roundId;
     final name = _courseController.text.trim();
     if (roundId == null || name.isEmpty) return;
-    await LocalDatabaseService.instance.updateCourseName(roundId, name);
+    if (name == _appliedCourseName) return;
+    _appliedCourseName = name;
+    await LocalDatabaseService.instance.applyCoursePar(roundId, name);
+    if (!mounted) return;
+    setState(() => _holeCount = PhGolfCatalog.holeCount(name));
+    await _refreshHoleState();
   }
 
   /// Follows the latest in-progress round, including one started from the scorecard.
@@ -90,6 +113,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     if (!mounted || active == null) return;
     _roundId = active;
     _clubs = await LocalDatabaseService.instance.getAllClubs();
+    _recentCourses = await LocalDatabaseService.instance.distinctCourseNames();
     await _loadCourseName();
     _courseReady = true;
     await _restoreHole();
@@ -98,7 +122,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
   Future<void> _restoreHole() async {
     if (_roundId == null) return;
-    final hole = await LocalDatabaseService.instance.currentHoleNumber(_roundId!);
+    final hole =
+        await LocalDatabaseService.instance.currentHoleNumber(_roundId!);
     if (!mounted) return;
     setState(() {
       _maxHole = hole;
@@ -127,15 +152,18 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   Future<void> _editShot(ShotRecord shot) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => ShotEditDialog(shot: shot, clubs: _clubs, lies: _lies),
+      builder: (context) =>
+          ShotEditDialog(shot: shot, clubs: _clubs, lies: _lies),
     );
     if (saved == true) await _refreshHoleState();
   }
 
   Future<void> _refreshHoleState() async {
     if (_roundId == null) return;
-    final hole = await LocalDatabaseService.instance.getHoleScore(_roundId!, _holeNumber);
-    final shots = await LocalDatabaseService.instance.getShotsForHole(_roundId!, _holeNumber);
+    final hole = await LocalDatabaseService.instance
+        .getHoleScore(_roundId!, _holeNumber);
+    final shots = await LocalDatabaseService.instance
+        .getShotsForHole(_roundId!, _holeNumber);
     final total = await LocalDatabaseService.instance.getRoundTotal(_roundId!);
     if (!mounted) return;
     setState(() {
@@ -156,10 +184,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission is required for shot tracking')),
+          const SnackBar(
+              content:
+                  Text('Location permission is required for shot tracking')),
         );
       }
       return null;
@@ -220,13 +251,17 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
   Future<void> _finishHole() async {
     if (_roundId == null) return;
-    final finishingRound = _holeNumber >= 18;
+    final holeCount = _holeCount;
+    final finishingRound = _holeNumber >= holeCount;
+    final nextPar =
+        PhGolfCatalog.parForHole(_courseController.text, _holeNumber + 1) ?? 4;
     await LocalDatabaseService.instance.finishHole(
       roundId: _roundId!,
       holeNumber: _holeNumber,
-      nextPar: 4,
+      nextPar: nextPar,
+      holeCount: holeCount,
     );
-    if (_holeNumber < 18) {
+    if (_holeNumber < holeCount) {
       setState(() {
         _holeNumber += 1;
         _maxHole = _holeNumber;
@@ -262,14 +297,14 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
+            VenueNameField(
               controller: _courseController,
               focusNode: _courseFocus,
-              decoration: const InputDecoration(
-                labelText: 'Course name',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.words,
+              labelText: 'Course name',
+              recentNames: _recentCourses,
+              catalogNames: PhGolfCatalog.courseNames,
+              captionFor: PhGolfCatalog.courseCaption,
+              onSelected: (_) => _persistCourseName(),
               onSubmitted: (_) => _persistCourseName(),
             ),
             const SizedBox(height: 12),
@@ -295,7 +330,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _yardsController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Distance travelled (yds)',
                   errorText: _yardsError,
@@ -314,7 +350,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   onPressed: _holeNumber > 1 ? () => _stepHole(-1) : null,
                   icon: const Icon(Icons.chevron_left),
                 ),
-                Text('Hole $_holeNumber', key: const Key('on-course-hole-label'), style: Theme.of(context).textTheme.headlineSmall),
+                Text('Hole $_holeNumber',
+                    key: const Key('on-course-hole-label'),
+                    style: Theme.of(context).textTheme.headlineSmall),
                 IconButton(
                   key: const Key('on-course-hole-next'),
                   tooltip: 'Next hole',
@@ -322,11 +360,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   icon: const Icon(Icons.chevron_right),
                 ),
                 const Spacer(),
-                Text('Round total: $_roundTotal', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Round total: $_roundTotal',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
-            Text('Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
+            Text(
+                'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -389,12 +429,14 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
               height: 80,
               child: ElevatedButton(
                 onPressed: _busy ? null : _recordShot,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppColors.green),
                 child: _busy
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
                         _simulator ? 'Record shot' : 'Record Shot at Ball',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
               ),
             ),
@@ -405,7 +447,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   child: OutlinedButton(
                     onPressed: _roundId == null
                         ? null
-                        : () => LocalDatabaseService.instance.incrementPenalties(_roundId!, _holeNumber, 1).then((_) => _refreshHoleState()),
+                        : () => LocalDatabaseService.instance
+                            .incrementPenalties(_roundId!, _holeNumber, 1)
+                            .then((_) => _refreshHoleState()),
                     child: const Text('Penalty +1'),
                   ),
                 ),
@@ -414,7 +458,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   child: OutlinedButton(
                     onPressed: _roundId == null
                         ? null
-                        : () => LocalDatabaseService.instance.incrementPenalties(_roundId!, _holeNumber, 2).then((_) => _refreshHoleState()),
+                        : () => LocalDatabaseService.instance
+                            .incrementPenalties(_roundId!, _holeNumber, 2)
+                            .then((_) => _refreshHoleState()),
                     child: const Text('Penalty +2'),
                   ),
                 ),
@@ -427,7 +473,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   child: OutlinedButton(
                     onPressed: _roundId == null
                         ? null
-                        : () => LocalDatabaseService.instance.incrementMulligans(_roundId!, _holeNumber).then((_) => _refreshHoleState()),
+                        : () => LocalDatabaseService.instance
+                            .incrementMulligans(_roundId!, _holeNumber)
+                            .then((_) => _refreshHoleState()),
                     child: Text('Mulligans ${_holeScore?.mulligans ?? 0}'),
                   ),
                 ),
@@ -436,7 +484,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                   child: OutlinedButton(
                     onPressed: _roundId == null
                         ? null
-                        : () => LocalDatabaseService.instance.concedeHole(_roundId!, _holeNumber).then((_) => _refreshHoleState()),
+                        : () => LocalDatabaseService.instance
+                            .concedeHole(_roundId!, _holeNumber)
+                            .then((_) => _refreshHoleState()),
                     child: const Text('Concede / Gimme'),
                   ),
                 ),
@@ -447,25 +497,32 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
               height: 72,
               child: ElevatedButton(
                 onPressed: _finishHole,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.amber, foregroundColor: Colors.black87),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.amber,
+                    foregroundColor: Colors.black87),
                 child: Text(
-                  _holeNumber >= 18 ? 'Finish Round' : 'Finish Hole',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  _holeNumber >= _holeCount ? 'Finish Round' : 'Finish Hole',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
             if (_shots.isNotEmpty) ...[
               const SizedBox(height: 24),
-              Text('Shots this hole', style: Theme.of(context).textTheme.titleMedium),
+              Text('Shots this hole',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ..._shots.map(
                 (s) => ListTile(
                   key: ValueKey('on-course-shot-${s.id}'),
                   dense: true,
                   onTap: () => _editShot(s),
-                  title: Text('Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}'),
+                  title: Text(
+                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}'),
                   subtitle: Text(
-                    s.distanceYards > 0 ? '${s.distanceYards.round()} yds' : 'Distance pending',
+                    s.distanceYards > 0
+                        ? '${s.distanceYards.round()} yds'
+                        : 'Distance pending',
                   ),
                   trailing: const Icon(Icons.edit_outlined),
                 ),
@@ -480,7 +537,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
 
 @visibleForTesting
 class ShotEditDialog extends StatefulWidget {
-  const ShotEditDialog({super.key, required this.shot, required this.clubs, required this.lies});
+  const ShotEditDialog(
+      {super.key, required this.shot, required this.clubs, required this.lies});
 
   final ShotRecord shot;
   final List<Club> clubs;
@@ -512,7 +570,10 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
   Widget build(BuildContext context) {
     final clubs = widget.clubs.any((club) => club.id == _clubId)
         ? widget.clubs
-        : [...widget.clubs, Club(id: _clubId, name: _clubId, category: 'other')];
+        : [
+            ...widget.clubs,
+            Club(id: _clubId, name: _clubId, category: 'other')
+          ];
     return AlertDialog(
       title: Text('Stroke ${widget.shot.strokeNumber}'),
       content: SingleChildScrollView(
@@ -524,7 +585,8 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
               value: _clubId,
               decoration: const InputDecoration(labelText: 'Club'),
               items: clubs
-                  .map((club) => DropdownMenuItem(value: club.id, child: Text(club.name)))
+                  .map((club) =>
+                      DropdownMenuItem(value: club.id, child: Text(club.name)))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _clubId = value);
@@ -549,10 +611,13 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
         TextButton(
           key: const Key('on-course-shot-delete'),
           onPressed: _delete,
-          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+          style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error),
           child: const Text('Delete shot'),
         ),
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         ElevatedButton(
           key: const Key('on-course-shot-save'),
           onPressed: _save,

@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import '../models/practice_drill.dart';
 import '../services/local_database_service.dart';
 
+/// A drill chosen from the sheet. [copyTitleToNote] is set when the
+/// golfer taps the title, which also fills the Range swing note.
+class PracticeDrillPick {
+  const PracticeDrillPick(this.drill, {this.copyTitleToNote = false});
+
+  final PracticeDrill drill;
+  final bool copyTitleToNote;
+}
+
 String practiceDrillChipKey(String category) {
   final slug = category
       .toLowerCase()
@@ -161,10 +170,19 @@ class _PracticeDrillSheetState extends State<PracticeDrillSheet> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                      Text(drill.title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium),
+                                      InkWell(
+                                        key: ValueKey(
+                                            'range-drill-title-${drill.id}'),
+                                        onTap: () => Navigator.pop(
+                                          context,
+                                          PracticeDrillPick(drill,
+                                              copyTitleToNote: true),
+                                        ),
+                                        child: Text(drill.title,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium),
+                                      ),
                                       Text(drill.category,
                                           style: Theme.of(context)
                                               .textTheme
@@ -185,8 +203,9 @@ class _PracticeDrillSheetState extends State<PracticeDrillSheet> {
                                         FilledButton(
                                           key: const ValueKey(
                                               'range-drill-use-btn'),
-                                          onPressed: () =>
-                                              Navigator.pop(context, drill),
+                                          onPressed: () => Navigator.pop(
+                                              context,
+                                              PracticeDrillPick(drill)),
                                           child: const Text('Use this drill'),
                                         ),
                                         TextButton(

@@ -40,7 +40,8 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 1;
+  /// Opens on On Course, which is the third tab.
+  int _index = 2;
 
   final _bagKey = GlobalKey<ClubsScreenState>();
   final _courseKey = GlobalKey<FairwayTrackerScreenState>();
@@ -49,9 +50,9 @@ class _HomeShellState extends State<HomeShell> {
 
   late final List<Widget> _pages = [
     ClubsScreen(key: _bagKey),
+    RangeDrillScreen(key: _rangeKey),
     FairwayTrackerScreen(key: _courseKey),
     ScorecardScreen(key: _scorecardKey),
-    RangeDrillScreen(key: _rangeKey),
   ];
 
   void _onTabSelected(int i) {
@@ -62,7 +63,7 @@ class _HomeShellState extends State<HomeShell> {
         case 0:
           _bagKey.currentState?.reload();
           break;
-        case 2:
+        case 3:
           _scorecardKey.currentState?.loadScorecard();
           break;
       }
@@ -88,6 +89,11 @@ class _HomeShellState extends State<HomeShell> {
               label: 'My Bag',
             ),
             NavigationDestination(
+              key: ValueKey('shell-tab-range'),
+              icon: Icon(Icons.fitness_center),
+              label: 'Range',
+            ),
+            NavigationDestination(
               key: ValueKey('shell-tab-oncourse'),
               icon: Icon(Icons.my_location),
               label: 'On Course',
@@ -96,11 +102,6 @@ class _HomeShellState extends State<HomeShell> {
               key: ValueKey('shell-tab-scorecard'),
               icon: Icon(Icons.scoreboard),
               label: 'Scorecard',
-            ),
-            NavigationDestination(
-              key: ValueKey('shell-tab-range'),
-              icon: Icon(Icons.fitness_center),
-              label: 'Range',
             ),
           ],
         ),

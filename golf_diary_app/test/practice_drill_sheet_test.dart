@@ -53,6 +53,23 @@ void main() {
         find.byKey(ValueKey(practiceDrillChipKey('Full Swing & Tempo')));
 
     expect(find.byKey(const ValueKey('range-drills-sheet')), findsOneWidget);
+    await tester.tap(
+        find.byKey(const ValueKey('range-drill-title-rng-drl-tempo-3to1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('range-drills-sheet')), findsNothing);
+    final notes = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .singleWhere(
+            (field) => field.controller?.text == '3:1 Tour Tempo Rhythm');
+    expect(notes.controller?.text, '3:1 Tour Tempo Rhythm');
+
+    await tester.tap(find.byKey(const ValueKey('range-header-drills-btn')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
     await tester.ensureVisible(chip);
     await tester.tap(chip);
     await tester.pump();
@@ -69,7 +86,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('range-drill-use-btn')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('3:1 Tour Tempo Rhythm'), findsOneWidget);
+    expect(find.text('3:1 Tour Tempo Rhythm'), findsNWidgets(2));
 
     await tester.enterText(find.widgetWithText(TextField, 'Avg (Yds)'), '150');
     await tester.tap(find.text('Save Drill Session'));
@@ -81,7 +98,11 @@ void main() {
 
     await tester.tap(find.text('Clear'));
     await tester.pump();
-    expect(find.text('3:1 Tour Tempo Rhythm'), findsNothing);
+    expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Text && widget.data == '3:1 Tour Tempo Rhythm'),
+        findsNothing);
+    expect(find.text('3:1 Tour Tempo Rhythm'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, 'Avg (Yds)'), '140');
     await tester.tap(find.text('Save Drill Session'));

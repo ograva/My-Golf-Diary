@@ -4,7 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.2 | Active | 2026-11-09 | Watson (Architect cohort) |
+| 1.3 | Active | 2026-11-09 | Watson (Architect cohort) |
 
 **Inputs:** [`PRD.md`](./PRD.md) v1.3 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
 
@@ -63,7 +63,7 @@ flowchart LR
 | provider | `^6.1.2` | State management where needed |
 | google_fonts | `^9.0.0` | Playfair Display, Inter, Roboto Mono |
 | *Planned (`CRSE-006`)* | `firebase_storage`, `google_maps_flutter` (or static tile renderer) | Course-level map caching in Firebase Storage & local offline map rendering |
-| *Planned (`RNGE-004`)* | `firebase_vertexai` or `google_generative_ai` | Google AI (Gemini) daily range assessment & RAG Golf Swing Diary chat |
+| *Planned (`RNGE-004`)* | `firebase_ai` (`FirebaseAI.vertexAI()`) | Vertex AI Gemini for the swing diary. The project owner pays. No player API keys |
 
 ---
 
@@ -107,7 +107,7 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 | `BAG` | `clubs_screen.dart` | `clubs` |
 | `CRSE` | `fairway_tracker_screen.dart`, `venue_name_field.dart` | `shots`, `round_scores`, `golf_rounds`, `ph_golf_catalog.dart`, `ph_golf_hole_coords.dart` (`CRSE-005`), local map cache (`CRSE-006`) |
 | `SCOR` | `scorecard_screen.dart`, `scorecard_hole_editor.dart`, `venue_name_field.dart` | `round_scores`, `golf_rounds`, `ph_golf_catalog.dart` |
-| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, drills sheet (`RNGE-003`), AI diary sheet (`RNGE-004`) | `range_drills` → updates `clubs`; `practice_drills` (`RNGE-003`); `swing_diary_messages` (`RNGE-004`) |
+| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, drills sheet (`RNGE-003`), AI diary sheet (`RNGE-004`) | `range_drills` → updates `clubs`; `practice_drills` (`RNGE-003`); `swing_diary_messages` and `range_evaluations` (`RNGE-004`) |
 | `SYNC` | `sync_cloud_button.dart` | `CloudSyncService` → Firestore (`my-golf-diary`) & Firebase Storage (`CRSE-006` map packs) |
 
 ---
@@ -201,32 +201,62 @@ flowchart TD
   - Plots each `ShotRecord` for the active hole (`start_lat/lon` → `end_lat/lon`) with club labels and yardage badges.
 - **Offline Fallback:** If a golfer is on the course with no cellular data and the course pack was not pre-downloaded, the view still renders a clean 2D vector fairway schematic (scaled from Tee-to-Green coordinates and `ShotRecord` GPS points) without failing.
 
-### 5.6 Google AI Range Assessment & RAG Golf Swing Diary (`RNGE-004` — Future Architecture)
+### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004` — Future Architecture)
+
+The diary comments on **today’s drills in the context of earlier practice**: what the player has been focusing on, and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
 
 ```mermaid
 sequenceDiagram
-  participant User as Golfer (Range Tab)
+  participant User as Golfer
   participant App as Flutter App (SQLite)
-  participant RAG as Local / Cloud RAG Builder
-  participant AI as Google AI (Gemini)
+  participant AI as Vertex AI Gemini
 
-  User->>App: Tap "Daily AI Assessment" or send Swing Diary chat message
-  App->>RAG: Query today's RangeDrillLogs + active PracticeDrill steps
-  App->>RAG: Retrieve historical club swing_notes, recent drill trends, & prior diary summaries
-  RAG->>AI: Structured prompt (System role + Retrieved Diary Context + User query/day logs)
-  AI-->>App: Markdown coaching assessment / grounded answer
-  App->>App: Persist turn in swing_diary_messages (SQLite + Firestore sync)
-  App-->>User: Render in continuous Golf Swing Diary chat thread
+  User->>App: Ask for a range evaluation or a follow-up
+  App->>App: Load today in full, recent raw history, progress brief, per-club tally
+  App->>AI: Prompt stays under about 250000 tokens
+  AI-->>App: Evaluation framed on past focus and progress
+  App->>App: Append the evaluation to range_evaluations
+  Note over App: When history would pass 250000 tokens, store a periodic summary and drop the oldest raw text from the next prompt
 ```
 
-- **Data Persistence (Planned SQLite / Firestore tables):**
-  - `swing_diary_messages`: `id`, `session_date` (`YYYY-MM-DD`), `role` (`user` | `model` | `daily_summary`), `content`, `referenced_drill_ids_json`, `referenced_club_ids_json`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`.
-  - `swing_diary_chunks` *(optional local embedding index)*: `id`, `source_type` (`range_drill` | `club_note` | `daily_summary`), `source_id`, `text_chunk`, `embedding_json`, `timestamp`.
-- **Hybrid RAG Retrieval Strategy:**
-  1. **Deterministic Temporal Context:** Always injects (a) all `range_drills` logged on the target day (club, shot count, `min`/`max`/`avg` yards, `tempo_notes`, and the step-by-step definition of any selected `PracticeDrill`), and (b) current `clubs` distance bands and `swing_notes`.
-  2. **Semantic / Historical Retrieval:** Searches historical `range_drills.tempo_notes`, prior `daily_summary` entries, and chat turns by club filter, keyword/BM25, or cosine similarity over lightweight embeddings (`text-embedding-004`) so queries like *"What fixed my driver slice last month?"* surface the exact past sessions.
-- **Google AI Integration & Key Security:**
-  - Uses **Firebase Vertex AI in Firebase** (`firebase_vertexai` with Firebase App Check / Anonymous Auth) or a lightweight Firebase Cloud Function proxy calling **Gemini** (`gemini-2.5-flash`), keeping raw Google AI API keys out of client source code.
+**Who pays.** `FirebaseAI.vertexAI()` with App Check and the existing anonymous user. A Flash-class Gemini model. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt.
+
+**What each call contains**, in order:
+
+1. Fixed system role: comment from this golfer’s notes, in yards.
+2. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
+3. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
+4. **Recent history, still raw**, while the whole prompt is under the ceiling. This is how early accounts work: the real drill log is the history.
+5. **Today, in full** — that day’s `range_drills`, drill steps, min / avg / max, and tempo notes. Today is never folded into the progress brief.
+6. The latest chat turns only.
+
+**250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw history so the evaluation can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
+
+- Write a **periodic summary** row (the new progress brief) from SQLite plus the previous brief. Keep the comparison facts above.
+- Leave a recent raw window (about a month of sessions, or the last several dozen logs) verbatim.
+- Leave today in full.
+- Later calls send the brief, the tally, the recent window, today, and the latest turns. Cost per message stays flat after the ceiling. It does not grow because the account is older.
+
+**Readable log.** Every model evaluation and every periodic summary is stored for the player to read later. A navigation entry to that log is not part of this decision. The rows have to be enough to render it without calling Vertex again.
+
+Planned SQLite table `range_evaluations`:
+
+| Column | Purpose |
+| :--- | :--- |
+| `id` | Primary key |
+| `kind` | `evaluation` or `periodic_summary` |
+| `session_date` | `YYYY-MM-DD` the note is about |
+| `content` | The text the player can read |
+| `prompt_tokens` | Size of the prompt that produced it, when known |
+| `covered_through_ms` | For a periodic summary, the newest drill timestamp folded into the brief |
+| `referenced_drill_ids_json` | Drills cited |
+| `referenced_club_ids_json` | Clubs cited |
+| `timestamp` | When the row was written |
+| `is_synced`, `updated_at_ms`, `deleted` | Same sync shape as other diary tables. Sync can wait |
+
+`swing_diary_messages` still holds the chat turns (`user`, `model`). An `evaluation` row is the durable copy of a model reply the log shows. A `periodic_summary` row is the progress brief used in later prompts and shown in the same log, marked so a reader can tell a compaction note from a day’s evaluation.
+
+Do not add an embedding index in this phase. A question about a specific older day loads that day’s `range_drills` by date and club and adds only those rows.
 
 ---
 
@@ -274,7 +304,7 @@ service cloud.firestore {
 - `firebase_options.dart` is public client config. Do not commit server credentials, Google Maps private signing keys, or Google AI (Gemini) API keys in repository source.
 - Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
 - **Firebase Storage (`CRSE-006`):** Shared course map packs under `/course_maps/{courseId}/**` allow authenticated read (`request.auth != null`) and restrict writes to authenticated cache builders / admin functions.
-- **Google AI (`RNGE-004`):** Route through Firebase Vertex AI or an authenticated Cloud Function; never bundle an unrestricted Gemini API key in the web/mobile client binary.
+- **Vertex AI (`RNGE-004`):** `FirebaseAI.vertexAI()` on this Firebase project. The owner pays while the diary stays under about 1,000 people. Players do not supply Gemini keys. No model key in the client.
 
 ---
 
@@ -309,9 +339,10 @@ Background location **not** required for current flows.
 5. **Strokes vs shots:** any change to `syncStrokeCountFromShots` updates §5.2 + PRD.
 6. **RNGE blend:** changes require Version History + migration if schema changes.
 7. **Seeded vs Custom Drills (`RNGE-003`):** deleting a seeded drill must persist via tombstone/flag (`deleted = 1`) so it does not reappear on app restart.
-8. **Firestore & Secrets:** no wide-open production rules on user data; no raw Google Maps or Google AI secret keys committed to git.
-9. **Theme/keys:** `app_theme.dart`; wireframe Keys per `cohorts/eunice.agent.md` (`on-course-distance-to-hole`, `on-course-map-toggle`, `range-header-drills-btn`).
-10. **Dependencies:** justify in Version History when adding packages.
+8. **Firestore & Secrets:** no wide-open production rules on user data; no raw Google Maps or Gemini API keys committed to git. Swing-diary calls use Vertex AI billed to the project. Do not add a player-supplied API key.
+9. **Diary prompt (`RNGE-004`):** send raw drill history while the prompt is under about 250,000 tokens. Past that, persist a periodic summary and keep today plus a recent raw window. Store every evaluation and periodic summary for a later read-only log.
+10. **Theme/keys:** `app_theme.dart`; wireframe Keys per `cohorts/eunice.agent.md` (`on-course-distance-to-hole`, `on-course-map-toggle`, `range-header-drills-btn`).
+11. **Dependencies:** justify in Version History when adding packages.
 
 ---
 
@@ -323,3 +354,4 @@ Background location **not** required for current flows.
 | 1.0 | 2026-11-06 | Watson | Full tech spec: strokes vs shots, yards, RNGE→club, Firestore rules, iOS plist |
 | 1.1 | 2026-11-07 | Watson | Named Firestore `my-golf-diary`, anonymous auth, pull-then-push LWW, tombstones |
 | 1.2 | 2026-11-09 | Watson | Align with PRD v1.3: DB v4 (`golf_rounds`) + planned v5 (`practice_drills`), venue catalog, `CRSE-005` gated live GPS distance-to-hole stream, `CRSE-006` Google Maps → Firebase Storage → local offline map cache, `RNGE-003` seeded/custom drill persistence, and `RNGE-004` Google AI (Gemini) RAG Golf Swing Diary architecture |
+| 1.3 | 2026-11-09 | Watson | RNGE-004 uses Vertex AI billed to the project under about 1,000 people. Prompts send raw drill history up to about 250,000 tokens, then a stored periodic summary plus a recent window, with today always in full. Evaluations and periodic summaries are kept in `range_evaluations` for a later reader log |

@@ -82,7 +82,7 @@ golf_diary_app/lib/
 ├── pwa/                              # Web build ID & service-worker update prompt
 ├── screens/                          # clubs, fairway_tracker, scorecard, scorecard_hole_editor, range_drill
 ├── services/
-│   ├── local_database_service.dart   # SQLite v4 (v5 planned for practice_drills & AI diary)
+│   ├── local_database_service.dart   # SQLite v5 (practice_drills); later AI diary tables
 │   ├── cloud_sync_service.dart       # Pull-then-push LWW Firestore sync
 │   ├── diary_remote.dart             # Firestore adapter
 │   ├── sync_identity.dart            # Firebase Anonymous Auth uid
@@ -114,11 +114,11 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 4** (`LocalDatabaseService._initDB`), with **version 5** planned for `RNGE-003` custom/deleted practice drills (and later `CRSE-006` / `RNGE-004` tables).
+**DB:** `golf_diary.db`, currently **version 5** (`LocalDatabaseService._initDB`). Later versions can add `CRSE-006` map cache and `RNGE-004` diary tables.
 - Version 2 added `clubs.brand`, `clubs.model`, and `range_drills.venue_name`.
 - Version 3 added `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
 - Version 4 added `golf_rounds` to track round lifecycle (`started_at_ms`, `completed_at_ms`).
-- **Planned Version 5 (`RNGE-003`):** adds `practice_drills` (seeded + user-created drills with tombstone support so users can delete seeded or custom drills) and optional `drill_id` reference on `range_drills`.
+- **Version 5 (`RNGE-003` / `RNGE-020`):** adds `practice_drills` (seeded + user-created drills with tombstone support so users can delete seeded or custom drills) and optional `drill_id` reference on `range_drills`.
 
 ### Tables (current & planned)
 
@@ -127,8 +127,8 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 - **`round_scores`** — `id`, `round_id`, `course_name`, `hole_number`, `par`, **`strokes`**, `penalties`, `mulligans`, `conceded`, **`final_score`**, `is_synced`, `updated_at_ms`, `deleted`.
 - **`golf_rounds`** — `round_id`, `course_name`, `started_at_ms`, `completed_at_ms`, `is_synced`, `updated_at_ms`, `deleted`.
 - **`range_drills`** — `id`, `club_id`, `shot_count`, `min_yards`, `max_yards`, `avg_yards`, `tempo_notes`, `venue_name`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`. *(Planned v5 column: `drill_id TEXT` nullable).*
-- **`practice_drills` *(Planned v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
-  - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 11 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
+- **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
+  - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the reference drills from [`Range_Drills.md`](./Range_Drills.md) (12 stable IDs, `rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync. `practice_drills` is not part of `syncFull` until a later shard.
 
 **Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — **mulligans** stored but **not** in gross formula (display/practice).
 
@@ -170,7 +170,7 @@ Changing this math requires **Version History** + migration if schema changes.
 - **Coordinate Lookup (`ph_golf_hole_coords.dart`):** Encodes verified WGS84 6-decimal Tee and Green/Pin coordinates from [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) keyed by canonical course name and `holeNumber` (1–18).
 - **Gating Rule:** `hasHoleCoordinates(courseName, holeNumber)` is true **only** when On Course is in `Course` mode (`!_simulator`) and a verified `HoleCoordinates(teeLat, teeLon, greenLat, greenLon)` entry exists for that exact course and hole.
   - Full 18-hole mapped courses (16 layouts) enable the metric on holes 1–18.
-  - Partial courses (e.g., Hallow Ridge H1–H4, H6–H9; Sherwood Hills mapped holes) enable the metric **only** on mapped holes and turn it off on unmapped holes.
+  - Partial courses (Hallow Ridge H1–H9; Sherwood Hills omits H3–H7) enable the metric **only** on mapped holes and turn it off on unmapped holes.
   - Unmapped courses (centroid-only or custom names) keep the metric and stream completely off.
 - **Stream Lifecycle & Battery:**
   - When gated **on**, `FairwayTrackerScreenState` subscribes to `Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 3))` (3-meter movement threshold) and performs an initial `getCurrentPosition` read so yardage appears immediately.
@@ -313,7 +313,7 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** currently version 4 (`golf_rounds`), upgrading to version 5 when `practice_drills` (`RNGE-003`) is implemented.
+- **DB:** version 5 (`practice_drills` and nullable `range_drills.drill_id`).
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -356,3 +356,4 @@ Background location **not** required for current flows.
 | 1.2 | 2026-11-09 | Watson | Align with PRD v1.3: DB v4 (`golf_rounds`) + planned v5 (`practice_drills`), venue catalog, `CRSE-005` gated live GPS distance-to-hole stream, `CRSE-006` Google Maps → Firebase Storage → local offline map cache, `RNGE-003` seeded/custom drill persistence, and `RNGE-004` Google AI (Gemini) RAG Golf Swing Diary architecture |
 | 1.3 | 2026-11-09 | Watson | RNGE-004 uses Vertex AI billed to the project under about 1,000 people. Prompts send raw drill history up to about 250,000 tokens, then a stored periodic summary plus a recent window, with today always in full. Evaluations and periodic summaries are kept in `range_evaluations` for a later reader log |
 | 1.4 | 2026-11-09 | Watson | §1 names the swing diary as Vertex AI so it matches PRD 1.4. No change to the §5.6 design |
+| 1.5 | 2026-11-09 | Athena | DB v5 is current: `practice_drills` seeded from `Range_Drills.md` (12 drills) and nullable `range_drills.drill_id`. Hole lookup uses catalog names. Sherwood omits H3–H7; Hallow Ridge H1–H9 are surveyed |

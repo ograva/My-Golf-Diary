@@ -428,6 +428,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
             SizedBox(
               height: 80,
               child: ElevatedButton(
+                key: const ValueKey('oncourse-record-shot-btn'),
                 onPressed: _busy ? null : _recordShot,
                 style:
                     ElevatedButton.styleFrom(backgroundColor: AppColors.green),

@@ -4,7 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.3 | Approved | 2026-11-09 | Jason (PM cohort) |
+| 1.4 | Approved | 2026-11-09 | Jason (PM cohort) |
 
 **Stories:** Embedded in §3 (20 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later.
 
@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **On Course** (GPS fairway HUD, live distance-to-hole metric on mapped courses, future cached course map view, penalties, mulligans, concede, optional upload), **Scorecard** (18 holes + editor), and **Range** (structured practice drills selector, block drill min/max/avg, notes, and a future Google AI / RAG continuous Golf Swing Diary chat). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC** bind requirements to [`Architecture.md`](./Architecture.md) code map.
+My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **On Course** (GPS fairway HUD, live distance-to-hole metric on mapped courses, future cached course map view, penalties, mulligans, concede, optional upload), **Scorecard** (18 holes + editor), and **Range** (structured practice drills selector, block drill min/max/avg, notes, and a future Vertex AI Golf Swing Diary). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC** bind requirements to [`Architecture.md`](./Architecture.md) code map.
 
 ---
 
@@ -100,7 +100,7 @@ As **Rory**, I want **gimmes visible** on the grid.
 
 ### RNGE — Range
 
-**Overview:** Header left-side drill selector drawer/sheet, non-putter club, **shot count**, min/max/avg fields, notes, **save** `RangeDrillLog`, plus future Google AI / RAG continuous Golf Swing Diary assessment.
+**Overview:** Header left-side drill selector drawer/sheet, non-putter club, **shot count**, min/max/avg fields, notes, **save** `RangeDrillLog`, plus a future Vertex AI Golf Swing Diary that comments on today’s drills in the light of earlier practice.
 
 **RNGE-001 — Club + shot block**  
 As **Riley**, I want **club + shot counter** so **the drill matches my ball count**.  
@@ -114,29 +114,27 @@ As **Riley**, I want **min/max/avg + notes + save** so **the session is recorded
 As **Riley**, I want **a list of practice drills accessible from a small icon on the left side of the Range header—with a short description, step-by-step instructions, and the ability to add my own drills or delete ones I don't like** so **my range sessions have clear structure**.  
 **AC:** (1) A compact icon button on the left side of the Range AppBar (`ValueKey('range-header-drills-btn')`) opens the Practice Drills sheet/drawer. (2) The list is pre-populated from [`Range_Drills.md`](./Range_Drills.md), displaying each drill's title, category, and short description, and expanding on tap to show the numbered step-by-step instructions. (3) Selecting a drill links or copies the drill title/cue into the active Range session so the user can follow the steps and log their block. (4) Users can **add a custom drill** (title, category, short description, step-by-step instructions) and **delete any drill** (custom or seeded) they do not like, with changes persisted locally in SQLite (and sync-ready via tombstones/flags).
 
-**RNGE-004 — Google AI Range Assessment & Continuous RAG Golf Swing Diary Chat (Future Feature)**  
-As **Riley**, I want **a Google AI assessment of my drills and swing notes—capable of summarizing all range notes taken in a day and maintaining a continuous Gemini-style Golf Swing Diary chat grounded in my historical practice data (RAG)** so **I can track swing evolution and get personalized coaching insights over time**.  
-**AC (Conceptual / Future Scope):** (1) **Daily Range Summary:** On-demand or end-of-day action synthesizes all `RangeDrillLog` entries, selected drills, yardage spreads (`min`/`max`/`avg`), and `tempo_notes` recorded on that date into a concise AI coaching assessment. (2) **Continuous Golf Swing Diary Chat:** Provides a persistent, multi-turn conversational thread (like Gemini chat) where the golfer asks questions ("Why did my 7-iron dispersion tighten last week?", "What cue worked when my driver started slicing in October?") and logs free-form feel thoughts. (3) **RAG Grounding Architecture:** Retrieves relevant historical context from the user's local/synced `range_drills`, `clubs.swing_notes`, and prior diary summaries (via embeddings / semantic retrieval or structured temporal context windows) before calling the Google AI (Gemini) API, ensuring responses cite the golfer's own logged sessions rather than generic tips. (4) **Offline & Privacy Guardrails:** Requires explicit user opt-in and network connectivity; raw local SQLite logs remain usable offline when AI services are unreachable.
+**RNGE-004 — Vertex AI range evaluation and Golf Swing Diary (Future Feature)**  
+As **Riley**, I want **today’s range notes assessed against what I have been practicing, in a continuous diary I can keep reading**, so **I can see whether a cue or a yardage is actually moving**.  
+**AC (Future Scope):** (1) **Today in context:** An on-demand evaluation covers that day’s drills, steps, min / avg / max, and tempo notes, and it says what the player has been focusing on and how those numbers compare with earlier sessions. (2) **Continuous diary:** Follow-up questions stay in one thread. A question about a specific older day uses that day’s saved logs. (3) **History that stays affordable:** While the prompt is under about 250,000 tokens, the model sees the real drill history. Past that ceiling, older history is replaced by a stored progress brief plus a per-club tally, a recent raw window remains, and today stays in full. The project owner pays Vertex AI while this stays under about 1,000 people. The player does not enter an API key. (4) **A log the player can read:** Every evaluation and every periodic summary is saved locally and can be reread without another model call. Range logging still works offline when Vertex is unreachable. Where the log appears in navigation is decided later.
 
 ```mermaid
 flowchart LR
-  subgraph Range_Tab [Range Tab & Diary]
-    Logs["Daily RangeDrillLogs + Swing Notes"]
-    Drills["Selected Drill Steps (Range_Drills.md)"]
-    History["Historical Club & Session Store (SQLite / Firestore)"]
+  subgraph Range_Tab [Range Tab]
+    Today["Today's drills, in full"]
+    History["Earlier drills, raw while the prompt fits"]
+    Brief["Progress brief and per-club tally, after the ceiling"]
   end
-  subgraph RAG_Layer [RAG Retrieval & Context Builder]
-    Retriever["Temporal + Semantic Retriever"]
+  subgraph Vertex [Vertex AI, project billed]
+    Eval["Evaluation of today against past focus"]
   end
-  subgraph Google_AI [Google AI / Gemini]
-    Summary["Daily Range Assessment"]
-    Chat["Continuous Golf Swing Diary Chat"]
+  subgraph Log [Readable log]
+    Rows["Saved evaluations and periodic summaries"]
   end
-  Logs --> Retriever
-  Drills --> Retriever
-  History --> Retriever
-  Retriever --> Summary
-  Retriever --> Chat
+  Today --> Eval
+  History --> Eval
+  Brief --> Eval
+  Eval --> Rows
 ```
 
 ### SYNC — Cloud sync (optional)
@@ -170,7 +168,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 5. **Verify** → Scorecard: totals; tap hole to fix strokes or par.  
 6. **Range — Select Drill** → tap the left header icon on Range to open the **Practice Drills** list ([`Range_Drills.md`](./Range_Drills.md)), read the step-by-step explainer (or add/delete custom drills), and apply a drill to the session.  
 7. **Range — Log Block** → pick club, count swings, enter min/max/avg and tempo notes, save.  
-8. **Range — AI Swing Diary (Future)** → request a **Google AI daily assessment** of today's drills and notes, and continue the conversation in the RAG-backed **Golf Swing Diary chat**.  
+8. **Range — Swing Diary (Future)** → ask for an evaluation of today’s drills against earlier practice, continue the thread, and later reread saved evaluations and periodic summaries.  
 9. **Backup** → **cloud sync** if Firebase is configured.  
 10. **Next round** → new round from scorecard or implied active round behavior.
 
@@ -181,7 +179,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | Area | Requirement |
 | :--- | :--- |
 | **Performance** | Tabs and shot save feel responsive; GPS read shows busy state (target: feedback ≤ ~2s typical). Cached course maps load from local disk without blocking shot capture. |
-| **Security / privacy** | No keys in source; on-device SQLite; Firestore & Firebase Storage rules before prod sync; Google AI API keys proxied or secured per Watson's architecture. |
+| **Security / privacy** | No keys in source; on-device SQLite; Firestore and Firebase Storage rules before production sync. Swing-diary calls use Vertex AI billed to the project. Players do not supply a Gemini key. |
 | **Accessibility** | Primary taps ≥48dp where feasible; theme contrast; respect OS font scale on core screens. |
 | **Offline** | Bag, fairway, scorecard, range, and seeded/custom drill catalog fully usable offline; distance-to-hole works offline via device GPS + bundled coordinates; cached course maps render offline once synced from Firebase Storage; AI assessment requires connectivity. |
 | **Location** | Request when recording or showing live hole distance; handle denied/deniedForever; automatically hide distance-to-hole on unmapped courses or Simulator mode. |
@@ -198,7 +196,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 5. **Watch-first** capture.  
 6. A separate non-Flutter web client. The Flutter PWA is in scope for sync.
 
-*(Note: **CRSE-006** Cached Course Map View and **RNGE-004** Google AI / RAG Golf Swing Diary Chat are documented in §3 as **Future Features** for architectural planning and phased delivery.)*
+*(Note: **CRSE-006** cached course map view and **RNGE-004** Vertex AI swing diary are future features. Range logging does not depend on either.)*
 
 ---
 
@@ -210,7 +208,8 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | RNGE aggregates: overwrite vs blend vs history-only? | Watson |
 | Source of truth if shot count ≠ scorecard strokes? | Watson (document in Architecture) |
 | Google Maps Static/Tile API licensing & Firebase Storage bucket structure for per-course map caching (`CRSE-006`) | Watson |
-| RAG storage & embedding strategy for Google AI Swing Diary (`RNGE-004`): client-side SQLite vector search vs Firestore Vector Search / Vertex AI / Gemini long-context window | Watson + Jason |
+| Where the saved evaluation and periodic-summary log appears in navigation (`RNGE-004`) | Jason + Eunice |
+| What replaces project-billed Vertex AI if the diary reaches about 1,000 people | Jason + Watson |
 | iOS **Info.plist** location strings | Watson |
 | Linking anonymous uid to Google or email, and migrating `local_user` | Product + Watson |
 | Analytics for Brief KPIs | Jason + Watson |
@@ -219,7 +218,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 - Firebase project `novusinc-8df79`, Firestore database `my-golf-diary`, Anonymous Auth enabled, and `firestore.rules` deployed to that database. `initializeFirebase` in `main.dart`.
 - [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) for `CRSE-005` live distance-to-hole and `CRSE-006` hole map bounds.
 - [`Range_Drills.md`](./Range_Drills.md) for `RNGE-003` seeded practice drills.
-- Future: Firebase Storage bucket + Google Maps API key (`CRSE-006`), and Google AI (Gemini) API / Firebase Vertex AI integration (`RNGE-004`).
+- Future: a Firebase Storage bucket and a Google Maps key (`CRSE-006`). Vertex AI on `novusinc-8df79` for `RNGE-004`, with App Check. No separate Gemini API product and no player API key.
 
 ---
 
@@ -231,7 +230,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | Shots per 18-equivalent | Local query / research |
 | Complete 18-hole rounds | `round_scores` completion stats |
 | RNGE saves / user / month | `range_drills` counts + % of sessions using a structured drill (`RNGE-003`) |
-| AI Diary engagement (future) | % of range days followed by a daily AI assessment or Swing Diary chat turn (`RNGE-004`) |
+| Swing diary use (future) | Share of range days that produce a saved evaluation, and whether players reopen the evaluation log (`RNGE-004`) |
 
 Interim: **5+ interviews** on “log at cart/bag” and “card matches round.”
 
@@ -245,3 +244,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.1 | 2026-11-07 | SYNC-004 pull/merge, anonymous uid, PWA in scope for sync |
 | 1.2 | 2026-11-08 | Reference [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) lookup table for CRSE, SCOR, and RNGE |
 | 1.3 | 2026-11-09 | Add `CRSE-005` (live GPS distance to hole on mapped courses), `CRSE-006` (future On-Course hole map view with Google Maps + Firebase Storage cache), `RNGE-003` (Range header drill picker + custom add/delete + [`Range_Drills.md`](./Range_Drills.md)), and `RNGE-004` (future Google AI daily range assessment & RAG Golf Swing Diary chat) |
+| 1.4 | 2026-11-09 | Align `RNGE-004` with Architecture 1.3: Vertex AI billed to the project under about 1,000 people, raw history until about 250,000 tokens, then a stored progress brief, and a readable log of evaluations and periodic summaries. No embeddings and no player API key in this phase |

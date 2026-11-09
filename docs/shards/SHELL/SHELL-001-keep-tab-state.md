@@ -6,7 +6,7 @@
 | **Module** | App shell (cross-cutting; no PRD prefix) |
 | **Story Ref** | None |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | S |
 | **Depends On** | None |
 

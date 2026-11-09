@@ -6,15 +6,15 @@
 | **Module** | BAG — My Bag |
 | **Story Ref** | BAG-001, BAG-002, BAG-003 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Superseded |
 | **Complexity** | M |
 | **Depends On** | SHELL-001 |
 
 ## Description
 
-My Bag already filters by category, edits notes in a dialog, and shows brand, model, a yardage sparkline, and past range sessions. This shard still replaces that card with the glance row from `Wireframe_MyBag.md`: name, min / avg / max, and a one-line note. Editing notes moves to a bottom sheet with an explicit save. Keep the header Add Club button (`add-club-button`), the club editor dialog, and the range-log sheet (`bag-range-logs-{clubId}`). Category chips stay session-only and start on Wood.
+My Bag filters by category, edits notes in a dialog, and shows brand, model, a yardage sparkline, and past range sessions. The glance-card rebuild is not scheduled.
 
-The glance layout shipped in `7f5791f` and was replaced by the bag commits after it (`1237fd8`, `d79ae09`, `019734e`). Treat the current screen as the baseline. A distance of 0 still renders as `0 yds`. There is no first-load spinner and no `bag-category-chip-*` or `bag-club-card-*` key.
+Superseded on 2026-11-09. The current My Bag screen is the accepted baseline. Do not rebuild the glance cards. A distance of 0 still renders as `0 yds`. There is no first-load spinner and no `bag-category-chip-*` or `bag-club-card-*` key.
 
 ## Acceptance Criteria
 

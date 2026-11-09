@@ -6,7 +6,7 @@
 | **Module** | RNGE — Range |
 | **Story Ref** | RNGE-001, RNGE-002 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Superseded |
 | **Complexity** | M |
 | **Depends On** | SHELL-001 |
 
@@ -14,9 +14,7 @@
 
 Range already excludes putters, counts hits up to 10, saves a counter of 0 as 10 balls, names the club in the success snackbar, clears the yardage fields, and leaves the tempo note in place. The venue field and the session log (this club / all clubs) are on the screen and stay.
 
-This shard still rebuilds the layout from `Wireframe_Range.md`: title `Range`, a bag-baseline card (em dash when a value is 0), stacked min / avg / max, save disabled until avg parses and the three values are ordered, and empty min or max copied from avg before save. `saveRangeDrill` blend math stays unchanged.
-
-`resolveDrillYardages` and the `range-*` keys shipped in `7f5791f` and are not in the current file. The title is still `Range Drill Instructor`. Save is always enabled and empty min or max is stored as 0.
+Superseded on 2026-11-09. The current Range screen is the accepted baseline, including the title `Range Drill Instructor`, always-enabled save, and empty min or max stored as 0. Do not rebuild this layout. RNGE-021 adds the drill sheet on this screen.
 
 ## Acceptance Criteria
 

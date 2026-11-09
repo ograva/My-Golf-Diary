@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-001, CRSE-002, CRSE-003, CRSE-004, SYNC-002 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Superseded |
 | **Complexity** | L |
 | **Depends On** | SHELL-001 |
 
@@ -14,9 +14,7 @@
 
 The fairway screen already has venue lookup, Course / Simulator mode, hole resume and stepping, shot edit, and course-name edits through `applyCoursePar` (that renames every row of the round and sets par on unplayed holes). Shot rows already show the club name, lie, and yards or `Distance pending`. The record button ignores taps while `_busy` is set. Finish on the last hole shows a local-save snackbar.
 
-This shard still rebuilds the layout from `Wireframe_OnCourse.md`: title `On Course`, record shot fixed above the tab bar, outlined finish hole, a location banner, the word `Gimme` on the HUD after concede, and the wireframe keys. Keep simulator entry, hole stepping, shot correction, and `applyCoursePar`.
-
-That layout shipped in `7f5791f` and was overwritten. The app bar title is `Fairway HUD` again. Record shot and Finish hole are filled buttons inside the scroll view. Permission denial is only a snackbar. The HUD line does not show `Gimme`.
+Superseded on 2026-11-09. The current Fairway HUD is the accepted baseline, including the title `Fairway HUD`, the scrolling record and finish buttons, the permission snackbar, and no `Gimme` chip. Do not rebuild this layout. CRSE-021 ships on this screen.
 
 ## Acceptance Criteria
 

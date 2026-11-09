@@ -32,4 +32,4 @@ Open the practice-drill list from a leading icon on the Range header. Each row s
 
 - Files: `golf_diary_app/lib/screens/range_drill_screen.dart` and a small sheet widget under `lib/widgets/` or `lib/screens/`.
 - The icon is `leading` on the AppBar, 48dp. One filled button in the sheet: **Use this drill**. Add’s save is the filled button on the form. Delete is text.
-- Keep the existing venue field, counter, and session log. Do not restyle the whole Range screen (that is RNGE-010).
+- Keep the existing venue field, counter, and session log. RNGE-010 is superseded, so do not restyle the Range screen.

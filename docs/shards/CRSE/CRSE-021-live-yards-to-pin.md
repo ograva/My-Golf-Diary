@@ -30,6 +30,6 @@ Show remaining yards from the phone to the current hole’s green while On Cours
 ## Dev notes
 
 - Files: `golf_diary_app/lib/screens/fairway_tracker_screen.dart`, `ph_golf_hole_coords.dart`.
-- Ship on the current Fairway HUD. Do not block on CRSE-010’s layout rebuild.
+- Ship on the current Fairway HUD. CRSE-010 is superseded, so do not wait for a layout rebuild.
 - Do not start a stream on the web build if `Geolocator` cannot provide a position; hide the line.
 - Yards stay the display unit (Architecture §5.1, §9.3).

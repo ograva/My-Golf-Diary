@@ -8,14 +8,16 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('shell-nav-bar')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-tab-oncourse')), findsOneWidget);
-    expect(find.byKey(const ValueKey('oncourse-record-shot-btn')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('oncourse-record-shot-btn')), findsOneWidget);
     expect(find.text('On Course'), findsOneWidget);
-    final bar = tester.widget<NavigationBar>(find.byKey(const ValueKey('shell-nav-bar')));
+    final bar = tester
+        .widget<NavigationBar>(find.byKey(const ValueKey('shell-nav-bar')));
     expect(
       bar.destinations
           .map((destination) => (destination as NavigationDestination).label)
           .toList(),
-      ['My Bag', 'On Course', 'Scorecard', 'Range'],
+      ['My Bag', 'Range', 'On Course', 'Scorecard'],
     );
     await tester.pump(const Duration(seconds: 2));
   });

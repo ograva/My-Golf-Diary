@@ -101,14 +101,19 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   }
 
   Future<void> _openDrills() async {
-    final drill = await showModalBottomSheet<PracticeDrill>(
+    final pick = await showModalBottomSheet<PracticeDrillPick>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => const PracticeDrillSheet(),
     );
-    if (!mounted || drill == null) return;
-    setState(() => _selectedDrill = drill);
+    if (!mounted || pick == null) return;
+    setState(() {
+      _selectedDrill = pick.drill;
+      if (pick.copyTitleToNote) {
+        _notesController.text = pick.drill.title;
+      }
+    });
   }
 
   @override

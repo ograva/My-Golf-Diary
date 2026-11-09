@@ -12,7 +12,9 @@
 
 ## Description
 
-Replace the always-open notes form on each club card with a glance row: name, min / avg / max in yards, and a one-line note. Editing notes happens in a bottom sheet with an explicit save. Category chips stay session-only and start on Wood.
+My Bag already filters by category, edits notes in a dialog, and shows brand, model, a yardage sparkline, and past range sessions. This shard still replaces that card with the glance row from `Wireframe_MyBag.md`: name, min / avg / max, and a one-line note. Editing notes moves to a bottom sheet with an explicit save. Keep the header Add Club button (`add-club-button`), the club editor dialog, and the range-log sheet (`bag-range-logs-{clubId}`). Category chips stay session-only and start on Wood.
+
+The glance layout shipped in `7f5791f` and was replaced by the bag commits after it (`1237fd8`, `d79ae09`, `019734e`). Treat the current screen as the baseline. A distance of 0 still renders as `0 yds`. There is no first-load spinner and no `bag-category-chip-*` or `bag-club-card-*` key.
 
 ## Acceptance Criteria
 
@@ -32,3 +34,4 @@ Replace the always-open notes form on each club card with a glance row: name, mi
 - File: `golf_diary_app/lib/screens/clubs_screen.dart`.
 - Use `GolfTextStyles.yardage` for the three stats.
 - Do not persist the selected category.
+- Do not remove Add Club, club edit/delete, or the range-log sheet while rebuilding the card.

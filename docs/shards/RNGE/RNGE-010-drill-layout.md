@@ -12,7 +12,11 @@
 
 ## Description
 
-Rebuild the range screen around the selected club’s current bag numbers, a ball counter, and stacked min / avg / max fields. Save stays disabled until avg is a number and the three values are ordered. An empty min or max copies avg before save so the blend does not store 0. A counter of 0 still saves as 10 balls. `saveRangeDrill` blend math is unchanged, including writing a non-empty tempo note onto the club’s swing notes.
+Range already excludes putters, counts hits up to 10, saves a counter of 0 as 10 balls, names the club in the success snackbar, clears the yardage fields, and leaves the tempo note in place. The venue field and the session log (this club / all clubs) are on the screen and stay.
+
+This shard still rebuilds the layout from `Wireframe_Range.md`: title `Range`, a bag-baseline card (em dash when a value is 0), stacked min / avg / max, save disabled until avg parses and the three values are ordered, and empty min or max copied from avg before save. `saveRangeDrill` blend math stays unchanged.
+
+`resolveDrillYardages` and the `range-*` keys shipped in `7f5791f` and are not in the current file. The title is still `Range Drill Instructor`. Save is always enabled and empty min or max is stored as 0.
 
 ## Acceptance Criteria
 
@@ -33,3 +37,4 @@ Rebuild the range screen around the selected club’s current bag numbers, a bal
 - File: `golf_diary_app/lib/screens/range_drill_screen.dart`.
 - Do not edit the min/max/avg blend in `LocalDatabaseService.saveRangeDrill`.
 - Field label: tempo for this drill, with helper text that a non-empty note updates the club cue.
+- Keep `VenueNameField` and `RangeSessionLog`. RNGE-021 also depends on both.

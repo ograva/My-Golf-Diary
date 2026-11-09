@@ -6,7 +6,7 @@
 | **Module** | App shell (cross-cutting; no PRD prefix) |
 | **Story Ref** | None |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Ready for Review |
 | **Complexity** | S |
 | **Depends On** | None |
 
@@ -16,16 +16,16 @@
 
 ## Acceptance Criteria
 
-- [ ] The four screens stay mounted while the user switches tabs (`IndexedStack`).
-- [ ] Selecting My Bag calls a public reload on `ClubsScreen`. Selecting Scorecard still calls `loadScorecard()`.
-- [ ] Navigation bar and destinations expose `shell-nav-bar` and `shell-tab-*` keys.
-- [ ] Launch still opens On Course. The widget test no longer expects the title `Fairway HUD`.
+- [x] The four screens stay mounted while the user switches tabs (`IndexedStack`).
+- [x] Selecting My Bag calls a public reload on `ClubsScreen`. Selecting Scorecard still calls `loadScorecard()`.
+- [x] Navigation bar and destinations expose `shell-nav-bar` and `shell-tab-*` keys.
+- [x] Launch still opens On Course. The widget test no longer expects the title `Fairway HUD`.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** `test/widget_test.dart` finds `shell-nav-bar`, `shell-tab-oncourse`, and `oncourse-record-shot-btn` after `pumpWidget(GolfDiaryApp)`.
-- [ ] **Integration (if needed):** Not required.
-- [ ] **Keys:** `shell-nav-bar`, `shell-tab-bag`, `shell-tab-oncourse`, `shell-tab-scorecard`, `shell-tab-range` from `docs/context/designs/Wireframe_HomeShell.md`.
+- [x] **Unit/widget:** `test/widget_test.dart` finds `shell-nav-bar`, `shell-tab-oncourse`, and `oncourse-record-shot-btn` after `pumpWidget(GolfDiaryApp)`.
+- [x] **Integration (if needed):** Not required.
+- [x] **Keys:** `shell-nav-bar`, `shell-tab-bag`, `shell-tab-oncourse`, `shell-tab-scorecard`, `shell-tab-range` from `docs/context/designs/Wireframe_HomeShell.md`.
 
 ## Dev notes
 

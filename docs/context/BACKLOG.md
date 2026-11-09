@@ -15,6 +15,8 @@ Index only. Shard bodies live under `docs/shards/`.
 | CRSE-022 | Hole map view | CRSE | Low | Not Started | L | CRSE-006 | [CRSE-022](../shards/CRSE/CRSE-022-hole-map-view.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Not Started | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Not Started | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |
-| RNGE-022 | Swing diary | RNGE | Low | Not Started | L | RNGE-004 | [RNGE-022](../shards/RNGE/RNGE-022-swing-diary.md) |
+| RNGE-022 | Swing diary evaluation | RNGE | Low | Not Started | L | RNGE-004 | [RNGE-022](../shards/RNGE/RNGE-022-swing-diary.md) |
+| RNGE-023 | Diary history ceiling | RNGE | Low | Not Started | M | RNGE-004 | [RNGE-023](../shards/RNGE/RNGE-023-diary-history-ceiling.md) |
+| RNGE-024 | Evaluation log | RNGE | Low | Not Started | S | RNGE-004 | [RNGE-024](../shards/RNGE/RNGE-024-evaluation-log.md) |
 
-Build CRSE-020 before CRSE-021. CRSE-022 can wait. Build RNGE-020 before RNGE-021. RNGE-022 can wait. CRSE-010 and RNGE-010 are layout rebuilds and do not block these shards.
+Build CRSE-020 before CRSE-021. CRSE-022 can wait. Build RNGE-020 before RNGE-021. RNGE-022, RNGE-023, and RNGE-024 can wait. RNGE-023 and RNGE-024 follow RNGE-022. CRSE-010 and RNGE-010 are layout rebuilds and do not block these shards.

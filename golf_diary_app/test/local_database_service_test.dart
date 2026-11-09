@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/data/practice_drill_seed.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:path/path.dart';
@@ -384,5 +385,99 @@ void main() {
     expect(await db.getActiveRoundId(), isNull);
     expect((await db.listRecentRounds()).any((r) => r.roundId == roundId),
         isFalse);
+  });
+
+  test('a new database seeds practice drills and can hide or add one',
+      () async {
+    final seeded = await db.listPracticeDrills();
+    expect(seeded.length, kPracticeDrillSeed.length);
+    expect(seeded.every((drill) => !drill.isCustom), isTrue);
+    expect(seeded.map((drill) => drill.id), contains('rng-drl-tempo-3to1'));
+    for (var i = 1; i < seeded.length; i++) {
+      final category = seeded[i - 1]
+          .category
+          .toLowerCase()
+          .compareTo(seeded[i].category.toLowerCase());
+      expect(category, lessThanOrEqualTo(0));
+      if (category == 0) {
+        expect(
+          seeded[i - 1]
+              .title
+              .toLowerCase()
+              .compareTo(seeded[i].title.toLowerCase()),
+          lessThanOrEqualTo(0),
+        );
+      }
+    }
+
+    expect(
+      () => db.insertPracticeDrill(
+        title: '   ',
+        category: 'Custom',
+        shortDescription: '',
+        steps: const ['Swing'],
+      ),
+      throwsArgumentError,
+    );
+
+    final created = await db.insertPracticeDrill(
+      title: ' Gate drill ',
+      category: ' Custom ',
+      shortDescription: 'A narrow gate',
+      steps: const [' Place two tees ', ''],
+    );
+    expect(created.isCustom, isTrue);
+    expect(created.title, 'Gate drill');
+    expect(created.category, 'Custom');
+    expect(created.steps, ['Place two tees']);
+
+    await db.deletePracticeDrill('rng-drl-tempo-3to1');
+    await db.deletePracticeDrill(created.id);
+    await LocalDatabaseService.debugClose();
+
+    final reopened = await db.listPracticeDrills();
+    expect(reopened.any((drill) => drill.id == 'rng-drl-tempo-3to1'), isFalse);
+    expect(reopened.any((drill) => drill.id == created.id), isFalse);
+    expect(reopened.length, kPracticeDrillSeed.length - 1);
+  });
+
+  test(
+      'upgrading a version 4 database seeds drills without reviving a tombstone',
+      () async {
+    final path = join(await getDatabasesPath(), 'golf_diary_unit.db');
+    final raw = await openDatabase(
+      path,
+      version: 4,
+      onCreate: (database, version) async {
+        await database.execute('''
+          CREATE TABLE range_drills (
+            id TEXT PRIMARY KEY,
+            club_id TEXT NOT NULL,
+            shot_count INTEGER NOT NULL,
+            min_yards REAL NOT NULL,
+            max_yards REAL NOT NULL,
+            avg_yards REAL NOT NULL,
+            tempo_notes TEXT,
+            venue_name TEXT,
+            timestamp INTEGER NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0,
+            updated_at_ms INTEGER NOT NULL DEFAULT 0,
+            deleted INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      },
+    );
+    await raw.close();
+
+    final seeded = await db.listPracticeDrills();
+    expect(seeded.length, kPracticeDrillSeed.length);
+    expect(seeded.every((drill) => !drill.isCustom), isTrue);
+
+    await db.deletePracticeDrill('rng-drl-feet-together');
+    await LocalDatabaseService.debugClose();
+    final reopened = await db.listPracticeDrills();
+    expect(
+        reopened.any((drill) => drill.id == 'rng-drl-feet-together'), isFalse);
+    expect(reopened.length, kPracticeDrillSeed.length - 1);
   });
 }

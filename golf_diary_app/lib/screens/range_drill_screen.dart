@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
+import '../models/practice_drill.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
@@ -20,6 +22,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<RangeDrillSummary> _log = [];
   List<String> _recentVenues = [];
   Club? _selectedClub;
+  PracticeDrill? _selectedDrill;
   int _shotCounter = 0;
   bool _logThisClubOnly = true;
 
@@ -77,6 +80,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
       tempoNotes: _notesController.text,
       venueName: _venueController.text.trim(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
+      drillId: _selectedDrill?.id,
     );
 
     await LocalDatabaseService.instance.saveRangeDrill(log);
@@ -96,6 +100,17 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     }
   }
 
+  Future<void> _openDrills() async {
+    final drill = await showModalBottomSheet<PracticeDrill>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => const PracticeDrillSheet(),
+    );
+    if (!mounted || drill == null) return;
+    setState(() => _selectedDrill = drill);
+  }
+
   @override
   Widget build(BuildContext context) {
     final thisClubOnly = _logThisClubOnly && _selectedClub != null;
@@ -109,8 +124,16 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
         : 'Saved drills show up here, newest first.';
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Range Drill Instructor'),
-          actions: const [SyncCloudButton()]),
+        leading: IconButton(
+          key: const ValueKey('range-header-drills-btn'),
+          tooltip: 'Practice drills',
+          onPressed: _openDrills,
+          icon: const Icon(Icons.list_alt),
+          style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+        ),
+        title: const Text('Range Drill Instructor'),
+        actions: const [SyncCloudButton()],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -123,6 +146,23 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               recentNames: _recentVenues,
               catalogNames: PhGolfCatalog.rangeAndSimNames,
             ),
+            if (_selectedDrill != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _selectedDrill!.title,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _selectedDrill = null),
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Text('Select club', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),

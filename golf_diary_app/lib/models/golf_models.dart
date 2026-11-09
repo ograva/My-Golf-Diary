@@ -141,8 +141,10 @@ class ShotRecord {
       lieType: map['lie_type'] as String,
       startLat: (map['start_lat'] as num).toDouble(),
       startLon: (map['start_lon'] as num).toDouble(),
-      endLat: map['end_lat'] != null ? (map['end_lat'] as num).toDouble() : null,
-      endLon: map['end_lon'] != null ? (map['end_lon'] as num).toDouble() : null,
+      endLat:
+          map['end_lat'] != null ? (map['end_lat'] as num).toDouble() : null,
+      endLon:
+          map['end_lon'] != null ? (map['end_lon'] as num).toDouble() : null,
       distanceYards: (map['distance_yards'] as num?)?.toDouble() ?? 0.0,
       notes: map['notes'] ?? '',
       timestamp: map['timestamp'] as int,
@@ -246,6 +248,7 @@ class RangeDrillLog {
   final String venueName;
   final int timestamp;
   final int isSynced;
+  final String? drillId;
 
   RangeDrillLog({
     required this.id,
@@ -258,6 +261,7 @@ class RangeDrillLog {
     this.venueName = '',
     required this.timestamp,
     this.isSynced = 0,
+    this.drillId,
   });
 
   Map<String, dynamic> toMap() {
@@ -272,6 +276,7 @@ class RangeDrillLog {
       'venue_name': venueName,
       'timestamp': timestamp,
       'is_synced': isSynced,
+      'drill_id': drillId,
     };
   }
 
@@ -287,6 +292,7 @@ class RangeDrillLog {
       venueName: map['venue_name'] as String? ?? '',
       timestamp: map['timestamp'] as int,
       isSynced: map['is_synced'] as int? ?? 0,
+      drillId: map['drill_id'] as String?,
     );
   }
 }
@@ -342,7 +348,8 @@ class _ClubSortKey implements Comparable<_ClubSortKey> {
     final lower = club.name.trim().toLowerCase();
     final category = club.category.trim().toLowerCase();
 
-    final isPutter = category == 'putter' || RegExp(r'\bputter\b').hasMatch(lower);
+    final isPutter =
+        category == 'putter' || RegExp(r'\bputter\b').hasMatch(lower);
     final isMiniDriver = RegExp(r'\bmini\s*-?\s*driver\b').hasMatch(lower);
     final isDriver = !isMiniDriver &&
         (lower == 'driver' ||
@@ -423,7 +430,8 @@ class _ClubSortKey implements Comparable<_ClubSortKey> {
   final String id;
 
   static double? _wedgeTypeRank(String lower) {
-    if (RegExp(r'\b(pitching|pw|p\s*-?\s*wedge)\b').hasMatch(lower) || lower == 'p') {
+    if (RegExp(r'\b(pitching|pw|p\s*-?\s*wedge)\b').hasMatch(lower) ||
+        lower == 'p') {
       return 46.0;
     }
     if (RegExp(r'\b(gap|gw|g\s*-?\s*wedge|approach|aw|a\s*-?\s*wedge|attack|uw|u\s*-?\s*wedge|utility\s+wedge)\b')
@@ -432,10 +440,12 @@ class _ClubSortKey implements Comparable<_ClubSortKey> {
         lower == 'a') {
       return 51.0;
     }
-    if (RegExp(r'\b(sand|sw|s\s*-?\s*wedge)\b').hasMatch(lower) || lower == 's') {
+    if (RegExp(r'\b(sand|sw|s\s*-?\s*wedge)\b').hasMatch(lower) ||
+        lower == 's') {
       return 55.0;
     }
-    if (RegExp(r'\b(lob|lw|l\s*-?\s*wedge)\b').hasMatch(lower) || lower == 'l') {
+    if (RegExp(r'\b(lob|lw|l\s*-?\s*wedge)\b').hasMatch(lower) ||
+        lower == 'l') {
       return 59.5;
     }
     return null;
@@ -460,7 +470,8 @@ class _ClubSortKey implements Comparable<_ClubSortKey> {
     if (digitMatch != null) {
       final value = double.tryParse(digitMatch.group(1)!);
       if (value != null) {
-        final isHighLaunch = RegExp(r'\b\d+\s*(?:hl|high\s+launch)\b').hasMatch(lower);
+        final isHighLaunch =
+            RegExp(r'\b\d+\s*(?:hl|high\s+launch)\b').hasMatch(lower);
         return isHighLaunch ? value + 0.5 : value;
       }
     }

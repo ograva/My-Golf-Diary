@@ -1,21 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../data/ph_golf_catalog.dart';
+import '../data/ph_golf_hole_coords.dart';
 import '../models/golf_models.dart';
 import '../services/local_database_service.dart';
+import '../services/pin_distance.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
-  const FairwayTrackerScreen({super.key});
+  const FairwayTrackerScreen({super.key, this.pinDistance});
+
+  /// When null, the screen uses [GeolocatorPinDistanceClient].
+  final PinDistanceClient? pinDistance;
 
   @override
   State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
 }
 
-class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
+class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
+    with WidgetsBindingObserver {
   static const _lies = [
     'tee',
     'fairway',
@@ -46,22 +54,116 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
   bool _courseReady = false;
   bool _simulator = false;
   String? _yardsError;
+  int? _yardsToPin;
+  bool _readingLocation = false;
+  bool _screenVisible = true;
+  int _pinToken = 0;
+  String? _watchedKey;
+  StreamSubscription<PinFix>? _pinSub;
+
+  PinDistanceClient get _pinDistance =>
+      widget.pinDistance ?? GeolocatorPinDistanceClient();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _courseFocus.addListener(_onCourseFocus);
     _bootstrap();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible == _screenVisible) return;
+    _screenVisible = visible;
+    _syncPinWatch();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _stopPinWatch();
+    } else if (state == AppLifecycleState.resumed) {
+      _syncPinWatch();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopPinWatch();
     _courseFocus.removeListener(_onCourseFocus);
     _persistCourseName();
     _courseFocus.dispose();
     _courseController.dispose();
     _yardsController.dispose();
     super.dispose();
+  }
+
+  void _stopPinWatch() {
+    _pinToken++;
+    _pinSub?.cancel();
+    _pinSub = null;
+    _watchedKey = null;
+    _yardsToPin = null;
+    _readingLocation = false;
+  }
+
+  void _syncPinWatch() {
+    final coords = _screenVisible && !_simulator
+        ? holeCoordinates(_appliedCourseName, _holeNumber)
+        : null;
+    if (coords == null) {
+      final hadLine = _yardsToPin != null ||
+          _readingLocation ||
+          _pinSub != null ||
+          _watchedKey != null;
+      _stopPinWatch();
+      if (hadLine && mounted) setState(() {});
+      return;
+    }
+    final key = '${_appliedCourseName.trim().toLowerCase()}#$_holeNumber';
+    if (_watchedKey == key) return;
+    _stopPinWatch();
+    _watchedKey = key;
+    _readingLocation = true;
+    final token = ++_pinToken;
+    if (mounted) setState(() {});
+    _beginPinWatch(coords, token);
+  }
+
+  Future<void> _beginPinWatch(HoleCoordinates coords, int token) async {
+    final fix = await _pinDistance.current();
+    if (!mounted || token != _pinToken) return;
+    if (fix == null) {
+      setState(() {
+        _yardsToPin = null;
+        _readingLocation = false;
+      });
+      return;
+    }
+    setState(() {
+      _yardsToPin =
+          yardsToHole(coords, fromLat: fix.latitude, fromLon: fix.longitude);
+      _readingLocation = false;
+    });
+    _pinSub = _pinDistance.watch().listen(
+      (next) {
+        if (!mounted || token != _pinToken) return;
+        setState(() {
+          _yardsToPin = yardsToHole(coords,
+              fromLat: next.latitude, fromLon: next.longitude);
+        });
+      },
+      onError: (_) {
+        if (!mounted || token != _pinToken) return;
+        _stopPinWatch();
+        setState(() {});
+      },
+    );
   }
 
   void _onCourseFocus() {
@@ -82,6 +184,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     _courseReady = true;
     await _restoreHole();
     await _refreshHoleState();
+    if (mounted) _syncPinWatch();
   }
 
   Future<void> _loadCourseName() async {
@@ -105,6 +208,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     if (!mounted) return;
     setState(() => _holeCount = PhGolfCatalog.holeCount(name));
     await _refreshHoleState();
+    _syncPinWatch();
   }
 
   /// Follows the latest in-progress round, including one started from the scorecard.
@@ -118,6 +222,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
     _courseReady = true;
     await _restoreHole();
     await _refreshHoleState();
+    if (mounted) _syncPinWatch();
   }
 
   Future<void> _restoreHole() async {
@@ -140,6 +245,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
       _lieType = 'tee';
     });
     await _refreshHoleState();
+    _syncPinWatch();
   }
 
   String _clubName(String clubId) {
@@ -277,6 +383,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
         ),
       );
     }
+    _syncPinWatch();
   }
 
   @override
@@ -314,18 +421,42 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen> {
                 ChoiceChip(
                   label: const Text('Course'),
                   selected: !_simulator,
-                  onSelected: (_) => setState(() {
-                    _simulator = false;
-                    _yardsError = null;
-                  }),
+                  onSelected: (_) {
+                    setState(() {
+                      _simulator = false;
+                      _yardsError = null;
+                    });
+                    _syncPinWatch();
+                  },
                 ),
                 ChoiceChip(
                   label: const Text('Simulator'),
                   selected: _simulator,
-                  onSelected: (_) => setState(() => _simulator = true),
+                  onSelected: (_) {
+                    setState(() => _simulator = true);
+                    _syncPinWatch();
+                  },
                 ),
               ],
             ),
+            if (_yardsToPin != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  '$_yardsToPin yds to pin',
+                  key: const ValueKey('on-course-distance-to-hole'),
+                  semanticsLabel: 'Yards to the pin',
+                  style: GolfTextStyles.tabularNum(context, fontSize: 22),
+                ),
+              )
+            else if (_readingLocation)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Reading location…',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
             if (_simulator) ...[
               const SizedBox(height: 12),
               TextField(

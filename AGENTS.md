@@ -11,6 +11,7 @@
 | [docs/context/Architecture.md](docs/context/Architecture.md) | Watson | Stack, folder map, data/sync, **constraints** (no separate CONSTRAINTS.md) |
 | [docs/context/PH_Golf_Venues.md](docs/context/PH_Golf_Venues.md) | Reference | Philippines golf courses, hole-by-hole par (H1–H18), driving ranges & simulator shops |
 | [docs/context/PH_Golf_Course_Hole_Coordinates.md](docs/context/PH_Golf_Course_Hole_Coordinates.md) | Reference | Surveyed Tee and Green/Pin GPS coordinates for Philippine golf holes |
+| [docs/context/Range_Drills.md](docs/context/Range_Drills.md) | Reference | Seeded practice drills catalog (descriptions & step-by-step instructions) for Range |
 
 ## Roster
 

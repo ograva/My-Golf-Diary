@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-005, CRSE-006 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | S |
 | **Depends On** | None |
 
@@ -16,13 +16,13 @@ Add a const Dart lookup of surveyed tee and green coordinates from `docs/context
 
 ## Acceptance Criteria
 
-- [ ] `holeCoordinates(courseName, holeNumber)` returns tee and green latitude and longitude for a fully mapped hole, using the same canonical name as the venue catalog.
-- [ ] The same call returns null for an unknown course, a course with no hole survey, a hole past the surveyed set, and a hole missing from a partial layout.
-- [ ] Lookup is trim and case-insensitive. A custom course name returns null.
+- [x] `holeCoordinates(courseName, holeNumber)` returns tee and green latitude and longitude for a fully mapped hole, using the same canonical name as the venue catalog.
+- [x] The same call returns null for an unknown course, a course with no hole survey, a hole past the surveyed set, and a hole missing from a partial layout.
+- [x] Lookup is trim and case-insensitive. A custom course name returns null.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** `test/ph_golf_hole_coords_test.dart` covers one full layout, one partial hole that exists, one missing hole on that partial layout, and an unknown name.
+- [x] **Unit/widget:** `test/ph_golf_hole_coords_test.dart` covers one full layout, one partial hole that exists, one missing hole on that partial layout, and an unknown name.
 - [ ] **Integration (if needed):** Not required.
 - [ ] **Keys:** None. This shard has no widgets.
 

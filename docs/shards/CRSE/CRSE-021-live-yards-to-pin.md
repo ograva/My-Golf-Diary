@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-005 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | CRSE-020 |
 
@@ -16,14 +16,14 @@ Show remaining yards from the phone to the current hole’s green while On Cours
 
 ## Acceptance Criteria
 
-- [ ] On a mapped hole in Course mode, the HUD shows whole yards labeled `yds to pin` (`on-course-distance-to-hole`). The value is `distanceBetween` meters times `1.09361`, rounded.
-- [ ] Simulator mode, a custom course, and a hole with no green coordinate do not build that text. There is no error placeholder.
-- [ ] The location stream uses a distance filter of about 3 meters and is cancelled when the widget is disposed, the mode switches to Simulator, or the hole or course becomes unmapped.
-- [ ] A denied location permission hides the yardage and keeps the existing shot-tracking message. Recording a shot still works as it does today.
+- [x] On a mapped hole in Course mode, the HUD shows whole yards labeled `yds to pin` (`on-course-distance-to-hole`). The value is `distanceBetween` meters times `1.09361`, rounded.
+- [x] Simulator mode, a custom course, and a hole with no green coordinate do not build that text. There is no error placeholder.
+- [x] The location stream uses a distance filter of about 3 meters and is cancelled when the widget is disposed, the mode switches to Simulator, or the hole or course becomes unmapped.
+- [x] A denied location permission hides the yardage and keeps the existing shot-tracking message. Recording a shot still works as it does today.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Widget test with a fake position stream. Selecting a mapped course shows the key and a known yardage. Switching to Simulator removes the key. An unknown course name leaves the key absent.
+- [x] **Unit/widget:** Widget test with a fake position stream. Selecting a mapped course shows the key and a known yardage. Switching to Simulator removes the key. An unknown course name leaves the key absent.
 - [ ] **Integration (if needed):** Not required. Do not call a live GPS fix in tests.
 - [ ] **Keys:** `on-course-distance-to-hole` from `Wireframe_OnCourse.md` §7 and §9. Semantics label: "Yards to the pin".
 

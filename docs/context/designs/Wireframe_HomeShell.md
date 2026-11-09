@@ -78,3 +78,11 @@ flowchart TD
 | Scorecard destination | `shell-tab-scorecard` | `NavigationDestination` |
 | Range destination | `shell-tab-range` | `NavigationDestination` |
 | Navigation bar | `shell-nav-bar` | `NavigationBar` |
+| Sync | `sync-cloud-button` | `IconButton` (as built, each tab AppBar) |
+| PWA update | `pwa-update-dialog` | `AlertDialog` |
+
+## 8. As built overlays
+
+Sync is an AppBar action on My Bag, On Course, Scorecard, and Range, not a fifth tab. Unavailable Firebase uses a snackbar and does not block the tab.
+
+On the web PWA, a newer published build opens [Wireframe_PwaUpdate.md](./Wireframe_PwaUpdate.md). It is not shown on Android.

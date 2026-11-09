@@ -117,3 +117,13 @@ flowchart TD
 | New round | `scorecard-new-round-btn` | `OutlinedButton` or `FilledButton` |
 | Empty state | `scorecard-empty-state` | `Card` |
 | Loading | `scorecard-loading` | `CircularProgressIndicator` |
+| Course field | `scorecard-new-round-course` | `TextField` in the dialog |
+| Save round | `scorecard-save-before-new` | `FilledButton` |
+| Discard round | `scorecard-discard-before-new` | `TextButton` |
+
+## 8. As built and catalog par
+
+- Unplayed tiles on a known course show **Par 3**, **Par 4**, or **Par 5** instead of an em dash. Played tiles still show the score and to-par. A 9-hole card hides **BACK 9**.
+- Caption under the course name: `18 holes · par 72` when the round’s name matches a published card.
+- **Start new round** opens [Wireframe_NewRound.md](./Wireframe_NewRound.md). If the active round already has play, that dialog is preceded by save / discard / cancel.
+- Empty copy stays: "No rounds yet. Track shots on On Course or start a round here." The empty primary uses the same key as the outlined button on a populated card (`scorecard-new-round-btn`). One is on screen at a time.

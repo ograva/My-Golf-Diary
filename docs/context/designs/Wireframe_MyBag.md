@@ -15,7 +15,7 @@ Show the bag by category with **min / avg / max in yards** and swing notes that 
 
 ```
 ┌─────────────────────────────┐
-│ AppBar: My Bag              │
+│ My Bag              [ + ]   │  add club, key add-club-button (as built)
 ├─────────────────────────────┤
 │ [Wood] Hybrid Iron Wedge …  │  horizontal chips, height 48
 ├─────────────────────────────┤
@@ -116,3 +116,9 @@ Range saves update club min/avg/max in SQLite. My Bag must reload when the tab i
 | Notes field | `bag-notes-field-{clubId}` | `TextField` |
 | Save notes | `bag-save-notes-btn-{clubId}` | `FilledButton` |
 | Empty state | `bag-empty-category` | `Text` |
+| Add club | `add-club-button` | `IconButton` (as built) |
+| Range logs | `bag-range-logs-{clubId}` | `IconButton` (as built) |
+
+## 8. As built dialogs
+
+The glance-card target in §2 is not fully shipped. Code still has per-card notes editing, brand and model, a yardage sparkline, delete with confirm, and a range-log sheet. Those surfaces are specified in [Wireframe_ClubEditor.md](./Wireframe_ClubEditor.md) so the current UI has a wireframe even where it differs from the glance target. Add Club stays in the AppBar, not at the bottom of the list.

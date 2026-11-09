@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `FairwayTrackerScreen` |
-| **PRD** | CRSE-001 … CRSE-004, SYNC-002 |
+| **PRD** | CRSE-001 … CRSE-006, SYNC-002 |
 | **Persona** | Rory — log between swings, phone out for a few seconds |
-| **Status** | Target v1.1 |
+| **Status** | Target v1.2 — includes as-built venue lookup and new distance / map |
 | **AppBar title** | **On Course** (replace "Fairway HUD") |
 
 ## 1. Screen purpose
@@ -18,7 +18,10 @@ Capture one GPS shot with club, lie, and hole context without scrolling to find 
 ┌─────────────────────────────┐
 │ On Course            [sync] │
 ├─────────────────────────────┤
-│ Local Course            ✎   │  compact course row, not a full field
+│ Local Course            ✎   │  VenueNameField; caption "18 holes · par 72" when known
+│ [ Course ] [ Simulator ]  │  as built
+│ 142 yds to pin            │  CRSE-005, tabular, only when mapped + Course mode
+│ [ HUD | Map ]             │  CRSE-006, only when this hole has tee and green
 │ ┌─────────────────────────┐ │
 │ │ HOLE 7          PAR 4   │ │  HUD card
 │ │ Strokes 2  Pen 0        │ │
@@ -139,3 +142,43 @@ flowchart TD
 | Finish hole | `oncourse-finish-hole-btn` | `OutlinedButton` |
 | Shot row | `oncourse-shot-row-{strokeNumber}` | `ListTile` |
 | Permission banner | `oncourse-location-banner` | `MaterialBanner` |
+| Course / Simulator | `oncourse-mode-course` `oncourse-mode-simulator` | `ChoiceChip` |
+| Distance to pin | `on-course-distance-to-hole` | `Text` (Roboto Mono) |
+| Map toggle | `on-course-map-toggle` | `SegmentedButton` |
+| Simulator yards | `oncourse-sim-yards-field` | `TextField` |
+
+## 8. As built (keep these states in the layout)
+
+The shipping screen still uses the AppBar title **Fairway HUD**, two large filled actions (Record and Finish), and a full course `TextField`. Those stay documented as the current code until the target dock in §2 is built. Behaviors that **are** in code and must appear on this wireframe:
+
+- **Course autocomplete** (`VenueNameField`): recent names, then the Philippines catalog. Custom text stays valid. Recognized course shows `18 holes · par 72` in `bodySmall`.
+- **Course / Simulator chips.** Simulator replaces GPS with a yards field. Blank or 0 shows "Enter a distance greater than 0".
+- **Hole stepper** keys already in code: `on-course-hole-previous`, `on-course-hole-label`, `on-course-hole-next`. Next is disabled until Finish Hole creates the next row. A 9-hole card ends at hole 9.
+- **Shot edit** opens `ShotEditDialog` (see [Wireframe_ShotEdit.md](./Wireframe_ShotEdit.md)). Row key in code: `on-course-shot-{id}`.
+
+## 9. Distance to the hole (CRSE-005)
+
+Shown only in **Course** mode when `hasHoleCoordinates(course, hole)` is true. Hidden with no error on Simulator, a custom course, or an unmapped hole (including a missing hole on a partial layout).
+
+| State | UI |
+| :--- | :--- |
+| Eligible, locating | Caption "Reading location…" under the mode chips. No fake yardage. |
+| Fix received | `142 yds to pin` in Roboto Mono, `titleLarge`. Updates when the player moves about 3 m. |
+| Permission denied | Same location banner as shot capture. Distance line stays hidden. |
+| Leave tab, Simulator, or unmapped hole | Stream stops. The line is not in the tree. |
+
+The number is remaining yards to the **green**, not the last shot’s carry. Label it **to pin** so it is not confused with shot distance on the stroke list.
+
+## 10. Map toggle (CRSE-006, future)
+
+The HUD / Map control is omitted unless this hole has a tee and a green. Map layout is [Wireframe_HoleMap.md](./Wireframe_HoleMap.md). If the pack is not on the device and the phone is offline, stay on the HUD and snackbar "Map for this course isn’t on the phone yet."
+
+```mermaid
+flowchart TD
+  mode{Course mode?}
+  mode -->|no| hide[Hide distance and map]
+  mode -->|yes| coords{Tee and green for this hole?}
+  coords -->|no| hide
+  coords -->|yes| live[Show yards to pin]
+  coords -->|yes| map[Enable map toggle]
+```

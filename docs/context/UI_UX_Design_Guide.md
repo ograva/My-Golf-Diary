@@ -12,6 +12,7 @@
 | :--- | :--- | :--- | :--- |
 | 1.0 | 2026-11-06 | Eunice (`/moodboard`) | Full design language, color system, typography, iconography, spacing |
 | 1.1 | 2026-11-06 | Eunice (`/wireframe`) | Target wireframes for shell + four tabs + hole editor; improvements over as-built UI |
+| 1.2 | 2026-11-09 | Eunice (`/wireframe`, `/audit-ux`) | New-feature wireframes, as-built dialogs that were missing, UX audit |
 
 ---
 
@@ -175,6 +176,15 @@ Target layouts (v1.1). These replace the as-built form stacks. Implementation st
 | Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md) |
 | Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) |
 | Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) |
+| Practice drills | Range sheet | [Wireframe_PracticeDrills.md](./designs/Wireframe_PracticeDrills.md) |
+| Hole map | On Course map pane | [Wireframe_HoleMap.md](./designs/Wireframe_HoleMap.md) |
+| Swing diary | Range sheet, future | [Wireframe_SwingDiary.md](./designs/Wireframe_SwingDiary.md) |
+| Shot edit | `ShotEditDialog` | [Wireframe_ShotEdit.md](./designs/Wireframe_ShotEdit.md) |
+| New round | Scorecard dialogs | [Wireframe_NewRound.md](./designs/Wireframe_NewRound.md) |
+| Club editor | Bag dialogs | [Wireframe_ClubEditor.md](./designs/Wireframe_ClubEditor.md) |
+| PWA update | `PwaUpdateDialog` | [Wireframe_PwaUpdate.md](./designs/Wireframe_PwaUpdate.md) |
+
+Audit: [UX_Audit.md](./designs/UX_Audit.md).
 
 ### Planned improvements (why the wireframes differ from the code)
 

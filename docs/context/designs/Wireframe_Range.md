@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `RangeDrillScreen` |
-| **PRD** | RNGE-001, RNGE-002 |
+| **PRD** | RNGE-001 … RNGE-004 |
 | **Persona** | Riley — ten balls, then write min / avg / max once |
 | **Status** | Target v1.1 |
 | **AppBar title** | **Range** (replace "Range Drill Instructor") |
@@ -16,8 +16,10 @@ Log one drill block for a non-putter club. Save writes `RangeDrillLog` and blend
 
 ```
 ┌─────────────────────────────┐
-│ Range                       │
+│ [≡] Range            [sync] │  left icon opens drills (RNGE-003)
 ├─────────────────────────────┤
+│ Driving range or simulator  │  VenueNameField, as built
+│ 3:1 Tour Tempo          ›   │  selected drill, or hidden
 │ CLUB                        │
 │ [7 Iron] 8i 9i PW …         │  48dp chips, putters hidden
 │ ┌ 7 Iron ───────────────┐   │
@@ -119,3 +121,19 @@ flowchart TD
 | Max | `range-max-field` | `TextField` |
 | Save | `range-save-drill-btn` | `FilledButton` |
 | Empty clubs | `range-empty-clubs` | `Text` |
+| Drills | `range-header-drills-btn` | `IconButton` leading |
+| Venue | `range-venue-field` | `TextField` inside autocomplete |
+| This club log | `range-log-this-club` | `FilterChip` (as built) |
+| All clubs log | `range-log-all` | `FilterChip` (as built) |
+| Session title | `range-session-log-title` | `Text` |
+| Diary | `range-swing-diary-btn` | `IconButton`, future RNGE-004 |
+
+## 8. As built
+
+The screen title is still **Range Drill Instructor**. The venue field, club chips, shot counter, min/avg/max, tempo notes, Save, and the session log (this club / all clubs) are in code. The left-header drill button and the diary button are not. Session log empty key: `range-session-empty`. Row key: `range-session-{drillId}`.
+
+## 9. Practice drills and diary
+
+The leading icon opens [Wireframe_PracticeDrills.md](./Wireframe_PracticeDrills.md). A chosen drill shows one line under the venue field: title plus a chevron to reopen the steps. It does not replace the 10-ball form.
+
+The diary icon (trailing, beside sync) is future and stays disabled with tooltip "Swing diary is not on yet" until RNGE-004. Layout: [Wireframe_SwingDiary.md](./Wireframe_SwingDiary.md).

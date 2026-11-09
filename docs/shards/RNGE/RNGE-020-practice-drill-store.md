@@ -6,7 +6,7 @@
 | **Module** | RNGE — Range |
 | **Story Ref** | RNGE-003 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Ready for Review |
 | **Complexity** | M |
 | **Depends On** | None |
 
@@ -16,16 +16,16 @@ Add SQLite `practice_drills` and seed the reference drills from `docs/context/Ra
 
 ## Acceptance Criteria
 
-- [ ] A new database and an upgraded version-4 database both contain the seeded drills, with stable ids from the reference doc, `is_custom = 0`, and `deleted = 0`.
-- [ ] Listing drills returns only `deleted = 0`, ordered by category then title.
-- [ ] Creating a drill stores title, category, short description, and ordered steps. Empty title is rejected.
-- [ ] Deleting a seeded or custom drill sets `deleted = 1` and a new `updated_at_ms`. The next list omits it. Re-opening the database does not insert that seed again.
+- [x] A new database and an upgraded version-4 database both contain the seeded drills, with stable ids from the reference doc, `is_custom = 0`, and `deleted = 0`.
+- [x] Listing drills returns only `deleted = 0`, ordered by category then title.
+- [x] Creating a drill stores title, category, short description, and ordered steps. Empty title is rejected.
+- [x] Deleting a seeded or custom drill sets `deleted = 1` and a new `updated_at_ms`. The next list omits it. Re-opening the database does not insert that seed again.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Extend `test/local_database_service_test.dart` for seed count, custom insert, seeded delete, and upgrade from a version-4 file.
-- [ ] **Integration (if needed):** Not required.
-- [ ] **Keys:** None. UI is RNGE-021.
+- [x] **Unit/widget:** Extend `test/local_database_service_test.dart` for seed count, custom insert, seeded delete, and upgrade from a version-4 file.
+- [x] **Integration (if needed):** Not required.
+- [x] **Keys:** None. UI is RNGE-021.
 
 ## Dev notes
 

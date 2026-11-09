@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../data/ph_golf_catalog.dart';
+import '../data/practice_drill_seeds.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import 'sync_merge.dart';
@@ -40,7 +43,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -64,6 +67,11 @@ class LocalDatabaseService {
     if (oldVersion < 4) {
       await _createGolfRoundsTable(db);
       await _backfillGolfRounds(db);
+    }
+    if (oldVersion < 5) {
+      await _createPracticeDrills(db);
+      await db.execute('ALTER TABLE range_drills ADD COLUMN drill_id TEXT');
+      await _seedPracticeDrills(db);
     }
   }
 
@@ -163,6 +171,7 @@ class LocalDatabaseService {
         avg_yards REAL NOT NULL,
         tempo_notes TEXT,
         venue_name TEXT,
+        drill_id TEXT,
         timestamp INTEGER NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
@@ -171,6 +180,8 @@ class LocalDatabaseService {
     ''');
     await _createSyncState(db);
     await _createGolfRoundsTable(db);
+    await _createPracticeDrills(db);
+    await _seedPracticeDrills(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -248,6 +259,104 @@ class LocalDatabaseService {
       _dirty({'swing_notes': notes}),
       where: 'id = ?',
       whereArgs: [clubId],
+    );
+  }
+
+  Future<void> _createPracticeDrills(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS practice_drills (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        short_description TEXT NOT NULL,
+        steps_json TEXT NOT NULL,
+        recommended_clubs TEXT,
+        is_custom INTEGER NOT NULL DEFAULT 0,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> _seedPracticeDrills(Database db) async {
+    for (final seed in practiceDrillSeeds) {
+      await db.insert(
+        'practice_drills',
+        {
+          'id': seed.id,
+          'title': seed.title,
+          'category': seed.category,
+          'short_description': seed.shortDescription,
+          'steps_json': jsonEncode(seed.steps),
+          'recommended_clubs': seed.recommendedClubs,
+          'is_custom': 0,
+          'is_synced': 0,
+          'updated_at_ms': 0,
+          'deleted': 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+  }
+
+  /// Active drills, seeded and custom, ordered by category then title.
+  Future<List<PracticeDrill>> listPracticeDrills() async {
+    final db = await database;
+    final rows = await db.query(
+      'practice_drills',
+      where: 'deleted = 0',
+      orderBy: 'category COLLATE NOCASE, title COLLATE NOCASE',
+    );
+    return rows.map(PracticeDrill.fromMap).toList();
+  }
+
+  /// Stores a player drill. An empty title is rejected.
+  Future<PracticeDrill> createPracticeDrill({
+    required String title,
+    required String category,
+    required String shortDescription,
+    required List<String> steps,
+    String recommendedClubs = '',
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError.value(
+          title, 'title', 'Practice drill title is required');
+    }
+    final drill = PracticeDrill(
+      id: 'drill_custom_${_nowMs()}',
+      title: trimmed,
+      category: category.trim(),
+      shortDescription: shortDescription.trim(),
+      steps: steps,
+      recommendedClubs: recommendedClubs.trim(),
+      isCustom: true,
+    );
+    final db = await database;
+    await db.insert('practice_drills', {
+      'id': drill.id,
+      'title': drill.title,
+      'category': drill.category,
+      'short_description': drill.shortDescription,
+      'steps_json': jsonEncode(drill.steps),
+      'recommended_clubs': drill.recommendedClubs,
+      'is_custom': 1,
+      'is_synced': 0,
+      'updated_at_ms': _nowMs(),
+      'deleted': 0,
+    });
+    return drill;
+  }
+
+  /// Hides a seeded or custom drill. The seed row stays so it is not reinserted.
+  Future<void> deletePracticeDrill(String id) async {
+    final db = await database;
+    await db.update(
+      'practice_drills',
+      _dirty({'deleted': 1}),
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 

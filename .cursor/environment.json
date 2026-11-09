@@ -1,4 +1,4 @@
 {
   "name": "My Golf Diary",
-  "install": "bash .cursor/cloud-agent-install.sh"
+  "install": "[ ! -d '/agent/repos/My-Golf-Diary' ] || cd '/agent/repos/My-Golf-Diary' || exit $?\nbash .cursor/cloud-agent-install.sh\nexport PATH=\"$HOME/.local/bin:$PATH\"\nuv tool install graphifyy\ngraphify install --platform cursor"
 }

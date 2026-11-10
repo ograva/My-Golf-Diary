@@ -4,9 +4,9 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.4 | Approved | 2026-11-09 | Jason (PM cohort) |
+| 1.5 | Approved | 2026-11-10 | Jason (PM cohort) |
 
-**Stories:** Embedded in §3 (20 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later.
+**Stories:** Embedded in §3 (26 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later. No file-per-story set for this version.
 
 **Inputs:** [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · Code: `golf_diary_app/lib/` (Flutter).
 
@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **On Course** (GPS fairway HUD, live distance-to-hole metric on mapped courses, future cached course map view, penalties, mulligans, concede, optional upload), **Scorecard** (18 holes + editor), and **Range** (structured practice drills selector, block drill min/max/avg, notes, and a future Vertex AI Golf Swing Diary). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC** bind requirements to [`Architecture.md`](./Architecture.md) code map.
+My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **On Course** (GPS fairway HUD, live distance-to-hole metric on mapped courses, future cached course map view, penalties, mulligans, concede, optional upload), **Scorecard** (18 holes + editor), and **Range** (structured practice drills selector, block drill min/max/avg, notes, and a future Vertex AI Golf Swing Diary). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Cloud backup today is anonymous and per install. A future account menu in the sync slot (`SYNC-005`–`SYNC-010`) adds Google and email/password sign-in so the same diary can be saved to Firestore and opened on another phone or the PWA. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC** bind requirements to [`Architecture.md`](./Architecture.md) code map.
 
 ---
 
@@ -26,6 +26,8 @@ My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + s
 | **Range-first Riley** | Pick structured practice drills, log block aggregates on the right club, and review daily AI swing diary takeaways | RNGE drill catalog + RNGE → BAG path + future AI Swing Diary |
 | **Bag-first Blake** | Pre-round yardages + cues | BAG clarity + persistence |
 
+Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA. That multi-device account is future `SYNC-005`–`SYNC-010`. It does not add a fourth persona, and it does not require an account before local play.
+
 ---
 
 ## 3. Feature Modules
@@ -36,7 +38,7 @@ My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + s
 | `CRSE` | On Course | `fairway_tracker_screen.dart`, `ShotRecord`, [`PH_Golf_Venues.md`](./PH_Golf_Venues.md), [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) |
 | `SCOR` | Scorecard | `scorecard_screen.dart`, `scorecard_hole_editor.dart`, [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) |
 | `RNGE` | Range | `range_drill_screen.dart`, `RangeDrillLog`, [`Range_Drills.md`](./Range_Drills.md) |
-| `SYNC` | Cloud (optional) | `cloud_sync_service.dart`, `initializeFirebase` in `main.dart`, Firebase Storage (future map cache) |
+| `SYNC` | Cloud (optional) | `cloud_sync_service.dart`, `sync_cloud_button.dart` (future account avatar), `initializeFirebase` in `main.dart`, Firebase Storage (future map cache) |
 
 ### BAG — My Bag
 
@@ -139,7 +141,7 @@ flowchart LR
 
 ### SYNC — Cloud sync (optional)
 
-**Overview:** Bidirectional sync of `clubs`, `shots`, `round_scores`, `range_drills` (and future custom drills / map cache metadata) with Firestore database `my-golf-diary` under `users/{uid}/...` and Firebase Storage for shared course map caches. The same path serves the phone and the web PWA (IndexedDB). Anonymous Auth supplies `uid`.
+**Overview:** Bidirectional sync of `clubs`, `shots`, `round_scores`, `golf_rounds`, `range_drills` (and future custom drills / swing-diary rows / map cache metadata) with Firestore database `my-golf-diary` under `users/{uid}/...` and Firebase Storage for shared course map caches. The same path serves the phone and the web PWA (IndexedDB). **Today** Anonymous Auth supplies `uid`, and the AppBar action on every tab is `SyncCloudButton` (`Key('sync-cloud-button')`, cloud icon) which runs `syncFull` immediately. **Future** `SYNC-005`–`SYNC-010` replace that slot with an avatar menu so a Google or email/password account can own the diary across devices. Local SQLite remains the source while offline.
 
 **SYNC-001 — Firebase optional at launch**  
 As **any user**, I want **app to run without Firebase** so **local always works**.  
@@ -151,11 +153,36 @@ As **Rory**, I want **sync from any tab** when online.
 
 **SYNC-003 — Anonymous identity**  
 As **product**, each install syncs as its Firebase anonymous user.  
-**AC:** (1) `SyncIdentity.ensureSignedIn()` is the user id. (2) Path stays `users/{uid}/...` on database `my-golf-diary`. (3) Linking Google or email is a later epic. (4) Old `users/local_user` data is not migrated automatically.
+**AC:** (1) `SyncIdentity.ensureSignedIn()` is the user id. (2) Path stays `users/{uid}/...` on database `my-golf-diary`. (3) Durable Google and email/password accounts are future `SYNC-006` and `SYNC-008`; until they ship, each install keeps its own anonymous uid. (4) Old `users/local_user` data is not migrated automatically.
 
 **SYNC-004 — Pull and last-write-wins**  
 As **Rory**, I want **another browser or phone to pick up my diary**.  
 **AC:** (1) Pull applies a remote row only when its `updatedAtMs` is newer. (2) A remote tombstone removes the local row. (3) Deleting a club uploads a tombstone before the local row disappears. (4) PWA and mobile share this behavior.
+
+**SYNC-005 — Account avatar menu (Future Feature)**  
+As **Rory**, I want **one avatar where the sync icon sits** so I can **sign in, sync, open my profile, or open settings** without a fifth tab.  
+**Placement:** The control replaces `SyncCloudButton` in the `AppBar.actions` slot already used on My Bag, On Course, Scorecard, and Range. One icon only. The cloud icon does not remain beside it.  
+**AC:** (1) Signed out, the control is `Key('account-avatar-button')` with a generic account icon and tooltip “Account”. Signed in, the same key shows the Google photo or initials from display name, then email. (2) Tap opens a menu with exactly four entries: Login `Key('account-menu-login')`, Sync `Key('account-menu-sync')`, Profile `Key('account-menu-profile')`, Settings `Key('account-menu-settings')`. (3) Signed out, Login opens the sign-in sheet (`SYNC-006`); Sync does not call `syncFull` and explains that sign-in is required to save to Firestore; Profile and Settings still open, and Profile offers sign-in rather than account details. Signed in, Login reads “Sign out” and signs out without deleting SQLite; Sync runs the same manual sync as `SYNC-002`. (4) Opening the menu never starts GPS, never blocks shot capture, and dismisses on outside tap. Sync result stays the existing snackbar (`pulled` / `pushed` / `failed`).
+
+**SYNC-006 — Google and email/password sign-in (Future Feature)**  
+As **Riley**, I want **to sign in with Google or email and password** so **my diary has an account I can open again**.  
+**AC:** (1) The Login sheet offers Google (`Key('account-login-google')`) and email/password (`Key('account-login-email')`, `Key('account-login-password')`, `Key('account-login-submit')`) with a create-account / sign-in toggle and “Forgot password” for email. (2) Google uses Firebase Auth on Android, iOS, and the web PWA and lands on the same `users/{uid}` for that Google account. Email/password create and sign-in use Firebase Auth; wrong password, weak password, invalid email, and email-already-in-use show an inline error and leave local data unchanged. (3) An email/password account must verify email before the first cloud push. Until verified, play stays local and Sync explains why. Google accounts are treated as verified. (4) The app still launches and records bag, course, scorecard, and range with no account and when Firebase init fails (`SYNC-001`). Passwords are never written to SQLite, logs, or the repo. (5) A successful sign-in persists across relaunch until Sign out.
+
+**SYNC-007 — Retrieve the diary on another device (Future Feature)**  
+As **Blake**, I want **a second phone or the PWA signed into the same account** to **download and upload my diary**.  
+**AC:** (1) After sign-in, Sync pulls then pushes `clubs`, `shots`, `round_scores`, `golf_rounds`, `range_drills`, and `practice_drills` (plus future swing-diary rows) under `users/{uid}/...` on database `my-golf-diary`, using `SYNC-004` last-write-wins. (2) Device B, signed into the same Google or email account, shows rows Device A successfully pushed, including tombstones. (3) The snackbar includes how many local rows were replaced because the remote `updatedAtMs` was newer. There is no per-row merge screen. (4) Sign-out keeps the on-device SQLite copy and stops further cloud reads and writes for that account. The next sync requires sign-in. A reinstall plus the same account recovers the cloud copy only.
+
+**SYNC-008 — Keep this device’s diary when the account changes (Future Feature)**  
+As **Rory**, I want **the rounds already on this phone to follow me** when I **create a durable account**.  
+**AC:** (1) If this install is anonymous and has local diary rows, Google or email sign-in links that anonymous user (`linkWithCredential` / equivalent) so existing `users/{uid}` docs stay put. (2) If link fails because that Google or email account already exists, the sheet offers two explicit actions. “Upload this device, then download the account” pushes local rows into the signed-in uid, then pulls with last-write-wins. “Replace this device with the account” pulls that account and does not push this device’s rows; on-device-only rows are removed only after that second confirm. Neither copy is discarded silently. (3) Legacy `users/local_user` cloud docs are still not migrated. Local rows that never synced follow the same choice. (4) Cancel returns to the anonymous or signed-out state the device had before the attempt.
+
+**SYNC-009 — Profile (Future Feature)**  
+As **Riley**, I want **a profile** so I can **see who is signed in and leave the account**.  
+**AC:** (1) Profile, opened from the avatar menu, shows display name, email, Google photo or initials, and provider (Google or email). It does not edit clubs, rounds, or drills. (2) Signed out, the same screen explains that the diary is on this device only and offers the sign-in sheet. (3) Sign out (`Key('account-profile-sign-out')`) confirms, clears the Firebase session, returns the avatar to the generic icon, and leaves SQLite in place. (4) Delete account is a second, separate confirm. It deletes the Firebase Auth user and cloud docs under that `users/{uid}` only. Local SQLite remains unless the player also confirms “Erase diary on this device”.
+
+**SYNC-010 — Settings (Future Feature)**  
+As **Blake**, I want **settings beside sync** so I can **see whether the cloud has my latest diary**.  
+**AC:** (1) Settings, opened from the avatar menu, shows Firebase availability, signed-in email or “Not signed in”, last successful sync time, and the count of local rows with `is_synced = 0`. (2) “Sync now” is the same action as the menu’s Sync item, including the signed-out explanation. (3) Email accounts get “Change password” and “Send verification email” here; Google accounts do not show password fields. (4) This screen does not add a units toggle, handicap, or social controls. Yards stay the stored unit until a separate decision changes that.
 
 ---
 
@@ -169,7 +196,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 6. **Range — Select Drill** → tap the left header icon on Range to open the **Practice Drills** list ([`Range_Drills.md`](./Range_Drills.md)), read the step-by-step explainer (or add/delete custom drills), and apply a drill to the session.  
 7. **Range — Log Block** → pick club, count swings, enter min/max/avg and tempo notes, save.  
 8. **Range — Swing Diary (Future)** → ask for an evaluation of today’s drills against earlier practice, continue the thread, and later reread saved evaluations and periodic summaries.  
-9. **Backup** → **cloud sync** if Firebase is configured.  
+9. **Account & backup** → today, the cloud icon on any tab runs anonymous sync when Firebase is configured. Future: that same slot is an avatar (`SYNC-005`) with Login, Sync, Profile, and Settings. After Google or email sign-in, Sync writes the diary to that account and another device on the same account retrieves it (`SYNC-006`, `SYNC-007`).  
 10. **Next round** → new round from scorecard or implied active round behavior.
 
 ---
@@ -179,9 +206,9 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | Area | Requirement |
 | :--- | :--- |
 | **Performance** | Tabs and shot save feel responsive; GPS read shows busy state (target: feedback ≤ ~2s typical). Cached course maps load from local disk without blocking shot capture. |
-| **Security / privacy** | No keys in source; on-device SQLite; Firestore and Firebase Storage rules before production sync. Swing-diary calls use Vertex AI billed to the project. Players do not supply a Gemini key. |
+| **Security / privacy** | No keys in source; on-device SQLite; Firestore and Firebase Storage rules before production sync. Swing-diary calls use Vertex AI billed to the project. Players do not supply a Gemini key. Future accounts (`SYNC-006`) use Firebase Auth only: passwords never sit in SQLite or logs, email/password accounts verify before the first cloud push, and rules stay `request.auth.uid == userId`. |
 | **Accessibility** | Primary taps ≥48dp where feasible; theme contrast; respect OS font scale on core screens. |
-| **Offline** | Bag, fairway, scorecard, range, and seeded/custom drill catalog fully usable offline; distance-to-hole works offline via device GPS + bundled coordinates; cached course maps render offline once synced from Firebase Storage; AI assessment requires connectivity. |
+| **Offline** | Bag, fairway, scorecard, range, and seeded/custom drill catalog fully usable offline; distance-to-hole works offline via device GPS + bundled coordinates; cached course maps render offline once synced from Firebase Storage; AI assessment requires connectivity. Sign-in and sync need a network. A persisted session still records offline and syncs on the next successful Sync. |
 | **Location** | Request when recording or showing live hole distance; handle denied/deniedForever; automatically hide distance-to-hole on unmapped courses or Simulator mode. |
 | **Battery** | Single position read per shot by default; live distance-to-hole uses a throttled/distance-filtered location stream (`distanceFilter` ≥ 2–5m) active only while On Course is visible on a mapped hole in Course mode. |
 
@@ -194,9 +221,13 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 3. **Social** / live leaderboards / multiplayer real-time sync.  
 4. **Auto** launch-monitor **Bluetooth** hardware ingest (manual/sim entry v1).  
 5. **Watch-first** capture.  
-6. A separate non-Flutter web client. The Flutter PWA is in scope for sync.
+6. A separate non-Flutter web client. The Flutter PWA is in scope for sync.  
+7. A **login wall**. Local play works with no account.  
+8. **Social** profiles, public diaries, friend graphs, or more than one signed-in account at a time.  
+9. **Sign in with Apple**, phone OTP, or providers other than Google and email/password, unless App Store review requires Apple (see §7).  
+10. A **manual row-by-row merge** UI. Multi-device conflicts stay last-write-wins.
 
-*(Note: **CRSE-006** cached course map view and **RNGE-004** Vertex AI swing diary are future features. Range logging does not depend on either.)*
+*(Note: **CRSE-006** cached course map view, **RNGE-004** Vertex AI swing diary, and **SYNC-005–SYNC-010** account avatar, Google and email/password sign-in, and multi-device retrieve are future features. Range logging and on-course capture do not depend on them.)*
 
 ---
 
@@ -211,11 +242,13 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | Where the saved evaluation and periodic-summary log appears in navigation (`RNGE-004`) | Jason + Eunice |
 | What replaces project-billed Vertex AI if the diary reaches about 1,000 people | Jason + Watson |
 | iOS **Info.plist** location strings | Watson |
-| Linking anonymous uid to Google or email, and migrating `local_user` | Product + Watson |
+| If iOS App Store review requires Sign in with Apple whenever Google sign-in is offered, add it before the iOS ship of `SYNC-006`. Product decision until then: Google and email/password only | Jason + Watson |
+| Email-verification copy and how long an unverified account may keep playing local-only (`SYNC-006`) | Jason |
 | Analytics for Brief KPIs | Jason + Watson |
 
 **Dependencies:**
 - Firebase project `novusinc-8df79`, Firestore database `my-golf-diary`, Anonymous Auth enabled, and `firestore.rules` deployed to that database. `initializeFirebase` in `main.dart`.
+- Future `SYNC-006`: enable Google and Email/Password on that same project (no new Firebase project). Android needs the app’s SHA fingerprints; the PWA domain must be an authorized domain. Anonymous linking behavior is specified in `SYNC-008`.
 - [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) for `CRSE-005` live distance-to-hole and `CRSE-006` hole map bounds.
 - [`Range_Drills.md`](./Range_Drills.md) for `RNGE-003` seeded practice drills.
 - Future: a Firebase Storage bucket and a Google Maps key (`CRSE-006`). Vertex AI on `novusinc-8df79` for `RNGE-004`, with App Check. No separate Gemini API product and no player API key.
@@ -231,6 +264,7 @@ As **Rory**, I want **another browser or phone to pick up my diary**.
 | Complete 18-hole rounds | `round_scores` completion stats |
 | RNGE saves / user / month | `range_drills` counts + % of sessions using a structured drill (`RNGE-003`) |
 | Swing diary use (future) | Share of range days that produce a saved evaluation, and whether players reopen the evaluation log (`RNGE-004`) |
+| Diary recovered on a second device (future) | Among players who create a Google or email account, share who complete a successful Sync on a second install within 30 days. Count Firebase Auth users against distinct installs; no new analytics SDK in this story (`SYNC-007`) |
 
 Interim: **5+ interviews** on “log at cart/bag” and “card matches round.”
 
@@ -245,3 +279,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.2 | 2026-11-08 | Reference [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) lookup table for CRSE, SCOR, and RNGE |
 | 1.3 | 2026-11-09 | Add `CRSE-005` (live GPS distance to hole on mapped courses), `CRSE-006` (future On-Course hole map view with Google Maps + Firebase Storage cache), `RNGE-003` (Range header drill picker + custom add/delete + [`Range_Drills.md`](./Range_Drills.md)), and `RNGE-004` (future Google AI daily range assessment & RAG Golf Swing Diary chat) |
 | 1.4 | 2026-11-09 | Align `RNGE-004` with Architecture 1.3: Vertex AI billed to the project under about 1,000 people, raw history until about 250,000 tokens, then a stored progress brief, and a readable log of evaluations and periodic summaries. No embeddings and no player API key in this phase |
+| 1.5 | 2026-11-10 | Future account menu in the sync slot: `SYNC-005` avatar with Login, Sync, Profile, and Settings; `SYNC-006` Google and email/password; `SYNC-007` same diary on another device; `SYNC-008` link or explicit upload when leaving anonymous auth; `SYNC-009` profile; `SYNC-010` sync settings. Local play stays signed-out. Not in the current build |

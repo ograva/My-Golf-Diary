@@ -13,6 +13,7 @@
 | 1.0 | 2026-11-06 | Eunice (`/moodboard`) | Full design language, color system, typography, iconography, spacing |
 | 1.1 | 2026-11-06 | Eunice (`/wireframe`) | Target wireframes for shell + four tabs + hole editor; improvements over as-built UI |
 | 1.2 | 2026-11-09 | Eunice (`/wireframe`, `/audit-ux`) | New-feature wireframes, as-built dialogs that were missing, UX audit |
+| 1.3 | 2026-11-11 | Eunice (`/wireframe`, `/flow`) | Post-range sit-down flow (`RNGE-005` → `RNGE-004`): session note card, active visit summary, **Save and evaluate session** compilation, compiled session log cards, and seamless handoff to the Vertex AI Swing Diary sheet (`Flow_RangeSessionAndEvaluation.md`) |
 
 ---
 
@@ -177,8 +178,9 @@ Target layouts (v1.1). These replace the as-built form stacks. Implementation st
 | Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) |
 | Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) |
 | Practice drills | Range sheet | [Wireframe_PracticeDrills.md](./designs/Wireframe_PracticeDrills.md) |
+| Range session & evaluation flow | Range → Compiled Summary → Vertex AI Diary | [Flow_RangeSessionAndEvaluation.md](./designs/Flow_RangeSessionAndEvaluation.md) |
 | Hole map | On Course map pane | [Wireframe_HoleMap.md](./designs/Wireframe_HoleMap.md) |
-| Swing diary | Range sheet, future | [Wireframe_SwingDiary.md](./designs/Wireframe_SwingDiary.md) |
+| Swing diary | Range evaluation & coaching sheet | [Wireframe_SwingDiary.md](./designs/Wireframe_SwingDiary.md) |
 | Shot edit | `ShotEditDialog` | [Wireframe_ShotEdit.md](./designs/Wireframe_ShotEdit.md) |
 | New round | Scorecard dialogs | [Wireframe_NewRound.md](./designs/Wireframe_NewRound.md) |
 | Club editor | Bag dialogs | [Wireframe_ClubEditor.md](./designs/Wireframe_ClubEditor.md) |
@@ -194,7 +196,7 @@ Audit: [UX_Audit.md](./designs/UX_Audit.md).
 | On Course | One long form. Record and Finish are both large filled buttons. Course field eats the first viewport. | Sticky **Record Shot** dock. HUD card for hole/par/score. Course name compact. Penalties/mulligan/concede/finish are secondary. GPS denied and busy states explicit. |
 | Scorecard | Six-column table, ~40dp rows, blue/orange fills | Out/In/Total banner, then **Front 9 / Back 9** hole tiles (≥48dp). Concede uses label `Gimme`, not color alone. |
 | Hole editor | Works; numbers not tabular; no live gross prominence | Stepper sheet with live **gross** and **vs par**. 56dp steppers. |
-| Range | Three cramped fields; counter beside a small button; no bag baseline | Selected-club baseline card, thumb-zone counter, min/avg/max with bag hints, save disabled until avg is a number. |
+| Range | Three cramped fields; counter beside a small button; no bag baseline | Two-stage flow: (1) On-mat club block capture (`Save Drill Session` updates club averages and adds to today's active visit); (2) Post-session sit-down card with a persistent **Session Note** (`range-session-note-field`), a live **This Visit's Summary** preview of clubs/drills logged, and **Save and Evaluate Session** (`range-save-evaluate-session-btn`) that compiles the session log and opens the Vertex AI Swing Diary evaluation. |
 
 **Global rules for every wireframe**
 

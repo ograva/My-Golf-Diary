@@ -3,137 +3,142 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `RangeDrillScreen` |
-| **PRD** | RNGE-001 … RNGE-004 |
-| **Persona** | Riley — ten balls, then write min / avg / max once |
-| **Status** | Target v1.1 |
-| **AppBar title** | **Range** (replace "Range Drill Instructor") |
+| **PRD** | RNGE-001 … RNGE-005 |
+| **Persona** | Riley — hits several clubs & drills on the mat, then sits down to jot a session note, review the compiled summary, and read Vertex AI's evaluation |
+| **Status** | Target v1.3 (aligned with as-built Range Drill Instructor + `RNGE-005` / `RNGE-004`) |
+| **AppBar title** | **Range Drill Instructor** (as built) |
 
 ## 1. Screen purpose
 
-Log one drill block for a non-putter club. Save writes `RangeDrillLog` and blends into the club’s min / avg / max (`saveRangeDrill`: new min = min of both, new max = max of both, new avg = mean of the two avgs). The screen shows the **current bag numbers** so Riley sees what will change.
+Support the two distinct moments of a real range visit:
+
+1. **Standing at the bay (Per-Club Block Capture — `RNGE-001`..`003`):** Pick a drill from the top-left header icon (`range-header-drills-btn`), select a club chip, tap **Hit Shot** up to 10 balls, enter `Min / Avg / Max` yards and a per-club **Swing Cue & Mechanics Note**, and tap **Save Drill Session**. Repeat across several clubs and drills. Each saved block updates that club's distance in My Bag and joins the **Active Visit Summary**.
+2. **Sitting down after the bucket (Session Note, Summary Review & Evaluation — `RNGE-005` → `RNGE-004`):** When done hitting balls, the golfer sits down, sees the **Wrap Up Range Visit** card showing a live summary of the clubs and drills recorded in this visit, jots down an overall **Session Note** (`range-session-note-field` — never erased when switching club chips), and taps **Save and Evaluate Session** (`range-save-evaluate-session-btn`). This compiles the visit into a single `RangeSessionLogEntry` in SQLite and opens the **Session Summary & Vertex AI Evaluation** sheet ([`Wireframe_SwingDiary.md`](./Wireframe_SwingDiary.md)).
 
 ## 2. Mobile layout
 
 ```
-┌─────────────────────────────┐
-│ [≡] Range            [sync] │  left icon opens drills (RNGE-003)
-├─────────────────────────────┤
-│ Driving range or simulator  │  VenueNameField, as built
-│ 3:1 Tour Tempo          ›   │  selected drill, or hidden
-│ CLUB                        │
-│ [7 Iron] 8i 9i PW …         │  48dp chips, putters hidden
-│ ┌ 7 Iron ───────────────┐   │
-│ │ Bag now               │   │
-│ │ MIN 140  AVG 155  MAX 168│ │  tabular, or — if zero
-│ └───────────────────────┘   │
-│ TEMPO                       │
-│ ┌ 3:1, pause at the top ┐   │  optional notes
-│ └───────────────────────┘   │
-│                             │
-│        4 / 10               │  tabular displaySmall
-│   balls in this block       │
-│        [  +  Hit  ]         │  filled, 64dp, disabled at 10
-│                             │
-│ This block (yds)            │
-│ Min        [ 148    ]       │  hint = current bag min
-│ Avg        [ 156    ]       │  required
-│ Max        [ 170    ]       │
-│                             │
-│ [ Save drill              ] │  filled, disabled until avg parses
-└─────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ [≡] Range Drill Instructor   [✦] [sync] │  [≡] drills · [✦] diary · [sync]
+├─────────────────────────────────────────┤
+│ Driving range or simulator              │  VenueNameField
+│ 3:1 Tour Tempo Rhythm           [Clear] │  active drill banner (when chosen)
+│                                         │
+│ Select club                             │
+│ [Driver] [3 Wood] [7 Iron] [PW] …       │  48dp ChoiceChips (putter excluded)
+│                                         │
+│ ┌ 💡 Swing Cue & Mechanics Note ──────┐ │  amber-tinted card (per-club cue)
+│ │ 3:1 Tour Tempo Rhythm               │ │  reloads on club switch or drill tap
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ Shots: 0 / 10          [ ⛳ Hit Shot ]   │  56dp button, caps at 10
+│ [ Min (Yds) ] [ Avg (Yds) ] [ Max (Yds)]│  tabular numeric inputs
+│                                         │
+│ [       Save Drill Session            ] │  saves 1 club block → joins visit
+│                                         │
+│ ── WRAP UP RANGE VISIT (RNGE-005) ───── │
+│ ┌ 📝 Wrap Up & Session Review ────────┐ │  creamElevated / surfaceContainer
+│ │ This visit so far (2 club blocks)   │ │  live preview before compiling
+│ │ • 7 Iron · 10 shots · avg 155 yds   │ │    Cue: "3:1 Tour Tempo Rhythm"
+│ │ • Driver · 10 shots · avg 242 yds   │ │    Drill: Simulated Fairway Corridor
+│ │ ─────────────────────────────────── │ │
+│ │ Session Note (overall thoughts)     │ │
+│ │ ┌─────────────────────────────────┐ │ │  ValueKey('range-session-note-field')
+│ │ │ Tempo felt much smoother with   │ │ │  3–4 lines, persists across club
+│ │ │ mid-irons; driver still pushy…  │ │ │  chip switches & tab switches
+│ │ └─────────────────────────────────┘ │ │
+│ │                                     │ │
+│ │ [ ✦ Save and Evaluate Session     ] │ │  ValueKey('range-save-evaluate-session-btn')
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ Session log                             │  ValueKey('range-session-log-title')
+│ [This club]  [All clubs]                │
+│ ┌ Compiled Session · Topgolf BGC ─────┐ │  ValueKey('range-session-log-list')
+│ │ 11/11/2026 7:45 PM · 2 club blocks  │ │  ValueKey('range-compiled-session-{id}')
+│ │ "Tempo felt much smoother…"         │ │
+│ │ • 7 Iron: 10 shots · 148/155/162 yds│ │
+│ │ • Driver: 10 shots · 225/242/255 yds│ │
+│ │ [ View AI Evaluation › ]            │ │  reopens saved evaluation (no AI call)
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
 ```
 
-Counter and **Hit** sit in the thumb zone, above the number fields. **Save drill** is the single filled primary. **Hit** is a tonal button (`FilledButton.tonal`) at 64dp so it stays easy to tap without becoming a second primary.
+### Visual hierarchy: Per-Club Block vs. Post-Visit Sit-Down
 
-### What changes vs current code
-
-- Title shortens to **Range**.
-- Selected club gets a baseline card (BAG numbers) so the drill is not a blind form.
-- Min / avg / max stack full width. Three columns on a phone are too narrow for gloves and for `yds` labels.
-- Hints show the current bag value, not the word "Min (Yds)" alone. Suffix text `yds` on each field.
-- Save stays disabled until **avg** parses as a number ≥ 0. Min and max may be empty; on save, empty min/max become `0.0` as today **only if** we also show a helper: "Empty min or max is stored as 0 and can shrink the bag minimum." Preferred target: if min or max is empty, copy avg into the empty side before save so a single-number block does not write 0. Document this as the UX rule for Athena — it is safer than the current `?? 0.0` and still produces a numeric `RangeDrillLog`.
-- If the user enters all three and min &gt; avg or avg &gt; max, inline error on the field and Save disabled.
-- Shot count 0 on save still stores **10** (RNGE-002 AC). Helper under the counter: "Leaving this at 0 saves the block as 10 balls."
-- After save: snackbar "Saved drill for {club}. Bag avg updated.", counter resets to 0, distance fields clear, notes stay (they are the club cue), baseline card reloads.
-- Empty club list (no non-putters): "Add clubs to the bag before a drill." No save button.
+- **Save Drill Session** (existing top section) logs a *single club block* while standing at the mat.
+- **Wrap Up & Session Review** (`Card` in `surfaceContainer` with `hairline` border) sits directly below **Save Drill Session** and above the historical **Session log**. It gives the golfer a calm "sit down after the bucket" workspace:
+  1. **This visit so far (`range-visit-summary-preview`):** Shows the uncompiled club blocks recorded during the current visit (club name, shots, min/avg/max in `GolfTextStyles.tabularNum`, per-club cue, and drill badge). If no blocks have been saved yet, shows subtle helper copy: *"Save one or more club blocks above, or jot a quick session note below."*
+  2. **Session Note (`range-session-note-field`):** Multi-line `TextField` (`minLines: 2, maxLines: 4`) labeled **Session Note** with hint *"How did the session feel overall? Ball flight, fatigue, takeaways…"*. Owned by `RangeDrillScreenState._sessionNoteController` so switching club chips **never** overwrites or clears it.
+  3. **Save and Evaluate Session (`range-save-evaluate-session-btn`):** 56dp action button with `Icons.auto_awesome` (`✦`). If the golfer typed numbers into `Min / Avg / Max` (or tapped `Hit Shot`) for the current club and forgot to tap **Save Drill Session** first, tapping **Save and Evaluate Session** automatically flushes that pending club block first, compiles the visit into `range_sessions`, and opens the **Session Summary & Vertex AI Evaluation** sheet.
 
 ## 3. Larger screens
 
-≥600dp: baseline card and counter on the left; min/avg/max and save on the right. Club chips span both columns.
+≥600dp: Club block capture on the left column; **Wrap Up & Session Review** card and **Session log** on the right column.
 
 ## 4. Widget inventory
 
 | Widget | Role |
 | :--- | :--- |
+| `IconButton` leading (`range-header-drills-btn`) | Opens `PracticeDrillSheet` (`RNGE-003`) |
+| `IconButton` trailing (`range-swing-diary-btn`) | Opens `SwingDiarySheet` (`RNGE-004`) |
+| `VenueNameField` | Driving range or simulator autocomplete |
 | Horizontal `ChoiceChip` | Non-putter clubs |
-| `Card` | Bag baseline |
-| `TextField` | Tempo notes, min, avg, max |
-| `FilledButton.tonal` | Hit |
-| `Text` tabular | `n / 10` |
-| `FilledButton` | Save drill |
-| `SnackBar` | Success |
-| `GolfTextStyles.yardage` | Baseline stats |
-
-Keyboard: `TextInputType.numberWithOptions(decimal: true)`.
+| `Card` (amber tint) + `TextField` | Per-club **Swing Cue & Mechanics Note** (`_notesController`) |
+| `ElevatedButton.icon` | **Hit Shot** (`0 / 10` counter) |
+| `TextField` × 3 | `Min (Yds)`, `Avg (Yds)`, `Max (Yds)` |
+| `ElevatedButton` | **Save Drill Session** (records single club block) |
+| `Card` (`range-visit-wrapup-card`) | Post-drill sit-down card containing active visit preview, session note, and compile CTA |
+| `TextField` (`range-session-note-field`) | Visit-level personal review note (`_sessionNoteController`) |
+| `FilledButton.icon` (`range-save-evaluate-session-btn`) | **Save and Evaluate Session** — compiles `range_sessions` and opens evaluation |
+| `FilterChip` × 2 | `This club` (`range-log-this-club`) / `All clubs` (`range-log-all`) |
+| `RangeSessionLog` (`range-session-log-list`) | Displays compiled `RangeSessionLogEntry` cards and standalone `RangeDrillLog` tiles |
 
 ## 5. Interaction & state map
 
-| State | UI |
+| State | UI behavior |
 | :--- | :--- |
-| Loading clubs | Spinner |
-| No clubs | Empty message |
-| Club selected | Chip selected, baseline + notes loaded from `swingNotes` |
-| Counter 0–9 | Hit enabled |
-| Counter 10 | Hit disabled |
-| Avg empty or not a number | Save disabled |
-| min &gt; avg or avg &gt; max | Field error, Save disabled |
-| Saving | Button shows progress, ignores double tap |
-| Saved | Snackbar, fields cleared, baseline refreshed |
-
-Notes edited here are the club’s swing notes passed through `tempoNotes` on the log. Do not imply a second notes store. If save also writes `updateClubSwingNotes`, say so in the snackbar ("Tempo note saved on this club"). Match current `saveRangeDrill` only — today notes live on the drill log, and the notes field is prefilled from `club.swingNotes` but save does not write them back. **Target:** keep that behavior. Label the field **Tempo for this drill** so it is not confused with bag swing notes.
+| Switch club chip | Updates selected club and reloads `_notesController` from `club.swingNotes`. **`_sessionNoteController` (`range-session-note-field`) is untouched.** |
+| Tap drill title in `PracticeDrillSheet` | Sets `_selectedDrill`, copies drill title into `_notesController` (per-club cue), and closes sheet. |
+| Tap **Use this drill** in `PracticeDrillSheet` | Sets `_selectedDrill` without overwriting `_notesController`, and closes sheet. |
+| Tap **Save Drill Session** | Saves `RangeDrillLog` (`session_id = NULL`), updates club stats in My Bag, appends the block to **This visit so far**, resets counter and min/avg/max fields. |
+| Tap **Save and Evaluate Session** with blocks or session note | Flushes any unsaved club block input first → writes compiled `range_sessions` row + links `range_drills.session_id` → clears `_sessionNoteController` and active visit preview → opens the **Session Summary & Vertex AI Evaluation** sheet (or, if offline / before `RNGE-004` is active, shows snackbar *"Session log saved. Connect to evaluate with Vertex AI."* and scrolls/highlights the new compiled card in `range-session-log-list`). |
+| Tap **Save and Evaluate Session** when completely empty | No uncompiled blocks, no pending block numbers, and blank session note → snackbar *"Log a club block or write a session note before saving the session."* |
+| Filter `This club` vs `All clubs` | `All clubs` shows all compiled session cards and standalone blocks. `This club` filters compiled session cards to those containing the selected club ( plus standalone blocks for that club). |
 
 ## 6. UX flow
 
+See [`Flow_RangeSessionAndEvaluation.md`](./Flow_RangeSessionAndEvaluation.md) for the complete end-to-end Mermaid diagram from hitting balls to reviewing the compiled summary and reading Vertex AI's evaluation.
+
 ```mermaid
 flowchart TD
-  open[Range] --> club[Pick club]
-  club --> base[Show bag min avg max]
-  base --> hits[Hit up to 10]
-  hits --> nums[Enter min avg max]
-  nums --> valid{avg number and order ok?}
-  valid -->|no| nums
-  valid -->|yes| save[saveRangeDrill blend]
-  save --> bag[My Bag shows new stats]
-  save --> snack[Snackbar]
+  mat[At the mat: pick drill & club] --> block[Hit up to 10 + enter Min/Avg/Max & club cue]
+  block --> saveBlock[Tap Save Drill Session]
+  saveBlock -->|Next club in bag| mat
+  saveBlock -->|Done hitting balls: sit down| sit[Review 'This visit so far' summary]
+  sit --> note[Jot overall thoughts in Session Note]
+  note --> compile[Tap Save and Evaluate Session]
+  compile --> flush{Pending unsaved club inputs?}
+  flush -->|Yes| autoSave[Auto-save pending club block] --> db[Compile & save range_sessions in SQLite]
+  flush -->|No| db
+  db --> log[Compiled card appears in Range Session Log]
+  db --> evalSheet[Open Session Summary & Vertex AI Evaluation sheet]
 ```
 
 ## 7. Key map
 
-| Element | ValueKey | Widget |
+| Element | ValueKey / Key | Widget |
 | :--- | :--- | :--- |
-| Club chip | `range-club-chip-{clubId}` | `ChoiceChip` |
-| Baseline card | `range-bag-baseline` | `Card` |
-| Tempo field | `range-tempo-field` | `TextField` |
-| Hit | `range-shot-counter-increment` | `FilledButton` |
-| Counter readout | `range-shot-counter` | `Text` |
-| Min | `range-min-field` | `TextField` |
-| Avg | `range-avg-field` | `TextField` |
-| Max | `range-max-field` | `TextField` |
-| Save | `range-save-drill-btn` | `FilledButton` |
-| Empty clubs | `range-empty-clubs` | `Text` |
-| Drills | `range-header-drills-btn` | `IconButton` leading |
-| Venue | `range-venue-field` | `TextField` inside autocomplete |
-| This club log | `range-log-this-club` | `FilterChip` (as built) |
-| All clubs log | `range-log-all` | `FilterChip` (as built) |
-| Session title | `range-session-log-title` | `Text` |
-| Diary | `range-swing-diary-btn` | `IconButton`, future RNGE-004 |
-
-## 8. As built
-
-The screen title is still **Range Drill Instructor**. The venue field, club chips, shot counter, min/avg/max, tempo notes, Save, and the session log (this club / all clubs) are in code. The left-header drill button and the diary button are not. Session log empty key: `range-session-empty`. Row key: `range-session-{drillId}`.
-
-## 9. Practice drills and diary
-
-The leading icon opens [Wireframe_PracticeDrills.md](./Wireframe_PracticeDrills.md). A chosen drill shows one line under the venue field: title plus a chevron to reopen the steps. It does not replace the 10-ball form.
-
-The diary icon (trailing, beside sync) is future and stays disabled with tooltip "Swing diary is not on yet" until RNGE-004. Layout: [Wireframe_SwingDiary.md](./Wireframe_SwingDiary.md).
+| Drills button | `range-header-drills-btn` | `IconButton` leading |
+| Swing diary button | `range-swing-diary-btn` | `IconButton` trailing |
+| Active drill clear | `range-active-drill-clear` | `TextButton` |
+| Wrap-up card | `range-visit-wrapup-card` | `Card` |
+| Visit summary preview | `range-visit-summary-preview` | `Column` / `Widget` |
+| Session note field | `range-session-note-field` | `TextField` |
+| Save & evaluate button | `range-save-evaluate-session-btn` | `FilledButton` / `ElevatedButton` |
+| Session log title | `range-session-log-title` | `Text` |
+| This club filter | `range-log-this-club` | `FilterChip` |
+| All clubs filter | `range-log-all` | `FilterChip` |
+| Session log list | `range-session-log-list` | `RangeSessionLog` |
+| Compiled session card | `range-compiled-session-{sessionId}` | `Card` |
+| Standalone block tile | `range-session-{drillId}` | `Card` |
+| Empty session log | `range-session-empty` | `Text` |

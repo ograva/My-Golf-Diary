@@ -4,7 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.6 | Active | 2026-11-11 | Watson (Architect cohort) |
+| 1.7 | Active | 2026-11-11 | Watson (Architect cohort) |
 
 **Inputs:** [`PRD.md`](./PRD.md) v1.5 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
 
@@ -24,7 +24,7 @@ flowchart LR
     UI[Flutter_UI]
     CAT["Catalogs (Venues, Coords, Drills)"]
     LDS[LocalDatabaseService]
-    DB[(SQLite_v5_v6)]
+    DB[(SQLite_v7)]
     CACHE[(Local_Map_Cache)]
     GPS[Geolocator]
     UI --> CAT
@@ -63,7 +63,7 @@ flowchart LR
 | provider | `^6.1.2` | State management where needed |
 | google_fonts | `^9.0.0` | Playfair Display, Inter, Roboto Mono |
 | *Planned (`CRSE-006`)* | `firebase_storage`, `google_maps_flutter` (or static tile renderer) | Course-level map caching in Firebase Storage & local offline map rendering |
-| *Planned (`RNGE-004`)* | `firebase_ai` (`FirebaseAI.vertexAI()`) | Vertex AI Gemini for the swing diary. The project owner pays. No player API keys |
+| `RNGE-004` | `firebase_ai` (`FirebaseAI.agentPlatform()`) | Vertex AI Gemini for the swing diary. `firebase_ai` 5.1 renamed `vertexAI()` to `agentPlatform()`. The project owner pays. No player API keys |
 
 ---
 
@@ -117,7 +117,7 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 5** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. **Planned Version 6 (`RNGE-005`)** adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note can be compiled into a single Range Session Log for display and Vertex AI (`RNGE-004`) evaluation. Later `CRSE-006` / `RNGE-004` tables follow.
+**DB:** `golf_diary.db`, currently **version 7** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. Version 6 adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note compile into one Range Session Log. Version 7 adds `swing_diary_messages`, `range_evaluations`, and a local `diary_settings` opt-in row. `range_sessions`, the diary tables, and `practice_drills` stay out of `syncFull`.
 - Version 2 added `clubs.brand`, `clubs.model`, and `range_drills.venue_name`.
 - Version 3 added `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
 - Version 4 added `golf_rounds` to track round lifecycle (`started_at_ms`, `completed_at_ms`).
@@ -251,7 +251,7 @@ flowchart TD
   - Plots each `ShotRecord` for the active hole (`start_lat/lon` → `end_lat/lon`) with club labels and yardage badges.
 - **Offline Fallback:** If a golfer is on the course with no cellular data and the course pack was not pre-downloaded, the view still renders a clean 2D vector fairway schematic (scaled from Tee-to-Green coordinates and `ShotRecord` GPS points) without failing.
 
-### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004` — Future Architecture)
+### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004`)
 
 The diary comments on **the compiled range session log (`RNGE-005`) and today’s drills in the context of earlier practice**: what the player has been focusing on, how they felt about the session (`session_note`), and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
 
@@ -270,7 +270,7 @@ sequenceDiagram
   Note over App: When history would pass 250000 tokens, store a periodic summary and drop the oldest raw text from the next prompt
 ```
 
-**Who pays.** `FirebaseAI.vertexAI()` with App Check and the existing anonymous user. A Flash-class Gemini model. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt.
+**Who pays.** `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-2.5-flash`. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`.
 
 **What each call contains**, in order:
 
@@ -356,7 +356,7 @@ service cloud.firestore {
 - `firebase_options.dart` is public client config. Do not commit server credentials, Google Maps private signing keys, or Google AI (Gemini) API keys in repository source.
 - Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
 - **Firebase Storage (`CRSE-006`):** Shared course map packs under `/course_maps/{courseId}/**` allow authenticated read (`request.auth != null`) and restrict writes to authenticated cache builders / admin functions.
-- **Vertex AI (`RNGE-004`):** `FirebaseAI.vertexAI()` on this Firebase project. The owner pays while the diary stays under about 1,000 people. Players do not supply Gemini keys. No model key in the client.
+- **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()` on this Firebase project (`firebase_ai` 5.1 renamed `vertexAI()`). The owner pays while the diary stays under about 1,000 people. Players do not supply Gemini keys. No model key in the client.
 
 ---
 
@@ -365,7 +365,7 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** version 5 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5 for `RNGE-003`). Planned version 6 adds `range_sessions` and `range_drills.session_id` for `RNGE-005`.
+- **DB:** version 7 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7).
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -410,3 +410,4 @@ Background location **not** required for current flows.
 | 1.4 | 2026-11-09 | Watson | §1 names the swing diary as Vertex AI so it matches PRD 1.4. No change to the §5.6 design |
 | 1.5 | 2026-11-09 | Athena | DB is version 5: `practice_drills` is seeded locally and `range_drills.drill_id` stores the drill used for a session. `practice_drills` is not in `syncFull` yet |
 | 1.6 | 2026-11-11 | Watson | Align with PRD v1.5 (`RNGE-005`): add §5.3.1 for the visit-level session note (`range-session-note-field`) and compiled Range Session Log (`range_sessions` table + `range_drills.session_id` in planned DB v6, `range-save-evaluate-session-btn`, `range-session-log-list`), and wire compiled `range_sessions` as the primary payload into `RNGE-004` Vertex AI evaluation (`range_evaluations.session_id`) |
+| 1.7 | 2026-11-11 | Athena | Shipped DB v6 (`range_sessions`, `range_drills.session_id`) and DB v7 (`swing_diary_messages`, `range_evaluations`, local `diary_settings` opt-in). Those tables stay out of `syncFull`. The diary client is `FirebaseAI.agentPlatform()` because `firebase_ai` 5.1 renamed `vertexAI()`. Recent raw window is the later of 30 days and the 36th newest non-today log |

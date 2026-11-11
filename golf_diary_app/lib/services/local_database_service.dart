@@ -9,8 +9,12 @@ import '../data/ph_golf_catalog.dart';
 import '../data/practice_drill_seed.dart';
 import '../models/golf_models.dart';
 import '../models/practice_drill.dart';
+import '../models/range_session.dart';
 import '../models/round_summary.dart';
 import 'sync_merge.dart';
+
+const kEmptyRangeSessionMessage =
+    'Log a club block or write a session note before saving the session.';
 
 class LocalDatabaseService {
   static final LocalDatabaseService instance = LocalDatabaseService._init();
@@ -44,7 +48,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -73,6 +77,13 @@ class LocalDatabaseService {
       await db.execute('ALTER TABLE range_drills ADD COLUMN drill_id TEXT');
       await _createPracticeDrillsTable(db);
       await _seedPracticeDrills(db);
+    }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE range_drills ADD COLUMN session_id TEXT');
+      await _createRangeSessionsTable(db);
+    }
+    if (oldVersion < 7) {
+      await _createDiaryTables(db);
     }
   }
 
@@ -173,6 +184,7 @@ class LocalDatabaseService {
         tempo_notes TEXT,
         venue_name TEXT,
         drill_id TEXT,
+        session_id TEXT,
         timestamp INTEGER NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
@@ -183,6 +195,8 @@ class LocalDatabaseService {
     await _createGolfRoundsTable(db);
     await _createPracticeDrillsTable(db);
     await _seedPracticeDrills(db);
+    await _createRangeSessionsTable(db);
+    await _createDiaryTables(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -307,13 +321,7 @@ class LocalDatabaseService {
       ${clubId == null ? '' : 'AND range_drills.club_id = ?'}
       ORDER BY range_drills.timestamp DESC
     ''', clubId == null ? null : [clubId]);
-    return rows.map((row) {
-      final name = row['club_name'] as String?;
-      return RangeDrillSummary(
-        drill: RangeDrillLog.fromMap(row),
-        clubName: (name == null || name.isEmpty) ? 'Removed club' : name,
-      );
-    }).toList();
+    return rows.map(_summaryFromRow).toList();
   }
 
   /// Average yards for [clubId], oldest session first.
@@ -327,6 +335,155 @@ class LocalDatabaseService {
       orderBy: 'timestamp ASC',
     );
     return rows.map((row) => (row['avg_yards'] as num).toDouble()).toList();
+  }
+
+  /// Club blocks not yet folded into a [RangeSession].
+  Future<List<RangeDrillSummary>> listUncompiledRangeDrills(
+      {String? clubId}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT range_drills.*, clubs.name AS club_name
+      FROM range_drills
+      LEFT JOIN clubs ON clubs.id = range_drills.club_id
+      WHERE range_drills.deleted = 0 AND range_drills.session_id IS NULL
+      ${clubId == null ? '' : 'AND range_drills.club_id = ?'}
+      ORDER BY range_drills.timestamp ASC
+    ''', clubId == null ? null : [clubId]);
+    return rows.map(_summaryFromRow).toList();
+  }
+
+  /// Newest compiled visit first. [clubId] keeps sessions that contain that club.
+  Future<List<RangeSession>> listRangeSessions({String? clubId}) async {
+    final db = await database;
+    final rows = await db.query(
+      'range_sessions',
+      where: 'deleted = 0',
+      orderBy: 'timestamp DESC',
+    );
+    final sessions = rows.map(RangeSession.fromMap).toList();
+    if (clubId == null) return sessions;
+    return sessions.where((session) => session.includesClub(clubId)).toList();
+  }
+
+  /// Freezes [blockIds], or every unlinked block, plus [sessionNote].
+  ///
+  /// Rows that already have a session stay on that session. A note with no
+  /// blocks is saved. No blocks and a blank note is rejected.
+  Future<RangeSession> compileRangeSession({
+    required String sessionNote,
+    String venueName = '',
+    List<String>? blockIds,
+  }) async {
+    final db = await database;
+    final note = sessionNote.trim();
+    final where = StringBuffer(
+        'deleted = 0 AND session_id IS NULL');
+    final args = <Object?>[];
+    if (blockIds != null) {
+      if (blockIds.isEmpty) {
+        where.write(' AND 0');
+      } else {
+        where.write(
+            ' AND id IN (${List.filled(blockIds.length, '?').join(',')})');
+        args.addAll(blockIds);
+      }
+    }
+    final rows = await db.query(
+      'range_drills',
+      where: where.toString(),
+      whereArgs: args,
+      orderBy: 'timestamp ASC',
+    );
+    if (rows.isEmpty && note.isEmpty) {
+      throw ArgumentError(kEmptyRangeSessionMessage);
+    }
+    final blocks = await _snapshotBlocks(db, rows);
+    final now = _nowMs();
+    final id = 'rsess_$now';
+    final summary = jsonEncode([for (final block in blocks) block.toJson()]);
+    await db.transaction((txn) async {
+      await txn.insert('range_sessions', {
+        'id': id,
+        'venue_name': venueName.trim(),
+        'session_note': note,
+        'compiled_summary_json': summary,
+        'timestamp': now,
+        'is_synced': 0,
+        'updated_at_ms': now,
+        'deleted': 0,
+      });
+      for (final row in rows) {
+        await txn.update(
+          'range_drills',
+          {
+            'session_id': id,
+            'is_synced': 0,
+            'updated_at_ms': now,
+          },
+          where: 'id = ? AND session_id IS NULL',
+          whereArgs: [row['id']],
+        );
+      }
+    });
+    return RangeSession(
+      id: id,
+      venueName: venueName.trim(),
+      sessionNote: note,
+      blocks: blocks,
+      timestamp: now,
+    );
+  }
+
+  Future<List<RangeSessionBlock>> _snapshotBlocks(
+      DatabaseExecutor db, List<Map<String, Object?>> rows) async {
+    final blocks = <RangeSessionBlock>[];
+    for (final row in rows) {
+      final log = RangeDrillLog.fromMap(row);
+      final clubs = await db.query(
+        'clubs',
+        columns: ['name'],
+        where: 'id = ?',
+        whereArgs: [log.clubId],
+        limit: 1,
+      );
+      final clubName = clubs.isEmpty ? 'Removed club' : clubs.first['name'] as String;
+      String? drillTitle;
+      var steps = const <String>[];
+      if (log.drillId != null && log.drillId!.isNotEmpty) {
+        final drills = await db.query(
+          'practice_drills',
+          where: 'id = ?',
+          whereArgs: [log.drillId],
+          limit: 1,
+        );
+        if (drills.isNotEmpty) {
+          final drill = PracticeDrill.fromMap(drills.first);
+          drillTitle = drill.title;
+          steps = drill.steps;
+        }
+      }
+      blocks.add(RangeSessionBlock(
+        clubId: log.clubId,
+        clubName: clubName,
+        shotCount: log.shotCount,
+        minYards: log.minYards,
+        avgYards: log.avgYards,
+        maxYards: log.maxYards,
+        tempoNotes: log.tempoNotes,
+        drillId: log.drillId,
+        drillTitle: drillTitle,
+        drillSteps: steps,
+      ));
+    }
+    return blocks;
+  }
+
+  RangeDrillSummary _summaryFromRow(Map<String, Object?> row) {
+    final name = row['club_name'] as String?;
+    return RangeDrillSummary(
+      drill: RangeDrillLog.fromMap(row),
+      clubName: (name == null || name.isEmpty) ? 'Removed club' : name,
+    );
   }
 
   Future<List<PracticeDrill>> listPracticeDrills() async {
@@ -1046,10 +1203,13 @@ class LocalDatabaseService {
     }
 
     final row = _sqliteRow(table, remote, remoteUpdated);
-    if (table == 'range_drills' &&
-        localRows.isNotEmpty &&
-        !remote.containsKey('drill_id')) {
-      row['drill_id'] = localRows.first['drill_id'];
+    if (table == 'range_drills' && localRows.isNotEmpty) {
+      if (!remote.containsKey('drill_id')) {
+        row['drill_id'] = localRows.first['drill_id'];
+      }
+      if (!remote.containsKey('session_id')) {
+        row['session_id'] = localRows.first['session_id'];
+      }
     }
     await db.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
     if (table == 'round_scores') {
@@ -1077,6 +1237,58 @@ class LocalDatabaseService {
     row['deleted'] = 0;
     row['is_synced'] = 1;
     return row;
+  }
+
+  Future<void> _createRangeSessionsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS range_sessions (
+        id TEXT PRIMARY KEY,
+        venue_name TEXT,
+        session_note TEXT,
+        compiled_summary_json TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> _createDiaryTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS swing_diary_messages (
+        id TEXT PRIMARY KEY,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS range_evaluations (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        session_id TEXT,
+        session_date TEXT,
+        content TEXT NOT NULL,
+        prompt_tokens INTEGER,
+        covered_through_ms INTEGER,
+        referenced_drill_ids_json TEXT,
+        referenced_club_ids_json TEXT,
+        timestamp INTEGER NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS diary_settings (
+        id TEXT PRIMARY KEY,
+        opted_in INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
   Future<void> _createPracticeDrillsTable(Database db) async {
@@ -1268,6 +1480,7 @@ class LocalDatabaseService {
       'tempo_notes',
       'venue_name',
       'drill_id',
+      'session_id',
       'timestamp',
       'is_synced',
       'updated_at_ms',

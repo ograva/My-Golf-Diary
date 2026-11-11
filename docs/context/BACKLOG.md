@@ -2,7 +2,7 @@
 
 Index only. Shard bodies live under `docs/shards/`.
 
-Checked against the working tree on 2026-11-11, after RNGE-005 was specified in the PRD, Architecture, and Range wireframes.
+Checked against the working tree on 2026-11-11, after the range session log and swing diary shipped.
 
 | Shard ID | Title | Module | Priority | Status | Complexity | Story Ref | File |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -17,11 +17,11 @@ Checked against the working tree on 2026-11-11, after RNGE-005 was specified in 
 | CRSE-022 | Hole map view | CRSE | Low | Not Started | L | CRSE-006 | [CRSE-022](../shards/CRSE/CRSE-022-hole-map-view.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Completed | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |
-| RNGE-025 | Range session store | RNGE | High | Not Started | M | RNGE-005 | [RNGE-025](../shards/RNGE/RNGE-025-range-session-store.md) |
-| RNGE-026 | Range session wrap-up | RNGE | High | Not Started | M | RNGE-005 | [RNGE-026](../shards/RNGE/RNGE-026-range-session-wrapup.md) |
-| RNGE-022 | Swing diary evaluation | RNGE | Low | Not Started | L | RNGE-004 | [RNGE-022](../shards/RNGE/RNGE-022-swing-diary.md) |
-| RNGE-023 | Diary history ceiling | RNGE | Low | Not Started | M | RNGE-004 | [RNGE-023](../shards/RNGE/RNGE-023-diary-history-ceiling.md) |
-| RNGE-024 | Evaluation log | RNGE | Low | Not Started | S | RNGE-004 | [RNGE-024](../shards/RNGE/RNGE-024-evaluation-log.md) |
+| RNGE-025 | Range session store | RNGE | High | Completed | M | RNGE-005 | [RNGE-025](../shards/RNGE/RNGE-025-range-session-store.md) |
+| RNGE-026 | Range session wrap-up | RNGE | High | Completed | M | RNGE-005 | [RNGE-026](../shards/RNGE/RNGE-026-range-session-wrapup.md) |
+| RNGE-022 | Swing diary evaluation | RNGE | Low | Completed | L | RNGE-004 | [RNGE-022](../shards/RNGE/RNGE-022-swing-diary.md) |
+| RNGE-023 | Diary history ceiling | RNGE | Low | Completed | M | RNGE-004 | [RNGE-023](../shards/RNGE/RNGE-023-diary-history-ceiling.md) |
+| RNGE-024 | Evaluation log | RNGE | Low | Completed | S | RNGE-004 | [RNGE-024](../shards/RNGE/RNGE-024-evaluation-log.md) |
 
 ## Code check
 
@@ -33,10 +33,12 @@ BAG-010, CRSE-010, and RNGE-010 are superseded. The current My Bag, Fairway HUD,
 
 CRSE-020 and CRSE-021 are done. A mapped hole on the Fairway HUD shows whole yards to the pin. Simulator mode, a custom course, an unmapped hole, and a missing location fix hide that line. The coordinate catalog is `ph_golf_hole_coords.dart`.
 
-RNGE-020 and RNGE-021 are done. The database is version 5. `practice_drills` is seeded from the reference catalog, and a player can add or hide a drill from the Range sheet. The next saved range session stores that drill id. `practice_drills` is still outside `syncFull`.
+RNGE-020 and RNGE-021 are done. `practice_drills` is seeded from the reference catalog, and a player can add or hide a drill from the Range sheet. `practice_drills` is still outside `syncFull`.
+
+RNGE-025 and RNGE-026 are done. The database is version 7. A visit note stays put when the club chip changes. Save and evaluate session writes a `range_sessions` row and links the uncompiled club blocks. The button stores the session on the phone and does not call Vertex.
+
+RNGE-022, RNGE-023, and RNGE-024 are done. The Range header opens an opt-in swing diary. Summarize today and follow-ups go through `FirebaseAI.agentPlatform()` when Firebase is available, and the reply is stored in `swing_diary_messages` and `range_evaluations`. Past about 250,000 tokens the oldest notes fold into a periodic summary. The evaluation log opens from inside the diary.
 
 Next to build:
 
-- RNGE-025, then RNGE-026: the session note and compiled range session log (`RNGE-005`). These do not call Vertex.
-- RNGE-022, then RNGE-023 and RNGE-024: the Vertex swing diary (`RNGE-004`). RNGE-022 now waits on the compiled session from RNGE-026.
-- CRSE-022: the hole map (`CRSE-006`). It does not block the range session work.
+- CRSE-022: the hole map (`CRSE-006`).

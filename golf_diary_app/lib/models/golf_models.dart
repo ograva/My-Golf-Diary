@@ -249,6 +249,7 @@ class RangeDrillLog {
   final int timestamp;
   final int isSynced;
   final String? drillId;
+  final String? sessionId;
 
   RangeDrillLog({
     required this.id,
@@ -262,6 +263,7 @@ class RangeDrillLog {
     required this.timestamp,
     this.isSynced = 0,
     this.drillId,
+    this.sessionId,
   });
 
   Map<String, dynamic> toMap() {
@@ -277,6 +279,7 @@ class RangeDrillLog {
       'timestamp': timestamp,
       'is_synced': isSynced,
       'drill_id': drillId,
+      'session_id': sessionId,
     };
   }
 
@@ -293,6 +296,7 @@ class RangeDrillLog {
       timestamp: map['timestamp'] as int,
       isSynced: map['is_synced'] as int? ?? 0,
       drillId: map['drill_id'] as String?,
+      sessionId: map['session_id'] as String?,
     );
   }
 }

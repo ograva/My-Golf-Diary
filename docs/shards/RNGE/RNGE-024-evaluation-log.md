@@ -6,7 +6,7 @@
 | **Module** | RNGE — Range |
 | **Story Ref** | RNGE-004 |
 | **Priority** | Low |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | S |
 | **Depends On** | RNGE-022 |
 
@@ -16,16 +16,16 @@ Let the player read saved range evaluations and periodic summaries without calli
 
 ## Acceptance Criteria
 
-- [ ] A control inside the Swing diary opens the log. Opening it performs no model call and does not require a network connection.
-- [ ] Rows come from `range_evaluations`, newest first. An `evaluation` shows its session date and content. A `periodic_summary` is labeled so a reader can tell a progress brief from a day’s evaluation.
-- [ ] An empty log reads "No evaluations yet."
-- [ ] The log is absent from the bottom navigation and from the Range header. Range drill save does not depend on this screen.
+- [x] A control inside the Swing diary opens the log. Opening it performs no model call and does not require a network connection.
+- [x] Rows come from `range_evaluations`, newest first. An `evaluation` shows its session date and content. A `periodic_summary` is labeled so a reader can tell a progress brief from a day’s evaluation.
+- [x] An empty log reads "No evaluations yet."
+- [x] The log is absent from the bottom navigation and from the Range header. Range drill save does not depend on this screen.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Seed one `evaluation` and one `periodic_summary`. Open the log from the diary and find both texts. Assert the fake model was not called. With no rows, find the empty copy.
-- [ ] **Integration (if needed):** Not required.
-- [ ] **Keys:** Proposed, for Eunice to add to `Wireframe_SwingDiary.md`: `diary-evaluation-log-btn`, `diary-evaluation-log`, `diary-evaluation-row-{id}`.
+- [x] **Unit/widget:** Seed one `evaluation` and one `periodic_summary`. Open the log from the diary and find both texts. Assert the fake model was not called. With no rows, find the empty copy.
+- [x] **Integration (if needed):** Not required.
+- [x] **Keys:** Proposed, for Eunice to add to `Wireframe_SwingDiary.md`: `diary-evaluation-log-btn`, `diary-evaluation-log`, `diary-evaluation-row-{id}`.
 
 ## Dev notes
 

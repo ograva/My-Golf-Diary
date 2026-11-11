@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/data/practice_drill_seed.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
+import 'package:golf_diary_app/services/swing_diary_prompt.dart';
+import 'package:golf_diary_app/services/swing_diary_service.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -479,5 +481,207 @@ void main() {
     expect(
         reopened.any((drill) => drill.id == 'rng-drl-feet-together'), isFalse);
     expect(reopened.length, kPracticeDrillSeed.length - 1);
+  });
+
+  Future<RangeDrillLog> saveBlock({
+    required String id,
+    required String clubId,
+    String tempo = '',
+    String? drillId,
+    double avg = 150,
+  }) {
+    return Future(() async {
+      final log = RangeDrillLog(
+        id: id,
+        clubId: clubId,
+        shotCount: 10,
+        minYards: avg - 5,
+        maxYards: avg + 5,
+        avgYards: avg,
+        tempoNotes: tempo,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        drillId: drillId,
+      );
+      await db.saveRangeDrill(log);
+      return log;
+    });
+  }
+
+  test('compile links two clubs and leaves a note-only session', () async {
+    await saveBlock(id: 'block_driver', clubId: 'driver', tempo: 'Smooth', avg: 220, drillId: 'rng-drl-tempo-3to1');
+    await saveBlock(id: 'block_iron', clubId: '7iron', tempo: 'Hold', avg: 150);
+    await db.updateClubIdentity((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').copyWith(
+          name: 'Driver still',
+          category: 'wood',
+        ));
+
+    final session = await db.compileRangeSession(sessionNote: 'Felt easy', venueName: 'Topgolf');
+    expect(session.blocks.map((block) => block.clubId), ['driver', '7iron']);
+    expect(session.blocks.first.clubName, 'Driver still');
+    expect(session.blocks.first.drillTitle, '3:1 Tour Tempo Rhythm');
+    expect(session.blocks.first.drillSteps, isNotEmpty);
+    expect(session.sessionNote, 'Felt easy');
+
+    await db.updateClubIdentity((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').copyWith(
+          name: 'Renamed driver',
+          category: 'wood',
+        ));
+    final stored = await db.listRangeSessions();
+    expect(stored.single.blocks.first.clubName, 'Driver still');
+    expect((await db.listRangeDrills()).every((row) => row.drill.sessionId == session.id), isTrue);
+
+    await expectLater(
+      db.compileRangeSession(sessionNote: '', blockIds: ['block_driver', 'block_iron']),
+      throwsArgumentError,
+    );
+    expect((await db.listRangeDrills()).every((row) => row.drill.sessionId == session.id), isTrue);
+
+    final noteOnly = await db.compileRangeSession(sessionNote: 'Just a thought');
+    expect(noteOnly.blocks, isEmpty);
+    expect((await db.listRangeSessions()).length, 2);
+  });
+
+  test('a blank visit is rejected', () async {
+    await expectLater(db.compileRangeSession(sessionNote: '   '), throwsArgumentError);
+    expect(await db.listRangeSessions(), isEmpty);
+  });
+
+  test('upgrading a version 5 database adds session links', () async {
+    final path = join(await getDatabasesPath(), 'golf_diary_unit.db');
+    final raw = await openDatabase(
+      path,
+      version: 5,
+      onCreate: (database, version) async {
+        await database.execute('''
+          CREATE TABLE clubs (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            min_distance REAL NOT NULL DEFAULT 0,
+            max_distance REAL NOT NULL DEFAULT 0,
+            avg_distance REAL NOT NULL DEFAULT 0,
+            swing_notes TEXT,
+            is_synced INTEGER NOT NULL DEFAULT 0,
+            updated_at_ms INTEGER NOT NULL DEFAULT 0,
+            deleted INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await database.insert('clubs', {
+          'id': 'driver',
+          'name': 'Driver',
+          'category': 'wood',
+          'min_distance': 0,
+          'max_distance': 0,
+          'avg_distance': 220,
+          'swing_notes': '',
+          'is_synced': 0,
+          'updated_at_ms': 0,
+          'deleted': 0,
+        });
+        await database.execute('''
+          CREATE TABLE range_drills (
+            id TEXT PRIMARY KEY,
+            club_id TEXT NOT NULL,
+            shot_count INTEGER NOT NULL,
+            min_yards REAL NOT NULL,
+            max_yards REAL NOT NULL,
+            avg_yards REAL NOT NULL,
+            tempo_notes TEXT,
+            venue_name TEXT,
+            drill_id TEXT,
+            timestamp INTEGER NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0,
+            updated_at_ms INTEGER NOT NULL DEFAULT 0,
+            deleted INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await database.insert('range_drills', {
+          'id': 'legacy_block',
+          'club_id': 'driver',
+          'shot_count': 10,
+          'min_yards': 200,
+          'max_yards': 240,
+          'avg_yards': 220,
+          'tempo_notes': 'Old cue',
+          'venue_name': 'Range',
+          'drill_id': null,
+          'timestamp': 1700000000000,
+          'is_synced': 0,
+          'updated_at_ms': 0,
+          'deleted': 0,
+        });
+        await database.execute('''
+          CREATE TABLE practice_drills (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            category TEXT NOT NULL,
+            short_description TEXT NOT NULL,
+            steps_json TEXT NOT NULL,
+            recommended_clubs TEXT,
+            is_custom INTEGER NOT NULL DEFAULT 0,
+            is_synced INTEGER NOT NULL DEFAULT 0,
+            updated_at_ms INTEGER NOT NULL DEFAULT 0,
+            deleted INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      },
+    );
+    await raw.close();
+
+    final session = await db.compileRangeSession(sessionNote: 'After upgrade');
+    expect(session.blocks.single.clubName, 'Driver');
+    expect(session.blocks.single.tempoNotes, 'Old cue');
+    expect((await db.listRangeDrills()).single.drill.sessionId, session.id);
+  });
+
+  test('diary history under the ceiling is raw and over it stores one brief', () async {
+    final now = DateTime.now();
+    await db.saveRangeDrill(RangeDrillLog(
+      id: 'ancient',
+      clubId: 'driver',
+      shotCount: 10,
+      minYards: 130,
+      maxYards: 150,
+      avgYards: 140,
+      tempoNotes: 'ANCIENT CUE ${'x' * 2000}',
+      timestamp: DateTime(2020, 1, 2).millisecondsSinceEpoch,
+      drillId: 'rng-drl-tempo-3to1',
+    ));
+    await db.saveRangeDrill(RangeDrillLog(
+      id: 'today_block',
+      clubId: 'driver',
+      shotCount: 10,
+      minYards: 150,
+      maxYards: 170,
+      avgYards: 160,
+      tempoNotes: 'TODAY CUE',
+      timestamp: now.millisecondsSinceEpoch,
+      drillId: 'rng-drl-tempo-3to1',
+    ));
+    final store = SwingDiaryService();
+    final under = await store.preparePrompt(tokenCeiling: kDiaryTokenCeiling, now: now);
+    expect(under.summary, isNull);
+    expect(under.prompt, contains('ANCIENT CUE'));
+    expect(under.prompt, contains('TODAY CUE'));
+    expect(under.prompt, contains('140'));
+    expect(under.prompt, contains('160'));
+    expect(under.prompt, contains('3:1 Tour Tempo Rhythm'));
+    expect(await store.listEvaluations(), isEmpty);
+
+    final over = await store.preparePrompt(tokenCeiling: 80, now: now);
+    expect(over.prompt, isNot(contains('ANCIENT CUE')));
+    expect(over.prompt, contains('TODAY CUE'));
+    expect(over.prompt, contains('Folded earlier practice'));
+    final briefs = (await store.listEvaluations()).where((row) => row.kind == 'periodic_summary');
+    expect(briefs, hasLength(1));
+
+    final named = await store.preparePrompt(
+      tokenCeiling: 80,
+      now: now,
+      question: 'What about 2020-01-02?',
+    );
+    expect(named.prompt, contains('ANCIENT CUE'));
+    expect(named.prompt, contains('TODAY CUE'));
+    expect(named.prompt, contains('Folded earlier practice'));
   });
 }

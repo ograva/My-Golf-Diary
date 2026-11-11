@@ -6,7 +6,7 @@
 | **Module** | RNGE — Range |
 | **Story Ref** | RNGE-005 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | RNGE-025 |
 
@@ -16,17 +16,17 @@ Add the sit-down wrap-up on Range. After the golfer saves one or more club block
 
 ## Acceptance Criteria
 
-- [ ] `range-session-note-field` is separate from the per-club Swing Cue field. Switching club chips reloads the club cue and leaves the session note as typed.
-- [ ] `range-visit-summary-preview` lists the uncompiled blocks from this visit: club, shot count, min / avg / max, cue, and drill title when one was used. Saving a drill block adds it to that preview.
-- [ ] `range-save-evaluate-session-btn` flushes a pending block when the counter or a yardage field has input, then compiles the visit. The session note clears, the preview clears, and `range-compiled-session-{id}` appears in `range-session-log-list` with the note and the blocks.
-- [ ] With no blocks, no pending input, and an empty session note, the button does not write a session and tells the golfer to log a block or write a note. A note-only wrap-up still saves.
-- [ ] The compiled card stays after restart. This club filters compiled cards to ones that include the selected club. The button does not open a model call.
+- [x] `range-session-note-field` is separate from the per-club Swing Cue field. Switching club chips reloads the club cue and leaves the session note as typed.
+- [x] `range-visit-summary-preview` lists the uncompiled blocks from this visit: club, shot count, min / avg / max, cue, and drill title when one was used. Saving a drill block adds it to that preview.
+- [x] `range-save-evaluate-session-btn` flushes a pending block when the counter or a yardage field has input, then compiles the visit. The session note clears, the preview clears, and `range-compiled-session-{id}` appears in `range-session-log-list` with the note and the blocks.
+- [x] With no blocks, no pending input, and an empty session note, the button does not write a session and tells the golfer to log a block or write a note. A note-only wrap-up still saves.
+- [x] The compiled card stays after restart. This club filters compiled cards to ones that include the selected club. The button does not open a model call.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Pump Range, save two club blocks, type a session note, switch clubs, and expect the note to remain. Tap Save and evaluate session and find the compiled card text. Restart the widget and find the card again. An empty tap finds the prompt and no new session row.
-- [ ] **Integration (if needed):** Not required.
-- [ ] **Keys:** `range-visit-wrapup-card`, `range-visit-summary-preview`, `range-session-note-field`, `range-save-evaluate-session-btn`, `range-session-log-list`, `range-compiled-session-{sessionId}` from `Wireframe_Range.md`.
+- [x] **Unit/widget:** Pump Range, save two club blocks, type a session note, switch clubs, and expect the note to remain. Tap Save and evaluate session and find the compiled card text. Restart the widget and find the card again. An empty tap finds the prompt and no new session row.
+- [x] **Integration (if needed):** Not required.
+- [x] **Keys:** `range-visit-wrapup-card`, `range-visit-summary-preview`, `range-session-note-field`, `range-save-evaluate-session-btn`, `range-session-log-list`, `range-compiled-session-{sessionId}` from `Wireframe_Range.md`.
 
 ## Dev notes
 

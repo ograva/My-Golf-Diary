@@ -6,7 +6,7 @@
 | **Module** | RNGE — Range |
 | **Story Ref** | RNGE-005 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | RNGE-020 |
 
@@ -16,16 +16,16 @@ Add SQLite `range_sessions` and a nullable `range_drills.session_id` so a range 
 
 ## Acceptance Criteria
 
-- [ ] A new database and an upgraded version-5 database both have `range_sessions` and nullable `range_drills.session_id`. Existing `range_drills` rows keep `session_id` null.
-- [ ] Compiling a session inserts one `range_sessions` row with venue, session note, timestamp, and `compiled_summary_json` that snapshots each block’s club id and name, shot count, min / avg / max, tempo note, drill id, drill title, and drill steps.
-- [ ] The same compile sets `session_id` on the included `range_drills` rows and leaves other blocks unlinked. A second compile of those same rows does not attach them again.
-- [ ] Compiling with no blocks and an empty session note is rejected. A note-only compile, with no blocks, still inserts a session. Re-opening the database keeps the session and the links.
+- [x] A new database and an upgraded version-5 database both have `range_sessions` and nullable `range_drills.session_id`. Existing `range_drills` rows keep `session_id` null.
+- [x] Compiling a session inserts one `range_sessions` row with venue, session note, timestamp, and `compiled_summary_json` that snapshots each block’s club id and name, shot count, min / avg / max, tempo note, drill id, drill title, and drill steps.
+- [x] The same compile sets `session_id` on the included `range_drills` rows and leaves other blocks unlinked. A second compile of those same rows does not attach them again.
+- [x] Compiling with no blocks and an empty session note is rejected. A note-only compile, with no blocks, still inserts a session. Re-opening the database keeps the session and the links.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Extend `test/local_database_service_test.dart` for a version-5 upgrade, a multi-club compile, a note-only compile, a rejected empty compile, and the snapshot fields.
-- [ ] **Integration (if needed):** Not required.
-- [ ] **Keys:** None. UI is RNGE-026.
+- [x] **Unit/widget:** Extend `test/local_database_service_test.dart` for a version-5 upgrade, a multi-club compile, a note-only compile, a rejected empty compile, and the snapshot fields.
+- [x] **Integration (if needed):** Not required.
+- [x] **Keys:** None. UI is RNGE-026.
 
 ## Dev notes
 

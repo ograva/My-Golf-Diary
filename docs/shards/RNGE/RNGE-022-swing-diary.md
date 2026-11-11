@@ -8,11 +8,11 @@
 | **Priority** | Low |
 | **Status** | Not Started |
 | **Complexity** | L |
-| **Depends On** | RNGE-020 |
+| **Depends On** | RNGE-025, RNGE-026 |
 
 ## Description
 
-Add the opt-in Swing diary on Range. An evaluation comments on today’s drills in the light of earlier practice, and a follow-up stays in the same thread. Calls go through Vertex AI on this Firebase project. The player does not enter an API key. Each evaluation is saved so it can be reread without another model call. Compacting history past the token ceiling is RNGE-023. The separate reader screen is RNGE-024.
+Add the opt-in Swing diary on Range. An evaluation comments on the compiled session from RNGE-026, including its session note and club blocks, in the light of earlier practice. A follow-up stays in the same thread. Calls go through Vertex AI on this Firebase project. The player does not enter an API key. Each evaluation is saved so it can be reread without another model call. Compacting history past the token ceiling is RNGE-023. The separate reader screen is RNGE-024.
 
 This shard is future work. Do not add the Vertex client until this shard is started.
 

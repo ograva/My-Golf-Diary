@@ -4,9 +4,9 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.4 | Active | 2026-11-09 | Watson (Architect cohort) |
+| 1.6 | Active | 2026-11-11 | Watson (Architect cohort) |
 
-**Inputs:** [`PRD.md`](./PRD.md) v1.3 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
+**Inputs:** [`PRD.md`](./PRD.md) v1.5 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
 
 ---
 
@@ -14,9 +14,9 @@
 
 **My Golf Diary** is a **local-first** Flutter app under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`). **On Course** uses **GPS** (`geolocator`): each **`ShotRecord`** stores ball position; segment distance is **Haversine** via `Geolocator.distanceBetween` (meters) converted to **yards** before save. When the selected course and hole have surveyed coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) and the HUD is in `Course` mode, a distance-filtered GPS stream computes live yards to the green (`CRSE-005`).
 
-**Scoring** is **`round_scores`** (per hole), paired with **`golf_rounds`** metadata (DB v4). **Range** combines a seeded + user-editable **Practice Drills** catalog (`RNGE-003`, [`Range_Drills.md`](./Range_Drills.md)) with 10-ball block logging (`range_drills`). Optional **Firebase** syncs dirty rows with Firestore database **`my-golf-diary`** under **`users/{uid}/{table}/{docId}`**. Sync is pull-then-push, last-write-wins on `updatedAtMs`. Web SQLite (IndexedDB) uses the same path.
+**Scoring** is **`round_scores`** (per hole), paired with **`golf_rounds`** metadata (DB v4). **Range** combines a seeded + user-editable **Practice Drills** catalog (`RNGE-003`, [`Range_Drills.md`](./Range_Drills.md)) with 10-ball club block logging (`range_drills`), a visit-level **session note**, and a compiled **Range Session Log** (`RNGE-005`, `range_sessions`) created when the golfer taps **Save and evaluate session**. Optional **Firebase** syncs dirty rows with Firestore database **`my-golf-diary`** under **`users/{uid}/{table}/{docId}`**. Sync is pull-then-push, last-write-wins on `updatedAtMs`. Web SQLite (IndexedDB) uses the same path.
 
-Future roadmap capabilities (`CRSE-006` cached hole map view and `RNGE-004` Vertex AI swing diary) layer onto this local-first core without breaking offline play.
+Future roadmap capabilities (`CRSE-006` cached hole map view and `RNGE-004` Vertex AI swing diary) layer onto this local-first core without breaking offline play; compiled `range_sessions` entries serve as the structured payload handed off to `RNGE-004`.
 
 ```mermaid
 flowchart LR
@@ -24,7 +24,7 @@ flowchart LR
     UI[Flutter_UI]
     CAT["Catalogs (Venues, Coords, Drills)"]
     LDS[LocalDatabaseService]
-    DB[(SQLite_v4_v5)]
+    DB[(SQLite_v5_v6)]
     CACHE[(Local_Map_Cache)]
     GPS[Geolocator]
     UI --> CAT
@@ -37,14 +37,14 @@ flowchart LR
     FS[(Firestore_my_golf_diary)]
     FST[(Firebase_Storage_Course_Maps)]
     GMAPS[Google_Maps_API]
-    GEMINI["Google_AI_Gemini_RAG (RNGE-004)"]
+    GEMINI["Vertex_AI_Gemini (RNGE-004)"]
   end
   CS[CloudSyncService] --> FS
   UI --> CS
   GMAPS -->|"Fetch & cache per course"| FST
   FST -->|"Sync course map pack"| CACHE
-  DB -->|"RAG context (drills + swing notes)"| GEMINI
-  GEMINI -->|"Daily summary & Swing Diary chat"| UI
+  DB -->|"Compiled range_sessions + drill blocks (RNGE-005)"| GEMINI
+  GEMINI -->|"Session evaluation & Swing Diary chat"| UI
 ```
 
 ---
@@ -74,22 +74,25 @@ golf_diary_app/lib/
 ├── main.dart                         # initializeFirebase, MaterialApp, HomeShell 4-tab nav
 ├── data/
 │   ├── ph_golf_catalog.dart          # Course par cards, ranges, sims (from PH_Golf_Venues.md)
-│   ├── ph_golf_hole_coords.dart      # Planned (CRSE-005/006): Tee & Green LatLon lookup
-│   └── range_drills_catalog.dart     # Planned (RNGE-003): Seeded drills from Range_Drills.md
+│   ├── ph_golf_hole_coords.dart      # Tee & Green LatLon lookup (CRSE-005/006)
+│   └── practice_drill_seed.dart      # Seeded drills from Range_Drills.md (RNGE-003)
 ├── models/
-│   ├── golf_models.dart              # Club, ShotRecord, RoundScore, RangeDrillLog (+ PracticeDrill)
+│   ├── golf_models.dart              # Club, ShotRecord, RoundScore, RangeDrillLog (+ RangeSessionLogEntry planned for RNGE-005)
+│   ├── practice_drill.dart           # PracticeDrill model (RNGE-003)
 │   └── round_summary.dart            # RoundSummary, RoundTotals
 ├── pwa/                              # Web build ID & service-worker update prompt
 ├── screens/                          # clubs, fairway_tracker, scorecard, scorecard_hole_editor, range_drill
 ├── services/
-│   ├── local_database_service.dart   # SQLite v4 (v5 planned for practice_drills & AI diary)
+│   ├── local_database_service.dart   # SQLite v5 (v6 planned for range_sessions & AI diary)
+│   ├── pin_distance.dart             # Live GPS distance-to-hole client (CRSE-005)
 │   ├── cloud_sync_service.dart       # Pull-then-push LWW Firestore sync
 │   ├── diary_remote.dart             # Firestore adapter
 │   ├── sync_identity.dart            # Firebase Anonymous Auth uid
 │   └── sync_merge.dart               # LWW timestamp & tombstone merge helpers
 ├── widgets/
 │   ├── venue_name_field.dart         # Shared course/range autocomplete
-│   ├── range_session_log.dart        # Chronological range log & trend
+│   ├── practice_drill_sheet.dart     # Practice drills picker, add, & delete sheet (RNGE-003)
+│   ├── range_session_log.dart        # Chronological range club blocks & compiled session logs (RNGE-005)
 │   ├── save_round_before_new_dialog.dart
 │   └── sync_cloud_button.dart
 └── theme/app_theme.dart
@@ -107,18 +110,19 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 | `BAG` | `clubs_screen.dart` | `clubs` |
 | `CRSE` | `fairway_tracker_screen.dart`, `venue_name_field.dart` | `shots`, `round_scores`, `golf_rounds`, `ph_golf_catalog.dart`, `ph_golf_hole_coords.dart` (`CRSE-005`), local map cache (`CRSE-006`) |
 | `SCOR` | `scorecard_screen.dart`, `scorecard_hole_editor.dart`, `venue_name_field.dart` | `round_scores`, `golf_rounds`, `ph_golf_catalog.dart` |
-| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, drills sheet (`RNGE-003`), AI diary sheet (`RNGE-004`) | `range_drills` → updates `clubs`; `practice_drills` (`RNGE-003`); `swing_diary_messages` and `range_evaluations` (`RNGE-004`) |
+| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart` (`RNGE-003`), session note & **Save and evaluate session** compiler (`RNGE-005`), AI diary sheet (`RNGE-004`) | `range_drills` → updates `clubs`; `practice_drills` (`RNGE-003`); `range_sessions` + `range_drills.session_id` (`RNGE-005`); `swing_diary_messages` and `range_evaluations` (`RNGE-004`) |
 | `SYNC` | `sync_cloud_button.dart` | `CloudSyncService` → Firestore (`my-golf-diary`) & Firebase Storage (`CRSE-006` map packs) |
 
 ---
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 5** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. Later `CRSE-006` / `RNGE-004` tables are still planned.
+**DB:** `golf_diary.db`, currently **version 5** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. **Planned Version 6 (`RNGE-005`)** adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note can be compiled into a single Range Session Log for display and Vertex AI (`RNGE-004`) evaluation. Later `CRSE-006` / `RNGE-004` tables follow.
 - Version 2 added `clubs.brand`, `clubs.model`, and `range_drills.venue_name`.
 - Version 3 added `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
 - Version 4 added `golf_rounds` to track round lifecycle (`started_at_ms`, `completed_at_ms`).
 - Version 5 (`RNGE-003`) adds `practice_drills` (seeded + user-created drills with tombstone support so users can delete seeded or custom drills) and optional `drill_id` on `range_drills`.
+- **Planned Version 6 (`RNGE-005`):** adds `range_sessions` (compiled range visit log with `session_note`, `venue_name`, and `compiled_summary_json`) and nullable `session_id` on `range_drills` to link each club block in the visit to its compiled session log.
 
 ### Tables (current & planned)
 
@@ -126,9 +130,11 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 - **`shots`** — `id`, `round_id`, `hole_number`, `stroke_number`, `club_id`, `lie_type`, `start_lat/lon`, `end_lat/lon` (set when next shot lands), `distance_yards`, `notes`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`.
 - **`round_scores`** — `id`, `round_id`, `course_name`, `hole_number`, `par`, **`strokes`**, `penalties`, `mulligans`, `conceded`, **`final_score`**, `is_synced`, `updated_at_ms`, `deleted`.
 - **`golf_rounds`** — `round_id`, `course_name`, `started_at_ms`, `completed_at_ms`, `is_synced`, `updated_at_ms`, `deleted`.
-- **`range_drills`** — `id`, `club_id`, `shot_count`, `min_yards`, `max_yards`, `avg_yards`, `tempo_notes`, `venue_name`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`. *(Planned v5 column: `drill_id TEXT` nullable).*
+- **`range_drills`** — `id`, `club_id`, `shot_count`, `min_yards`, `max_yards`, `avg_yards`, `tempo_notes`, `venue_name`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`, `drill_id` (nullable `practice_drills.id`), and *(Planned v6 — `RNGE-005`)* `session_id TEXT` (nullable foreign key to `range_sessions.id`; `NULL` while a block belongs to the active uncompiled range visit or came from a legacy pre-v6 save).
 - **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
-  - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 11 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
+  - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 12 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
+- **`range_sessions` *(Planned v6 — `RNGE-005`)*** — `id TEXT PRIMARY KEY`, `venue_name TEXT NOT NULL DEFAULT ''`, `session_note TEXT NOT NULL DEFAULT ''`, `compiled_summary_json TEXT NOT NULL DEFAULT '[]'`, `timestamp INTEGER NOT NULL`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
+  - `compiled_summary_json` snapshots the ordered list of club blocks at compile time (`clubId`, `clubName`, `shotCount`, `minYards`, `avgYards`, `maxYards`, `tempoNotes`, `drillId`, `drillTitle`, `drillSteps`) so the compiled session log remains self-contained for UI rendering and Vertex AI (`RNGE-004`) evaluation even if a club or custom drill is later edited or deleted.
 
 **Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — **mulligans** stored but **not** in gross formula (display/practice).
 
@@ -164,6 +170,50 @@ After inserting **`range_drills`**, updates **`clubs`** for `log.clubId`:
 - mark `is_synced = 0`
 
 Changing this math requires **Version History** + migration if schema changes.
+
+### 5.3.1 Session Note & Compiled Range Session Log (`RNGE-005` — Planned v6)
+
+A range visit often spans several clubs and drills before the golfer wraps up with personal takeaways. `RNGE-005` separates **per-club block capture** from **visit-level session compilation**:
+
+```mermaid
+flowchart TD
+  subgraph Active_Range_Visit [Active Range Visit on RangeDrillScreen]
+    ClubBlocks["Save Drill Session (1..N club blocks)\nWrites range_drills with session_id = NULL\nUpdates clubs min/max/avg + swing_notes"]
+    SessionNote["Session Note TextField\n(ValueKey('range-session-note-field'))\nPersists across club chip switches"]
+  end
+  Trigger["Tap Save and evaluate session\n(ValueKey('range-save-evaluate-session-btn'))"]
+  Flush{"Unsaved block inputs\n(shots > 0 or yards entered)?"}
+  SavePending["Flush pending block via saveRangeDrill()"]
+  Compile["Compile RangeSessionLogEntry:\n• venue_name, session_note, timestamp\n• Attach active visit's uncompiled range_drills\n• Snapshot club names, yardages, cues, & drill steps\n• Insert range_sessions + set range_drills.session_id"]
+  UIList["Render in Range Session Log\n(ValueKey('range-session-log-list'))"]
+  EvalGate{"Vertex AI (RNGE-004)\nenabled & online?"}
+  RunEval["Pass compiled session log to\nVertex AI evaluation flow"]
+  SavedOffline["Show confirmation snackbar:\nSession log saved locally for later evaluation"]
+
+  ClubBlocks --> Trigger
+  SessionNote --> Trigger
+  Trigger --> Flush
+  Flush -->|Yes| SavePending --> Compile
+  Flush -->|No| Compile
+  Compile --> UIList
+  Compile --> EvalGate
+  EvalGate -->|Yes| RunEval
+  EvalGate -->|No| SavedOffline
+```
+
+- **Two Distinct Note Scopes on `RangeDrillScreen`:**
+  1. **Per-club Swing Cue & Mechanics Note (`_notesController`):** Reloads from `club.swingNotes` when switching club chips (or when tapping a practice drill title in `PracticeDrillSheet`) and saves onto each `RangeDrillLog` row and `clubs.swing_notes`.
+  2. **Session Note (`_sessionNoteController`, `ValueKey('range-session-note-field')`):** Holds the golfer's overall thoughts and personal review of the range visit. Owned by `RangeDrillScreenState` (and preserved across tab switches by `HomeShell`'s `IndexedStack`), it is **never** overwritten when the golfer switches club chips or saves an individual club block.
+- **Tracking Active Visit Blocks:**
+  - As the golfer records clubs during a visit, `RangeDrillScreenState` tracks the IDs of `RangeDrillLog` rows saved during the current visit (or queries `range_drills` from today where `session_id IS NULL` and `deleted = 0`).
+- **`compileAndSaveRangeSession` Transaction (`LocalDatabaseService`):**
+  1. **Pending Block Flush:** When the golfer taps **Save and evaluate session** (`ValueKey('range-save-evaluate-session-btn')`), if the current club form has unsaved shot/yardage input (`_shotCounter > 0` or any of min/avg/max is non-empty), `RangeDrillScreen` first flushes that block via `saveRangeDrill` so no work is lost. If neither any club block in the visit nor a non-empty `session_note` exists, the button prompts the golfer to log a club block or write a session note first.
+  2. **Compilation:** Joins the visit's `RangeDrillLog` rows with `clubs` (for `clubName`) and `practice_drills` (for `drill.title` and `drill.steps`), serializes the structured block list into `compiled_summary_json`, inserts a new `range_sessions` row (`id: 'rsess_${nowMs}'`), and sets `session_id = id` on the member `range_drills` rows inside a single SQLite transaction.
+  3. **Post-Compile Reset:** Clears `_sessionNoteController`, resets the active visit's pending block list, and reloads the screen.
+- **Session Log Rendering (`ValueKey('range-session-log-list')`):**
+  - `RangeSessionLog` displays compiled `range_sessions` entries (showing date/time, venue, the overall `session_note`, and a compact breakdown of each club/drill block in the session) alongside any standalone/legacy `range_drills` rows, while preserving the existing `This club` / `All clubs` filter (filtering compiled sessions that include the selected club).
+- **Handoff to `RNGE-004`:**
+  - `compileAndSaveRangeSession` returns the persisted `RangeSessionLogEntry`. When `RNGE-004` is wired and online, the screen immediately invokes the Vertex AI evaluation sheet/service with that `RangeSessionLogEntry`. When offline or before `RNGE-004` is enabled, the compiled session log remains safely stored in `range_sessions` and a confirmation snackbar informs the golfer that the session log is saved.
 
 ### 5.4 Live GPS Distance to Hole (`CRSE-005`)
 
@@ -203,7 +253,7 @@ flowchart TD
 
 ### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004` — Future Architecture)
 
-The diary comments on **today’s drills in the context of earlier practice**: what the player has been focusing on, and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
+The diary comments on **the compiled range session log (`RNGE-005`) and today’s drills in the context of earlier practice**: what the player has been focusing on, how they felt about the session (`session_note`), and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
 
 ```mermaid
 sequenceDiagram
@@ -211,11 +261,12 @@ sequenceDiagram
   participant App as Flutter App (SQLite)
   participant AI as Vertex AI Gemini
 
-  User->>App: Ask for a range evaluation or a follow-up
-  App->>App: Load today in full, recent raw history, progress brief, per-club tally
+  User->>App: Tap "Save and evaluate session" (RNGE-005) or ask a follow-up
+  App->>App: Persist compiled range_sessions row (session_note + club/drill blocks)
+  App->>App: Load compiled session log in full, recent raw history, progress brief, per-club tally
   App->>AI: Prompt stays under about 250000 tokens
-  AI-->>App: Evaluation framed on past focus and progress
-  App->>App: Append the evaluation to range_evaluations
+  AI-->>App: Evaluation framed on session note, club blocks, and past focus
+  App->>App: Append the evaluation to range_evaluations (linked to session_id)
   Note over App: When history would pass 250000 tokens, store a periodic summary and drop the oldest raw text from the next prompt
 ```
 
@@ -226,8 +277,8 @@ sequenceDiagram
 1. Fixed system role: comment from this golfer’s notes, in yards.
 2. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
 3. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
-4. **Recent history, still raw**, while the whole prompt is under the ceiling. This is how early accounts work: the real drill log is the history.
-5. **Today, in full** — that day’s `range_drills`, drill steps, min / avg / max, and tempo notes. Today is never folded into the progress brief.
+4. **Recent history, still raw**, while the whole prompt is under the ceiling: earlier compiled `range_sessions` (including each visit's `session_note` and club/drill blocks) plus any standalone `range_drills`.
+5. **Today / active compiled session log, in full (`RNGE-005`)** — the compiled `range_sessions` payload (`session_note`, venue, and every club block's min / avg / max, per-club tempo notes, and linked drill title/steps) plus any additional `range_drills` logged today. Today’s session is never folded into the progress brief.
 6. The latest chat turns only.
 
 **250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw history so the evaluation can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
@@ -245,10 +296,11 @@ Planned SQLite table `range_evaluations`:
 | :--- | :--- |
 | `id` | Primary key |
 | `kind` | `evaluation` or `periodic_summary` |
+| `session_id` | Nullable `range_sessions.id` that triggered this evaluation (`RNGE-005`) |
 | `session_date` | `YYYY-MM-DD` the note is about |
 | `content` | The text the player can read |
 | `prompt_tokens` | Size of the prompt that produced it, when known |
-| `covered_through_ms` | For a periodic summary, the newest drill timestamp folded into the brief |
+| `covered_through_ms` | For a periodic summary, the newest session/drill timestamp folded into the brief |
 | `referenced_drill_ids_json` | Drills cited |
 | `referenced_club_ids_json` | Clubs cited |
 | `timestamp` | When the row was written |
@@ -256,7 +308,7 @@ Planned SQLite table `range_evaluations`:
 
 `swing_diary_messages` still holds the chat turns (`user`, `model`). An `evaluation` row is the durable copy of a model reply the log shows. A `periodic_summary` row is the progress brief used in later prompts and shown in the same log, marked so a reader can tell a compaction note from a day’s evaluation.
 
-Do not add an embedding index in this phase. A question about a specific older day loads that day’s `range_drills` by date and club and adds only those rows.
+Do not add an embedding index in this phase. A question about a specific older day loads that day’s `range_sessions` and `range_drills` by date and club and adds only those rows.
 
 ---
 
@@ -269,7 +321,7 @@ Do not add an embedding index in this phase. A question about a specific older d
 
 **CloudSyncService.syncFull**
 
-1. **Pull** every doc in `users/{uid}/{table}` for `clubs`, `shots`, `round_scores`, `range_drills`, `golf_rounds` (and `practice_drills` once DB v5 lands).
+1. **Pull** every doc in `users/{uid}/{table}` for `clubs`, `shots`, `round_scores`, `range_drills`, `golf_rounds` (and `practice_drills` / `range_sessions` once enabled for sync).
 2. **Last-write-wins:** remote `updatedAtMs` newer than local `updated_at_ms` replaces the row (`is_synced = 1`). A remote `deleted: true` tombstone removes the local row (or marks seeded `practice_drills` hidden with `deleted = 1`). An equal or older remote leaves the local row.
 3. **Push** rows with `is_synced = 0`. A failed write stays dirty. A pushed tombstone is then removed locally (except seeded `practice_drills` rows, which retain `deleted = 1` locally so the seed is not re-inserted on next launch); the cloud doc stays so other devices can see the delete.
 
@@ -313,7 +365,7 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** version 5. `golf_rounds` arrived in version 4. `practice_drills` and `range_drills.drill_id` arrived in version 5 (`RNGE-003`).
+- **DB:** version 5 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5 for `RNGE-003`). Planned version 6 adds `range_sessions` and `range_drills.session_id` for `RNGE-005`.
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -326,7 +378,7 @@ service cloud.firestore {
 
 Background location **not** required for current flows.
 
-**Testing:** `flutter test`; inject fakes/streams for DB and GPS where possible; verify `CRSE-005` visibility gating (shown on mapped hole in Course mode, hidden in Simulator mode or unmapped course) and `RNGE-003` drill seeding, custom creation, and deletion; `ValueKey` for interactive widgets (Eunice).
+**Testing:** `flutter test`; inject fakes/streams for DB and GPS where possible; verify `CRSE-005` visibility gating (shown on mapped hole in Course mode, hidden in Simulator mode or unmapped course), `RNGE-003` drill seeding, custom creation, and deletion, and `RNGE-005` session note persistence across club switches + multi-club session compilation; `ValueKey` for interactive widgets (Eunice).
 
 ---
 
@@ -340,8 +392,8 @@ Background location **not** required for current flows.
 6. **RNGE blend:** changes require Version History + migration if schema changes.
 7. **Seeded vs Custom Drills (`RNGE-003`):** deleting a seeded drill must persist via tombstone/flag (`deleted = 1`) so it does not reappear on app restart.
 8. **Firestore & Secrets:** no wide-open production rules on user data; no raw Google Maps or Gemini API keys committed to git. Swing-diary calls use Vertex AI billed to the project. Do not add a player-supplied API key.
-9. **Diary prompt (`RNGE-004`):** send raw drill history while the prompt is under about 250,000 tokens. Past that, persist a periodic summary and keep today plus a recent raw window. Store every evaluation and periodic summary for a later read-only log.
-10. **Theme/keys:** `app_theme.dart`; wireframe Keys per `cohorts/eunice.agent.md` (`on-course-distance-to-hole`, `on-course-map-toggle`, `range-header-drills-btn`).
+9. **Compiled Range Session Log & Diary prompt (`RNGE-005` & `RNGE-004`):** Session-level notes (`range-session-note-field`) must stay separate from per-club swing cues so switching club chips never erases the visit note. **Save and evaluate session** (`range-save-evaluate-session-btn`) must always persist the compiled `range_sessions` row locally first (flushing any unsaved club block input) before attempting Vertex AI evaluation so offline sessions never lose data. Send raw session/drill history while the prompt is under about 250,000 tokens; past that, persist a periodic summary and keep today's compiled session log plus a recent raw window. Store every evaluation and periodic summary for a later read-only log.
+10. **Theme/keys:** `app_theme.dart`; wireframe Keys per `cohorts/eunice.agent.md` (`on-course-distance-to-hole`, `on-course-map-toggle`, `range-header-drills-btn`, `range-session-note-field`, `range-save-evaluate-session-btn`, `range-session-log-list`).
 11. **Dependencies:** justify in Version History when adding packages.
 
 ---
@@ -357,3 +409,4 @@ Background location **not** required for current flows.
 | 1.3 | 2026-11-09 | Watson | RNGE-004 uses Vertex AI billed to the project under about 1,000 people. Prompts send raw drill history up to about 250,000 tokens, then a stored periodic summary plus a recent window, with today always in full. Evaluations and periodic summaries are kept in `range_evaluations` for a later reader log |
 | 1.4 | 2026-11-09 | Watson | §1 names the swing diary as Vertex AI so it matches PRD 1.4. No change to the §5.6 design |
 | 1.5 | 2026-11-09 | Athena | DB is version 5: `practice_drills` is seeded locally and `range_drills.drill_id` stores the drill used for a session. `practice_drills` is not in `syncFull` yet |
+| 1.6 | 2026-11-11 | Watson | Align with PRD v1.5 (`RNGE-005`): add §5.3.1 for the visit-level session note (`range-session-note-field`) and compiled Range Session Log (`range_sessions` table + `range_drills.session_id` in planned DB v6, `range-save-evaluate-session-btn`, `range-session-log-list`), and wire compiled `range_sessions` as the primary payload into `RNGE-004` Vertex AI evaluation (`range_evaluations.session_id`) |

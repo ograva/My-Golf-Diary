@@ -3,15 +3,23 @@ import 'package:flutter/material.dart';
 import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
 import '../models/practice_drill.dart';
+import '../models/range_session.dart';
+import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
+import '../services/swing_diary_service.dart';
+import '../services/vertex_diary_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
+import '../widgets/swing_diary_sheet.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 
 class RangeDrillScreen extends StatefulWidget {
-  const RangeDrillScreen({super.key});
+  const RangeDrillScreen({super.key, this.diary});
+
+  /// When null, calls go through [VertexDiaryModel]. Tests pass a fake.
+  final DiaryModel? diary;
 
   @override
   State<RangeDrillScreen> createState() => RangeDrillScreenState();
@@ -20,21 +28,26 @@ class RangeDrillScreen extends StatefulWidget {
 class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<Club> _clubs = [];
   List<RangeDrillSummary> _log = [];
+  List<RangeSession> _compiled = [];
   List<String> _recentVenues = [];
   Club? _selectedClub;
   PracticeDrill? _selectedDrill;
   int _shotCounter = 0;
   bool _logThisClubOnly = true;
+  late final DiaryModel _diary;
+  final SwingDiaryService _diaryStore = SwingDiaryService();
 
   final TextEditingController _minController = TextEditingController();
   final TextEditingController _maxController = TextEditingController();
   final TextEditingController _avgController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _sessionNoteController = TextEditingController();
   final TextEditingController _venueController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _diary = widget.diary ?? VertexDiaryModel();
     reload();
   }
 
@@ -44,18 +57,21 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     _maxController.dispose();
     _avgController.dispose();
     _notesController.dispose();
+    _sessionNoteController.dispose();
     _venueController.dispose();
     super.dispose();
   }
 
   Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getAllClubs();
-    final log = await LocalDatabaseService.instance.listRangeDrills();
+    final log = await LocalDatabaseService.instance.listUncompiledRangeDrills();
+    final compiled = await LocalDatabaseService.instance.listRangeSessions();
     final venues = await LocalDatabaseService.instance.distinctVenueNames();
     if (!mounted) return;
     setState(() {
       _clubs = clubs.where((c) => c.category != 'putter').toList();
       _log = log;
+      _compiled = compiled;
       _recentVenues = venues;
       if (_selectedClub == null && _clubs.isNotEmpty) {
         _selectedClub = _clubs.first;
@@ -67,7 +83,13 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     });
   }
 
-  Future<void> _saveDrillSet() async {
+  bool get _hasPendingBlock =>
+      _shotCounter > 0 ||
+      _minController.text.trim().isNotEmpty ||
+      _avgController.text.trim().isNotEmpty ||
+      _maxController.text.trim().isNotEmpty;
+
+  Future<void> _saveDrillSet({bool quiet = false}) async {
     if (_selectedClub == null) return;
 
     final log = RangeDrillLog(
@@ -86,18 +108,54 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     await LocalDatabaseService.instance.saveRangeDrill(log);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Saved drill for ${_selectedClub!.name}!'),
-          backgroundColor: AppColors.green,
-        ),
-      );
+      if (!quiet) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved drill for ${_selectedClub!.name}!'),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
       setState(() => _shotCounter = 0);
       _minController.clear();
       _maxController.clear();
       _avgController.clear();
       await reload();
     }
+  }
+
+  Future<void> _saveAndEvaluate() async {
+    if (_hasPendingBlock) {
+      await _saveDrillSet(quiet: true);
+    }
+    try {
+      await LocalDatabaseService.instance.compileRangeSession(
+        sessionNote: _sessionNoteController.text,
+        venueName: _venueController.text.trim(),
+      );
+    } on ArgumentError catch (error) {
+      if (!mounted) return;
+      final message = error.message?.toString() ?? kEmptyRangeSessionMessage;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    if (!mounted) return;
+    _sessionNoteController.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Session log saved. It is stored for later evaluation.'),
+      ),
+    );
+    await reload();
+  }
+
+  Future<void> _openDiary() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SwingDiarySheet(diary: _diary, store: _diaryStore),
+    );
   }
 
   Future<void> _openDrills() async {
@@ -124,6 +182,13 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             .where((entry) => entry.drill.clubId == _selectedClub!.id)
             .toList()
         : _log;
+    final visibleCompiled = thisClubOnly
+        ? _compiled.where((session) => session.includesClub(_selectedClub!.id)).toList()
+        : _compiled;
+    final visitLines = _log
+        .map((entry) =>
+            '${entry.clubName} · avg ${entry.drill.avgYards.round()} · ${entry.drill.tempoNotes}')
+        .join('\n');
     final emptyLogMessage = thisClubOnly
         ? 'No range sessions for ${_selectedClub!.name} yet.'
         : 'Saved drills show up here, newest first.';
@@ -137,7 +202,15 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
           style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
         ),
         title: const Text('Range Drill Instructor'),
-        actions: const [SyncCloudButton()],
+        actions: [
+          IconButton(
+            key: const ValueKey('range-swing-diary-btn'),
+            tooltip: 'Swing diary',
+            onPressed: _openDiary,
+            icon: const Icon(Icons.auto_stories_outlined),
+          ),
+          const SyncCloudButton(),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -288,6 +361,44 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            Card(
+              key: const ValueKey('range-visit-wrapup-card'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Session note',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    TextField(
+                      key: const ValueKey('range-session-note-field'),
+                      controller: _sessionNoteController,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'How the session went',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      visitLines.isEmpty
+                          ? 'No club blocks in this visit yet.'
+                          : visitLines,
+                      key: const ValueKey('range-visit-summary-preview'),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const ValueKey('range-save-evaluate-session-btn'),
+                      onPressed: _saveAndEvaluate,
+                      child: const Text('Save and evaluate session'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
               thisClubOnly
                   ? 'Session log · ${_selectedClub!.name}'
@@ -318,6 +429,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             const SizedBox(height: 8),
             RangeSessionLog(
               sessions: visibleLog,
+              compiled: visibleCompiled,
               showClubName: !thisClubOnly,
               emptyMessage: emptyLogMessage,
             ),

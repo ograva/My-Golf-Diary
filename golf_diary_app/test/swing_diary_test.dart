@@ -33,7 +33,7 @@ class FakeDiaryModel implements DiaryModel {
   String? lastPrompt;
 
   @override
-  String get modelName => 'gemini-2.5-flash';
+  String get modelName => 'gemini-3.8-flash';
 
   @override
   String get location => 'global';
@@ -335,7 +335,7 @@ void main() {
     expect(find.text('Waiting for Vertex'), findsOneWidget);
     expect(find.byKey(const ValueKey('diary-eval-debug')), findsOneWidget);
     expect(find.textContaining('phase=request'), findsOneWidget);
-    expect(find.textContaining('model=gemini-2.5-flash'), findsOneWidget);
+    expect(find.textContaining('model=gemini-3.8-flash'), findsOneWidget);
     expect(find.textContaining('appCheck=missing'), findsOneWidget);
     expect(find.byKey(const ValueKey('diary-eval-cancel')), findsOneWidget);
 

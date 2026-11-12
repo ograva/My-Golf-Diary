@@ -10,7 +10,7 @@ import 'diary_model.dart';
 /// [FirebaseAI.agentPlatform]. This is that Vertex client. It is not
 /// `FirebaseAI.googleAI()`, and it does not read a Gemini API key.
 class VertexDiaryModel implements DiaryModel {
-  static const String modelId = 'gemini-2.5-flash';
+  static const String modelId = 'gemini-3.8-flash';
   static const String defaultLocation = 'global';
 
   @override

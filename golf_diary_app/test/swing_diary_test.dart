@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/app_check_config.dart';
 import 'package:golf_diary_app/main.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/screens/range_drill_screen.dart';
@@ -56,6 +57,15 @@ class FakeDiaryModel implements DiaryModel {
 }
 
 void main() {
+  test('an empty App Check site key does not activate', () {
+    expect(shouldActivateAppCheck(isWeb: true, siteKey: ''), isFalse);
+    expect(shouldActivateAppCheck(isWeb: true, siteKey: '   '), isFalse);
+    expect(shouldActivateAppCheck(isWeb: false, siteKey: kRecaptchaSiteKey),
+        isFalse);
+    expect(shouldActivateAppCheck(isWeb: true, siteKey: kRecaptchaSiteKey),
+        isTrue);
+  });
+
   final db = LocalDatabaseService.instance;
 
   Future<void> useFreshDatabase() async {
@@ -318,13 +328,15 @@ void main() {
     final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
     await tester.ensureVisible(summarize);
     await tester.tap(summarize);
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
     expect(find.byKey(const ValueKey('diary-eval-status')), findsOneWidget);
     expect(find.text('Waiting for Vertex'), findsOneWidget);
     expect(find.byKey(const ValueKey('diary-eval-debug')), findsOneWidget);
     expect(find.textContaining('phase=request'), findsOneWidget);
     expect(find.textContaining('model=gemini-2.5-flash'), findsOneWidget);
+    expect(find.textContaining('appCheck=missing'), findsOneWidget);
     expect(find.byKey(const ValueKey('diary-eval-cancel')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('diary-eval-cancel')));

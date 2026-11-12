@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../app_check_config.dart';
 import '../services/diary_model.dart';
 import '../services/swing_diary_service.dart';
 
@@ -33,6 +34,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   String? _errorMessage;
   String? _evaluationId;
   String _draft = '';
+  String _appCheck = 'missing';
   String? _pendingQuestion;
   DateTime? _startedAt;
   Timer? _ticker;
@@ -109,6 +111,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     });
     try {
       final plan = await widget.store.preparePrompt(question: question);
+      final appCheck = await appCheckDebugState();
       if (cancel.isCancelled) throw const DiaryCancelled();
       if (!mounted) return;
       setState(() {
@@ -116,6 +119,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
         _status = 'Waiting for Vertex';
         _promptChars = plan.prompt.length;
         _promptTokens = plan.tokens;
+        _appCheck = appCheck;
       });
       final buffer = StringBuffer();
       await for (final chunk
@@ -179,7 +183,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     final firebase = widget.diary.available ? 'yes' : 'no';
     final base =
         'phase=$_phase model=${widget.diary.modelName} location=${widget.diary.location} '
-        'firebase=$firebase chars=$_promptChars tokens=$_promptTokens elapsed=${elapsed}s chunks=$_chunks';
+        'firebase=$firebase appCheck=$_appCheck chars=$_promptChars tokens=$_promptTokens elapsed=${elapsed}s chunks=$_chunks';
     if (_phase == 'cancelled') return '$base cancelled by user';
     if (_phase == 'failed') return '$base error=$_errorType: $_errorMessage';
     if (_phase == 'done') return '$base saved $_evaluationId';

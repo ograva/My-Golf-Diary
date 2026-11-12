@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 
+import '../app_check_config.dart';
 import '../firebase_options.dart';
 import 'diary_remote.dart';
 import 'local_database_service.dart';
@@ -90,10 +91,16 @@ class CloudSyncService {
 }
 
 Future<bool> initializeFirebase() async {
-  if (Firebase.apps.isNotEmpty) return true;
+  final alreadyRunning = Firebase.apps.isNotEmpty;
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    await SyncIdentity.ensureSignedIn();
+    if (!alreadyRunning) {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+    }
+    await activateWebAppCheck();
+    if (!alreadyRunning) {
+      await SyncIdentity.ensureSignedIn();
+    }
     return true;
   } catch (_) {
     return false;

@@ -19,6 +19,13 @@ class DiaryMessage {
   final int timestamp;
 }
 
+class DiaryExchange {
+  const DiaryExchange({required this.evaluationId, required this.reply});
+
+  final String evaluationId;
+  final DiaryMessage reply;
+}
+
 class RangeEvaluation {
   const RangeEvaluation({
     required this.id,
@@ -100,7 +107,8 @@ class SwingDiaryService {
 
   Future<bool> hasDrillToday({DateTime? now}) async {
     final clock = now ?? DateTime.now();
-    final start = DateTime(clock.year, clock.month, clock.day).millisecondsSinceEpoch;
+    final start =
+        DateTime(clock.year, clock.month, clock.day).millisecondsSinceEpoch;
     final end = start + const Duration(days: 1).inMilliseconds;
     final rows = await (await _db).query(
       'range_drills',
@@ -151,7 +159,7 @@ class SwingDiaryService {
     return plan;
   }
 
-  Future<DiaryMessage> ask({
+  Future<DiaryExchange> ask({
     required String prompt,
     required String reply,
     required String userText,
@@ -199,11 +207,14 @@ class SwingDiaryService {
         'deleted': 0,
       });
     });
-    return DiaryMessage(
-      id: modelId,
-      role: 'model',
-      content: reply,
-      timestamp: clock.millisecondsSinceEpoch + 1,
+    return DiaryExchange(
+      evaluationId: evalId,
+      reply: DiaryMessage(
+        id: modelId,
+        role: 'model',
+        content: reply,
+        timestamp: clock.millisecondsSinceEpoch + 1,
+      ),
     );
   }
 
@@ -211,7 +222,8 @@ class SwingDiaryService {
     final clock = now ?? DateTime.now();
     final sessions = await _database.listRangeSessions();
     for (final session in sessions) {
-      if (_ymd(DateTime.fromMillisecondsSinceEpoch(session.timestamp)) == _ymd(clock)) {
+      if (_ymd(DateTime.fromMillisecondsSinceEpoch(session.timestamp)) ==
+          _ymd(clock)) {
         return session.id;
       }
     }
@@ -300,10 +312,12 @@ class SwingDiaryService {
     return tallies;
   }
 
-  Future<({List<String> drillIds, List<String> clubIds})> _todayRefs(DateTime now) async {
+  Future<({List<String> drillIds, List<String> clubIds})> _todayRefs(
+      DateTime now) async {
     final drills = await _database.listRangeDrills();
     final today = drills.where((entry) {
-      return _ymd(DateTime.fromMillisecondsSinceEpoch(entry.drill.timestamp)) == _ymd(now);
+      return _ymd(DateTime.fromMillisecondsSinceEpoch(entry.drill.timestamp)) ==
+          _ymd(now);
     });
     return (
       drillIds: [for (final entry in today) entry.drill.id],

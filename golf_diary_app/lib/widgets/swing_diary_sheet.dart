@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/diary_model.dart';
@@ -22,6 +24,19 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   var _hasToday = false;
   var _showLog = false;
   var _busy = false;
+  var _promptChars = 0;
+  var _promptTokens = 0;
+  var _chunks = 0;
+  String? _phase;
+  String? _status;
+  String? _errorType;
+  String? _errorMessage;
+  String? _evaluationId;
+  String _draft = '';
+  String? _pendingQuestion;
+  DateTime? _startedAt;
+  Timer? _ticker;
+  DiaryCancel? _cancel;
   List<DiaryMessage> _messages = const [];
   List<RangeEvaluation> _evaluations = const [];
 
@@ -33,6 +48,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
 
   @override
   void dispose() {
+    _cancel?.cancel();
+    _ticker?.cancel();
     _composer.dispose();
     super.dispose();
   }
@@ -58,28 +75,122 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     setState(() => _optedIn = true);
   }
 
+  void _startClock() {
+    _ticker?.cancel();
+    _startedAt = DateTime.now();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _busy) setState(() {});
+    });
+  }
+
+  void _stopClock() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
   Future<void> _send(String text) async {
-    if (!widget.diary.available || _busy || text.trim().isEmpty) return;
-    setState(() => _busy = true);
-    final plan = await widget.store.preparePrompt(question: text);
-    final reply = await widget.diary.generate(plan.prompt);
-    final sessionId = await widget.store.latestTodaySessionId();
-    await widget.store.ask(
-      prompt: plan.prompt,
-      reply: reply,
-      userText: text,
-      sessionId: sessionId,
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    _composer.clear();
-    await _load();
+    final question = text.trim();
+    if (!widget.diary.available || _busy || question.isEmpty) return;
+    final cancel = DiaryCancel();
+    _cancel = cancel;
+    _pendingQuestion = question;
+    _startClock();
+    setState(() {
+      _busy = true;
+      _phase = 'prepare';
+      _status = 'Preparing your session';
+      _draft = '';
+      _chunks = 0;
+      _promptChars = 0;
+      _promptTokens = 0;
+      _errorType = null;
+      _errorMessage = null;
+      _evaluationId = null;
+    });
+    try {
+      final plan = await widget.store.preparePrompt(question: question);
+      if (cancel.isCancelled) throw const DiaryCancelled();
+      if (!mounted) return;
+      setState(() {
+        _phase = 'request';
+        _status = 'Waiting for Vertex';
+        _promptChars = plan.prompt.length;
+        _promptTokens = plan.tokens;
+      });
+      final buffer = StringBuffer();
+      await for (final chunk
+          in widget.diary.generate(plan.prompt, cancel: cancel)) {
+        if (cancel.isCancelled) throw const DiaryCancelled();
+        buffer.write(chunk);
+        if (!mounted) return;
+        setState(() {
+          _phase = 'stream';
+          _status = 'Waiting for Vertex';
+          _chunks += 1;
+          _draft = buffer.toString();
+        });
+      }
+      if (cancel.isCancelled) throw const DiaryCancelled();
+      if (!mounted) return;
+      setState(() => _phase = 'save');
+      final sessionId = await widget.store.latestTodaySessionId();
+      final saved = await widget.store.ask(
+        prompt: plan.prompt,
+        reply: buffer.toString(),
+        userText: question,
+        sessionId: sessionId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _phase = 'done';
+        _status = null;
+        _draft = '';
+        _evaluationId = saved.evaluationId;
+      });
+      _composer.clear();
+      await _load();
+    } on DiaryCancelled {
+      if (!mounted) return;
+      setState(() {
+        _phase = 'cancelled';
+        _status = 'Evaluation cancelled';
+        _draft = '';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _phase = 'failed';
+        _status = '$error';
+        _errorType = error.runtimeType.toString();
+        _errorMessage = '$error';
+        _draft = '';
+      });
+    } finally {
+      _cancel = null;
+      _stopClock();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _debugLine() {
+    final elapsed = _startedAt == null
+        ? 0
+        : DateTime.now().difference(_startedAt!).inSeconds;
+    final firebase = widget.diary.available ? 'yes' : 'no';
+    final base =
+        'phase=$_phase model=${widget.diary.modelName} location=${widget.diary.location} '
+        'firebase=$firebase chars=$_promptChars tokens=$_promptTokens elapsed=${elapsed}s chunks=$_chunks';
+    if (_phase == 'cancelled') return '$base cancelled by user';
+    if (_phase == 'failed') return '$base error=$_errorType: $_errorMessage';
+    if (_phase == 'done') return '$base saved $_evaluationId';
+    return base;
   }
 
   @override
   Widget build(BuildContext context) {
     final available = widget.diary.available;
     final height = MediaQuery.sizeOf(context).height * 0.85;
+    final failed = _phase == 'failed' && !_busy;
     return SafeArea(
       child: SizedBox(
         height: height,
@@ -88,7 +199,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Swing diary', style: Theme.of(context).textTheme.titleLarge),
+              Text('Swing diary',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Expanded(
                 child: _loading
@@ -109,12 +221,14 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                   spacing: 8,
                                   children: [
                                     OutlinedButton(
-                                      key: const ValueKey('diary-opt-in-dismiss'),
+                                      key: const ValueKey(
+                                          'diary-opt-in-dismiss'),
                                       onPressed: () => Navigator.pop(context),
                                       child: const Text('Not now'),
                                     ),
                                     ElevatedButton(
-                                      key: const ValueKey('diary-opt-in-continue'),
+                                      key: const ValueKey(
+                                          'diary-opt-in-continue'),
                                       onPressed: _continue,
                                       child: const Text('Continue'),
                                     ),
@@ -133,9 +247,28 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                 const SizedBox(height: 12),
                                 for (final message in _messages)
                                   ListTile(
-                                    key: ValueKey('diary-message-${message.id}'),
-                                    title: Text(message.role == 'model' ? 'Evaluation' : 'You'),
+                                    key:
+                                        ValueKey('diary-message-${message.id}'),
+                                    title: Text(message.role == 'model'
+                                        ? 'Evaluation'
+                                        : 'You'),
                                     subtitle: Text(message.content),
+                                  ),
+                                if (_draft.isNotEmpty)
+                                  ListTile(
+                                    key: const ValueKey('diary-eval-draft'),
+                                    title: const Text('Evaluation'),
+                                    subtitle: Text(_draft),
+                                  ),
+                                if (_status != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(_status!,
+                                      key: const ValueKey('diary-eval-status')),
+                                ],
+                                if (_phase != null)
+                                  Text(
+                                    _debugLine(),
+                                    key: const ValueKey('diary-eval-debug'),
                                   ),
                                 const SizedBox(height: 8),
                                 TextField(
@@ -149,7 +282,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                 ),
                                 const SizedBox(height: 8),
                                 OutlinedButton(
-                                  key: const ValueKey('diary-summarize-today-btn'),
+                                  key: const ValueKey(
+                                      'diary-summarize-today-btn'),
                                   onPressed: available && _hasToday && !_busy
                                       ? () => _send('Summarize today')
                                       : null,
@@ -163,11 +297,32 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                       : null,
                                   child: const Text('Send'),
                                 ),
+                                if (_busy)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton(
+                                      key: const ValueKey('diary-eval-cancel'),
+                                      onPressed: () => _cancel?.cancel(),
+                                      child: const Text('Cancel'),
+                                    ),
+                                  ),
+                                if (failed)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton(
+                                      key: const ValueKey('diary-eval-retry'),
+                                      onPressed: () =>
+                                          _send(_pendingQuestion ?? ''),
+                                      child: const Text('Try again'),
+                                    ),
+                                  ),
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: TextButton(
-                                    key: const ValueKey('diary-evaluation-log-btn'),
-                                    onPressed: () => setState(() => _showLog = true),
+                                    key: const ValueKey(
+                                        'diary-evaluation-log-btn'),
+                                    onPressed: () =>
+                                        setState(() => _showLog = true),
                                     child: const Text('Evaluation log'),
                                   ),
                                 ),

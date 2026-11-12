@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/main.dart';
@@ -12,19 +14,44 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class FakeDiaryModel implements DiaryModel {
-  FakeDiaryModel({this.available = true, this.reply = 'Solid contact.'});
+  FakeDiaryModel({
+    this.available = true,
+    this.reply = 'Solid contact.',
+    this.hold = false,
+    this.error,
+  });
 
   @override
   final bool available;
   final String reply;
+
+  /// When true, [generate] waits until [DiaryCancel.cancel] runs.
+  final bool hold;
+  Object? error;
   int calls = 0;
   String? lastPrompt;
 
   @override
-  Future<String> generate(String prompt) async {
+  String get modelName => 'gemini-2.5-flash';
+
+  @override
+  String get location => 'global';
+
+  @override
+  Stream<String> generate(String prompt, {DiaryCancel? cancel}) async* {
     calls += 1;
     lastPrompt = prompt;
-    return reply;
+    if (cancel?.isCancelled == true) throw const DiaryCancelled();
+    if (hold) {
+      final gate = Completer<void>();
+      cancel?.bindAbort(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await gate.future;
+      if (cancel?.isCancelled == true) throw const DiaryCancelled();
+    }
+    if (error != null) throw error!;
+    yield reply;
   }
 }
 
@@ -47,7 +74,8 @@ void main() {
       theme: buildGolfTheme(),
       home: RangeDrillScreen(diary: model),
     ));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
   }
 
@@ -55,7 +83,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('range-swing-diary-btn')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
   }
 
@@ -69,7 +98,8 @@ void main() {
     final model = FakeDiaryModel();
     await pumpRange(tester, model);
 
-    expect(find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
     await openDiary(tester);
     await tester.tap(find.byKey(const ValueKey('diary-opt-in-dismiss')));
     await tester.pump();
@@ -78,7 +108,9 @@ void main() {
     expect(find.byKey(const ValueKey('diary-opt-in-dismiss')), findsNothing);
   });
 
-  testWidgets('summarize today stores the reply and a follow-up survives restart', (tester) async {
+  testWidgets(
+      'summarize today stores the reply and a follow-up survives restart',
+      (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -116,13 +148,15 @@ void main() {
     await openDiary(tester);
     await tester.tap(find.byKey(const ValueKey('diary-opt-in-continue')));
     await tester.pump();
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump();
 
     final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
     await tester.ensureVisible(summarize);
     await tester.tap(summarize);
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
     expect(model.calls, 1);
@@ -130,14 +164,23 @@ void main() {
     expect(model.lastPrompt, contains('TODAY CUE'));
     expect(model.lastPrompt, contains('3:1 Tour Tempo Rhythm'));
     expect(find.text('Solid contact.'), findsOneWidget);
-    final evaluations = await tester.runAsync(() => SwingDiaryService().listEvaluations());
+    expect(find.textContaining('saved'), findsOneWidget);
+    expect(find.textContaining('phase=done'), findsOneWidget);
+    final summarizeButton = tester.widget<OutlinedButton>(
+        find.byKey(const ValueKey('diary-summarize-today-btn')));
+    expect(summarizeButton.onPressed, isNotNull);
+    final evaluations =
+        await tester.runAsync(() => SwingDiaryService().listEvaluations());
     expect(evaluations!.where((row) => row.kind == 'evaluation').length, 1);
-    expect(evaluations.singleWhere((row) => row.kind == 'evaluation').content, 'Solid contact.');
+    expect(evaluations.singleWhere((row) => row.kind == 'evaluation').content,
+        'Solid contact.');
     expect(evaluations.where((row) => row.kind == 'periodic_summary'), isEmpty);
 
-    await tester.enterText(find.byKey(const ValueKey('diary-composer-field')), 'How was the face?');
+    await tester.enterText(find.byKey(const ValueKey('diary-composer-field')),
+        'How was the face?');
     await tester.tap(find.byKey(const ValueKey('diary-send-btn')));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
     expect(model.calls, 2);
     expect(find.text('How was the face?'), findsOneWidget);
@@ -152,7 +195,8 @@ void main() {
     expect(find.text('Solid contact.'), findsWidgets);
   });
 
-  testWidgets('offline diary disables send and the log does not call the model', (tester) async {
+  testWidgets('offline diary disables send and the log does not call the model',
+      (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -197,20 +241,26 @@ void main() {
 
     final model = FakeDiaryModel(available: false);
     await pumpRange(tester, model);
-    expect(find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
 
-    await tester.pumpWidget(MaterialApp(theme: buildGolfTheme(), home: const GolfDiaryApp()));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pumpWidget(
+        MaterialApp(theme: buildGolfTheme(), home: const GolfDiaryApp()));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
     expect(find.byKey(const ValueKey('shell-tab-range')), findsOneWidget);
-    expect(find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
 
     await pumpRange(tester, model);
     await openDiary(tester);
     expect(find.text('Your range log is still on this phone.'), findsOneWidget);
-    final send = tester.widget<ElevatedButton>(find.byKey(const ValueKey('diary-send-btn')));
+    final send = tester
+        .widget<ElevatedButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNull);
-    final summarize = tester.widget<OutlinedButton>(find.byKey(const ValueKey('diary-summarize-today-btn')));
+    final summarize = tester.widget<OutlinedButton>(
+        find.byKey(const ValueKey('diary-summarize-today-btn')));
     expect(summarize.onPressed, isNull);
 
     await tester.tap(find.byKey(const ValueKey('diary-evaluation-log-btn')));
@@ -236,5 +286,104 @@ void main() {
     await tester.pump();
     expect(find.text('No evaluations yet.'), findsOneWidget);
     expect(model.calls, 0);
+  });
+
+  Future<void> seedTodayDrill() async {
+    await SwingDiaryService().setOptedIn(true);
+    await db.saveRangeDrill(RangeDrillLog(
+      id: 'drill_today',
+      clubId: 'driver',
+      shotCount: 10,
+      minYards: 150,
+      maxYards: 170,
+      avgYards: 160,
+      tempoNotes: 'TODAY CUE',
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    ));
+  }
+
+  testWidgets('cancel leaves no evaluation and shows the debug line',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final model = FakeDiaryModel(hold: true);
+    await pumpRange(tester, model);
+    await openDiary(tester);
+
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('diary-eval-status')), findsOneWidget);
+    expect(find.text('Waiting for Vertex'), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-eval-debug')), findsOneWidget);
+    expect(find.textContaining('phase=request'), findsOneWidget);
+    expect(find.textContaining('model=gemini-2.5-flash'), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-eval-cancel')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('diary-eval-cancel')));
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    expect(find.text('Evaluation cancelled'), findsOneWidget);
+    expect(find.textContaining('cancelled by user'), findsOneWidget);
+    final evaluations =
+        await tester.runAsync(() => SwingDiaryService().listEvaluations());
+    expect(evaluations!.where((row) => row.kind == 'evaluation'), isEmpty);
+    final summarizeButton = tester.widget<OutlinedButton>(
+        find.byKey(const ValueKey('diary-summarize-today-btn')));
+    expect(summarizeButton.onPressed, isNotNull);
+  });
+
+  testWidgets('a failed evaluation can be tried again', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final model = FakeDiaryModel(error: StateError('vertex down'));
+    await pumpRange(tester, model);
+    await openDiary(tester);
+
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    expect(find.textContaining('StateError'), findsOneWidget);
+    expect(find.textContaining('phase=failed'), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-eval-retry')), findsOneWidget);
+    final evaluations =
+        await tester.runAsync(() => SwingDiaryService().listEvaluations());
+    expect(evaluations!.where((row) => row.kind == 'evaluation'), isEmpty);
+
+    model.error = null;
+    await tester.tap(find.byKey(const ValueKey('diary-eval-retry')));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    expect(model.calls, 2);
+    expect(find.text('Solid contact.'), findsOneWidget);
+    expect(find.textContaining('phase=done'), findsOneWidget);
+    expect(find.textContaining('saved'), findsOneWidget);
+    final saved =
+        await tester.runAsync(() => SwingDiaryService().listEvaluations());
+    expect(saved!.where((row) => row.kind == 'evaluation').length, 1);
+    final summarizeButton = tester.widget<OutlinedButton>(
+        find.byKey(const ValueKey('diary-summarize-today-btn')));
+    expect(summarizeButton.onPressed, isNotNull);
   });
 }

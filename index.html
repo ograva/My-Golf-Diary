@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/My-Golf-Diary/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Track your bag, rounds, and range practice.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="screen-orientation" content="portrait">
+  <meta name="x5-orientation" content="portrait">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- tool/build_web.sh sets this to true so the release PWA can register its worker. -->
+  <meta name="golf-diary-release" content="true">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Golf Diary">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Golf Diary</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <script>
+    (function () {
+      function lockPortrait() {
+        var orientation = screen.orientation || screen.mozOrientation || screen.msOrientation;
+        if (orientation && typeof orientation.lock === 'function') {
+          orientation.lock('portrait').catch(function () {});
+        } else if (typeof screen.lockOrientation === 'function') {
+          screen.lockOrientation('portrait');
+        } else if (typeof screen.mozLockOrientation === 'function') {
+          screen.mozLockOrientation('portrait');
+        } else if (typeof screen.msLockOrientation === 'function') {
+          screen.msLockOrientation('portrait');
+        }
+      }
+      lockPortrait();
+      window.addEventListener('orientationchange', lockPortrait);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) lockPortrait();
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      var current = new URL(window.location.href);
+      if (current.searchParams.has('updated')) {
+        current.searchParams.delete('updated');
+        history.replaceState(null, '', current.pathname + current.search + current.hash);
+      }
+
+      function workerScript(reg) {
+        var worker = reg.active || reg.waiting || reg.installing;
+        return worker ? worker.scriptURL : '';
+      }
+
+      function registrations() {
+        if (!('serviceWorker' in navigator)) return Promise.resolve([]);
+        return navigator.serviceWorker.getRegistrations();
+      }
+
+      window.golfDiaryDisableServiceWorker = function () {
+        return registrations().then(function (regs) {
+          return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+        }).then(function () {
+          if (!('caches' in window)) return null;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+          });
+        }).catch(function () { return null; });
+      };
+
+      window.golfDiaryFetchPublishedBuild = function () {
+        var url = new URL('app_build.json', document.baseURI);
+        url.searchParams.set('t', String(Date.now()));
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then(function (reg) {
+            if (reg) reg.update();
+          }).catch(function () {});
+        }
+        return fetch(url.toString(), { cache: 'no-store' }).then(function (response) {
+          if (!response.ok) return null;
+          return response.json();
+        }).then(function (body) {
+          if (!body || typeof body.buildId !== 'string' || !body.buildId.trim()) return null;
+          return JSON.stringify({
+            buildId: body.buildId.trim(),
+            version: typeof body.version === 'string' ? body.version.trim() : ''
+          });
+        }).catch(function () { return null; });
+      };
+
+      window.golfDiaryApplyUpdate = function () {
+        var reload = function () {
+          var url = new URL(window.location.href);
+          url.searchParams.set('updated', String(Date.now()));
+          window.location.replace(url.toString());
+        };
+        if (!('serviceWorker' in navigator)) {
+          reload();
+          return;
+        }
+        var timer = setTimeout(reload, 4000);
+        navigator.serviceWorker.addEventListener('message', function (event) {
+          if (!event.data || event.data.type !== 'RELOAD' || !event.data.url) return;
+          clearTimeout(timer);
+          window.location.replace(event.data.url);
+        });
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          var worker = reg && (reg.active || reg.waiting || reg.installing);
+          if (!worker) {
+            clearTimeout(timer);
+            reload();
+            return;
+          }
+          worker.postMessage({ type: 'APPLY_UPDATE' });
+        }).catch(function () {
+          clearTimeout(timer);
+          reload();
+        });
+      };
+
+      var release = document.querySelector('meta[name="golf-diary-release"]');
+      if (!release || release.content !== 'true' || !('serviceWorker' in navigator)) {
+        if (release && release.content !== 'true') window.golfDiaryDisableServiceWorker();
+        return;
+      }
+
+      var scope = new URL('./', document.baseURI).toString();
+      var script = new URL('pwa_service_worker.js', document.baseURI).toString();
+      registrations().then(function (regs) {
+        return Promise.all(regs.map(function (reg) {
+          if (workerScript(reg).indexOf('flutter_service_worker.js') !== -1) {
+            return reg.unregister();
+          }
+          return Promise.resolve();
+        }));
+      }).then(function () {
+        return navigator.serviceWorker.register(script, { scope: scope });
+      }).catch(function (error) {
+        console.warn('Golf Diary update worker failed to register', error);
+      });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
+

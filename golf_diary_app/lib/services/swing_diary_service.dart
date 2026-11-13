@@ -110,14 +110,23 @@ class SwingDiaryService {
     final start =
         DateTime(clock.year, clock.month, clock.day).millisecondsSinceEpoch;
     final end = start + const Duration(days: 1).inMilliseconds;
-    final rows = await (await _db).query(
+    final db = await _db;
+    final drills = await db.query(
       'range_drills',
       columns: ['id'],
       where: 'deleted = 0 AND timestamp >= ? AND timestamp < ?',
       whereArgs: [start, end],
       limit: 1,
     );
-    return rows.isNotEmpty;
+    if (drills.isNotEmpty) return true;
+    final sessions = await db.query(
+      'range_sessions',
+      columns: ['id'],
+      where: 'deleted = 0 AND timestamp >= ? AND timestamp < ?',
+      whereArgs: [start, end],
+      limit: 1,
+    );
+    return sessions.isNotEmpty;
   }
 
   /// Builds the next prompt and, only when it would pass [tokenCeiling],
@@ -128,6 +137,7 @@ class SwingDiaryService {
     DateTime? now,
   }) async {
     final clock = now ?? DateTime.now();
+    final clubs = await _database.getAllClubs();
     final drills = await _database.listRangeDrills();
     final sessions = await _database.listRangeSessions();
     final messages = await listMessages();
@@ -135,6 +145,7 @@ class SwingDiaryService {
     final existing = await _latestBrief();
     final plan = planDiaryPrompt(DiaryPromptInput(
       now: clock,
+      clubs: clubs,
       drills: drills,
       sessions: sessions,
       turns: [
@@ -163,6 +174,7 @@ class SwingDiaryService {
     required String prompt,
     required String reply,
     required String userText,
+    int? promptTokens,
     String? sessionId,
     DateTime? now,
   }) async {
@@ -197,7 +209,7 @@ class SwingDiaryService {
         'session_id': sessionId,
         'session_date': _ymd(clock),
         'content': reply,
-        'prompt_tokens': estimateDiaryTokens(prompt),
+        'prompt_tokens': promptTokens ?? estimateDiaryTokens(prompt),
         'covered_through_ms': null,
         'referenced_drill_ids_json': jsonEncode(today.drillIds),
         'referenced_club_ids_json': jsonEncode(today.clubIds),

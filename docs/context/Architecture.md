@@ -274,12 +274,13 @@ sequenceDiagram
 
 **What each call contains**, in order:
 
-1. Fixed system role: comment from this golfer’s notes, in yards.
-2. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
-3. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
-4. **Recent history, still raw**, while the whole prompt is under the ceiling: earlier compiled `range_sessions` (including each visit's `session_note` and club/drill blocks) plus any standalone `range_drills`.
-5. **Today / active compiled session log, in full (`RNGE-005`)** — the compiled `range_sessions` payload (`session_note`, venue, and every club block's min / avg / max, per-club tempo notes, and linked drill title/steps) plus any additional `range_drills` logged today. Today’s session is never folded into the progress brief.
-6. The latest chat turns only.
+1. **Coaching `systemInstruction`** (`Content.system` in `VertexDiaryModel`) plus a yardage-grounding header: biomechanics / performance-physio / caddie persona, equipment and swing baseline (3:1 Tour rhythm, Korean posture, pelvic pivot, glute-driven bump, "Hatid" putting, plantar fascia & thoracic spine safeguards, PGM HGB009 trainer), 4-step operating workflow, and mobile-friendly Markdown / `──►` sequence formatting rules—strictly grounded in the golfer's logged SQLite numbers in yards.
+2. **Current bag (`clubs` from SQLite)** — club names, categories, brand/model specs, recorded `min / avg / max yd`, and per-club `swing_notes`.
+3. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
+4. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
+5. **Recent history, still raw**, while the whole prompt (including `systemInstruction`) is under the ceiling: earlier compiled `range_sessions` (venue, total shots, `session_note`, and numbered club/drill blocks with dispersion spread) plus any uncompiled standalone `range_drills`.
+6. **Today / active compiled session log, in full (`RNGE-005`)** — the compiled `range_sessions` payload (`session_note`, venue, total shots, and every club block's shot count, min / avg / max, spread, per-club tempo notes, and linked drill title/steps) plus any uncompiled `range_drills` logged today. Today’s session is never folded into the progress brief.
+7. The latest chat turns and active coaching request.
 
 **250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw history so the evaluation can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
 
@@ -414,3 +415,4 @@ Background location **not** required for current flows.
 | 1.8 | 2026-11-12 | Athena | Swing diary still calls Vertex from the app. `http` is a direct dependency so an in-flight `generateContentStream` can be aborted. No Cloud Function proxy |
 | 1.9 | 2026-11-12 | Athena | Web startup activates Firebase App Check with the public reCAPTCHA Enterprise site key before diary calls. A failed activation does not turn Firebase off. Android and iOS providers stay off while those apps reuse the web client config |
 | 1.10 | 2026-11-12 | Athena | Swing diary model is `gemini-3.8-flash`. Agent Platform shut down `gemini-2.5-flash` on 2026-10-20 |
+| 1.11 | 2026-11-13 | Athena | Upgraded swing diary prompt with a structured biomechanics / physio / caddie `systemInstruction` (`Content.system`), live `clubs` bag snapshot, session venue/shot/spread formatting without duplicating compiled drill blocks, and zero-dependency Markdown table & `──►` diagram rendering in `SwingDiarySheet` |

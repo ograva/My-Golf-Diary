@@ -270,7 +270,7 @@ sequenceDiagram
   Note over App: When history would pass 250000 tokens, store a periodic summary and drop the oldest raw text from the next prompt
 ```
 
-**Who pays.** `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-2.5-flash`. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`.
+**Who pays.** `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`.
 
 **What each call contains**, in order:
 
@@ -413,3 +413,4 @@ Background location **not** required for current flows.
 | 1.7 | 2026-11-11 | Athena | Shipped DB v6 (`range_sessions`, `range_drills.session_id`) and DB v7 (`swing_diary_messages`, `range_evaluations`, local `diary_settings` opt-in). Those tables stay out of `syncFull`. The diary client is `FirebaseAI.agentPlatform()` because `firebase_ai` 5.1 renamed `vertexAI()`. Recent raw window is the later of 30 days and the 36th newest non-today log |
 | 1.8 | 2026-11-12 | Athena | Swing diary still calls Vertex from the app. `http` is a direct dependency so an in-flight `generateContentStream` can be aborted. No Cloud Function proxy |
 | 1.9 | 2026-11-12 | Athena | Web startup activates Firebase App Check with the public reCAPTCHA Enterprise site key before diary calls. A failed activation does not turn Firebase off. Android and iOS providers stay off while those apps reuse the web client config |
+| 1.10 | 2026-11-12 | Athena | Swing diary model is `gemini-3.8-flash`. Agent Platform shut down `gemini-2.5-flash` on 2026-10-20 |

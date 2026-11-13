@@ -116,4 +116,30 @@ void main() {
     await pumpRange();
     expect(card, findsOneWidget);
   });
+
+  testWidgets('a lead-in chip writes its prompt into the session note', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.pumpWidget(
+        MaterialApp(theme: buildGolfTheme(), home: const RangeDrillScreen()));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    final chip = find.byKey(const ValueKey('range-lead-in-chip-physical'));
+    await tester.ensureVisible(chip);
+    await tester.tap(chip);
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('range-session-note-field')))
+          .controller!
+          .text,
+      'Body / physio watchout: ',
+    );
+  });
 }

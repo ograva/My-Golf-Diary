@@ -1,3 +1,5 @@
+import 'package:firebase_ai/firebase_ai.dart';
+
 /// A swing-diary model call. Tests pass a fake. The app uses Vertex.
 abstract class DiaryModel {
   bool get available;
@@ -13,6 +15,14 @@ abstract class DiaryModel {
   Stream<String> generate(
     String prompt, {
     String? systemInstruction,
+    DiaryCancel? cancel,
+  });
+
+  /// One JSON object. Null when the model has nothing to return.
+  Future<String?> generateJson({
+    required String prompt,
+    required String systemInstruction,
+    Schema? responseSchema,
     DiaryCancel? cancel,
   });
 }

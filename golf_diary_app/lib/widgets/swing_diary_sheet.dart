@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_check_config.dart';
+import '../models/golfer_profile.dart';
 import '../services/diary_model.dart';
+import '../services/golfer_profile_service.dart';
+import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import 'diary_markdown_body.dart';
+import 'golfer_baseline_sheet.dart';
 
 /// Opt-in swing diary. The model is only called after Continue, and only
 /// when [diary] reports that Vertex is available.
@@ -42,6 +46,10 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   DiaryCancel? _cancel;
   List<DiaryMessage> _messages = const [];
   List<RangeEvaluation> _evaluations = const [];
+  GolferProfile _profile = const GolferProfile();
+  var _clubsMissingSpecs = false;
+  var _baselineUpdated = false;
+  String? _baselineSummary;
 
   @override
   void initState() {
@@ -59,6 +67,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
 
   Future<void> _load() async {
     final optedIn = await widget.store.isOptedIn();
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
+    final clubs = await LocalDatabaseService.instance.getAllClubs();
     final hasToday = await widget.store.hasDrillToday();
     final messages = await widget.store.listMessages();
     final evaluations = await widget.store.listEvaluations();
@@ -68,6 +78,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
       _hasToday = hasToday;
       _messages = messages;
       _evaluations = evaluations;
+      _profile = profile;
+      _clubsMissingSpecs = clubsMissingEquipmentSpecs(clubs);
       _loading = false;
     });
   }
@@ -149,12 +161,25 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
         userText: question,
         sessionId: sessionId,
       );
+      DistillResult? distilled;
+      try {
+        distilled =
+            await GolferProfileService(model: widget.diary).distillIfNeeded();
+      } catch (_) {
+        distilled = null;
+      }
       if (!mounted) return;
       setState(() {
         _phase = 'done';
         _status = null;
         _draft = '';
         _evaluationId = saved.evaluationId;
+        _baselineUpdated = distilled?.changed == true;
+        _baselineSummary = distilled?.changed == true
+            ? (distilled!.summary.isEmpty
+                ? 'Baseline updated'
+                : distilled.summary)
+            : null;
       });
       _composer.clear();
       await _load();
@@ -181,6 +206,36 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     }
   }
 
+  void _applyLeadIn(LeadInPrompt prompt) {
+    final current = _composer.text.trim();
+    if (!current.contains(prompt.prefix)) {
+      _composer.text = current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
+    }
+  }
+
+  Future<void> _dismissLeadIn(LeadInPrompt prompt) async {
+    await LocalDatabaseService.instance.saveGolferProfile(
+      _profile.copyWith(
+        dismissedPrompts: {..._profile.dismissedPrompts, prompt.id}.toList(),
+      ),
+    );
+    await _load();
+  }
+
+  Future<void> _openBaseline() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => GolferBaselineSheet(
+        profile: _profile,
+        diary: widget.diary,
+      ),
+    );
+    if (!mounted) return;
+    await _load();
+  }
+
   String _debugLine() {
     final elapsed = _startedAt == null
         ? 0
@@ -200,6 +255,10 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     final available = widget.diary.available;
     final height = MediaQuery.sizeOf(context).height * 0.85;
     final failed = _phase == 'failed' && !_busy;
+    final leadIns = leadInPrompts(
+      _profile,
+      clubsMissingSpecs: _clubsMissingSpecs,
+    );
     return SafeArea(
       child: SizedBox(
         height: height,
@@ -283,6 +342,48 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                     key: const ValueKey('diary-eval-debug'),
                                   ),
                                 const SizedBox(height: 8),
+                                if (_baselineUpdated) ...[
+                                  Text(
+                                    _baselineSummary ?? 'Baseline updated',
+                                    key: const ValueKey('diary-baseline-updated'),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton(
+                                      key: const ValueKey('diary-baseline-review'),
+                                      onPressed: _openBaseline,
+                                      child: const Text('Review'),
+                                    ),
+                                  ),
+                                ],
+                                for (final prompt in leadIns)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: ActionChip(
+                                            key: ValueKey(
+                                                'diary-lead-in-chip-${prompt.id}'),
+                                            label: Text(prompt.label),
+                                            onPressed: _busy
+                                                ? null
+                                                : () => _applyLeadIn(prompt),
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        key: ValueKey(
+                                            'diary-lead-in-dismiss-${prompt.id}'),
+                                        tooltip: 'Dismiss',
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _dismissLeadIn(prompt),
+                                        icon: const Icon(Icons.close, size: 18),
+                                      ),
+                                    ],
+                                  ),
+                                const SizedBox(height: 8),
                                 TextField(
                                   key: const ValueKey('diary-composer-field'),
                                   controller: _composer,
@@ -328,15 +429,22 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                       child: const Text('Try again'),
                                     ),
                                   ),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton(
-                                    key: const ValueKey(
-                                        'diary-evaluation-log-btn'),
-                                    onPressed: () =>
-                                        setState(() => _showLog = true),
-                                    child: const Text('Evaluation log'),
-                                  ),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    TextButton(
+                                      key: const ValueKey('diary-baseline-btn'),
+                                      onPressed: _openBaseline,
+                                      child: Text(_profile.baselineLabel),
+                                    ),
+                                    TextButton(
+                                      key: const ValueKey(
+                                          'diary-evaluation-log-btn'),
+                                      onPressed: () =>
+                                          setState(() => _showLog = true),
+                                      child: const Text('Evaluation log'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],

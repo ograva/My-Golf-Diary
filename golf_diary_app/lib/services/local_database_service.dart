@@ -8,6 +8,7 @@ import 'package:sqflite/sqflite.dart';
 import '../data/ph_golf_catalog.dart';
 import '../data/practice_drill_seed.dart';
 import '../models/golf_models.dart';
+import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
 import '../models/range_session.dart';
 import '../models/round_summary.dart';
@@ -48,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -84,6 +85,9 @@ class LocalDatabaseService {
     }
     if (oldVersion < 7) {
       await _createDiaryTables(db);
+    }
+    if (oldVersion < 8) {
+      await _createGolferProfileTable(db);
     }
   }
 
@@ -197,6 +201,7 @@ class LocalDatabaseService {
     await _seedPracticeDrills(db);
     await _createRangeSessionsTable(db);
     await _createDiaryTables(db);
+    await _createGolferProfileTable(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -1289,6 +1294,65 @@ class LocalDatabaseService {
         opted_in INTEGER NOT NULL DEFAULT 0
       )
     ''');
+  }
+
+  Future<void> _createGolferProfileTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS golfer_profile (
+        id TEXT PRIMARY KEY,
+        equipment_notes TEXT NOT NULL DEFAULT '',
+        swing_anchors TEXT NOT NULL DEFAULT '',
+        physical_constraints TEXT NOT NULL DEFAULT '',
+        training_environment TEXT NOT NULL DEFAULT '',
+        dismissed_prompts_json TEXT NOT NULL DEFAULT '[]',
+        distilled_through_ms INTEGER NOT NULL DEFAULT 0,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<GolferProfile> getGolferProfile() async {
+    final db = await database;
+    final rows = await db.query(
+      'golfer_profile',
+      where: 'id = ? AND deleted = 0',
+      whereArgs: [GolferProfile.rowId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return const GolferProfile();
+    return GolferProfile.fromMap(rows.first);
+  }
+
+  Future<void> saveGolferProfile(GolferProfile profile) async {
+    final db = await database;
+    await db.insert(
+      'golfer_profile',
+      _dirty(profile.toMap()),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Practice venues and course names the golfer actually logged, most used first.
+  Future<List<String>> frequentVenueNames({int limit = 8}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT name FROM (
+        SELECT TRIM(venue_name) AS name
+        FROM range_sessions
+        WHERE deleted = 0 AND TRIM(venue_name) != ''
+        UNION ALL
+        SELECT TRIM(course_name) AS name
+        FROM golf_rounds
+        WHERE deleted = 0 AND TRIM(course_name) != ''
+      )
+      WHERE name != ''
+      GROUP BY name
+      ORDER BY COUNT(*) DESC, name COLLATE NOCASE
+      LIMIT ?
+    ''', [limit]);
+    return [for (final row in rows) row['name'] as String];
   }
 
   Future<void> _createPracticeDrillsTable(Database db) async {

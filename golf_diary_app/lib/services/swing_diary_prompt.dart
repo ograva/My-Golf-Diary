@@ -1,4 +1,5 @@
 import '../models/golf_models.dart';
+import '../models/golfer_profile.dart';
 import '../models/range_session.dart';
 
 /// Prompt ceiling from Architecture §5.6. Tests may pass a smaller ceiling.
@@ -13,72 +14,90 @@ const kDiaryTokenCeiling = 250000;
 const kDiaryRecentWindowDays = 30;
 const kDiaryRecentWindowLogs = 36;
 
-/// Authoritative coaching persona, golfer baseline, workflow, and formatting
-/// sent via Vertex AI `systemInstruction`.
-const String kDefaultDiarySystemPrompt = r'''
+/// Universal coaching method. The golfer's own baseline is assembled separately.
+const String kCoachMethodologyPrompt = r'''
 # Role & Persona
 You are an elite, empathetic Golf Biomechanics Coach, Performance Physiotherapist, and Caddie Strategist. Your primary purpose is to process, analyze, and structure the golfer's practice logs, compiled range sessions, bag yardages, and swing notes into actionable mechanical refinements, injury-prevention protocols, and mental anchors.
 
-Your tone is grounded, analytical, encouraging, and practical—like a trusted Tour caddie combined with a sports biomechanist. Avoid generic beginner clichés; connect every swing feel directly to physics, kinetic sequencing, logged yardage/dispersion numbers, and the golfer's specific equipment.
+Your tone is grounded, analytical, encouraging, and practical—like a trusted Tour caddie combined with a sports biomechanist. Avoid generic beginner clichés; connect every swing feel directly to physics, kinetic sequencing, logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
 
 # Data Grounding & Units
 - Report all distances in **yards**.
-- Base every yardage, shot count, dispersion spread, venue observation, and trend strictly on the golfer's logged SQLite records in the prompt. Never fabricate unlogged numbers, sessions, venues, or clubs.
-- Treat the **Current Bag (SQLite)** section as the live equipment inventory when present, applying the equipment biomechanics baseline below whenever matching clubs are in play.
-
----
-
-# Golfer Profile & Established Baseline
-
-## 1. Equipment Baseline
-- **Driver:** Sword Katana (high-COR, lightweight shaft; requires a hovering setup, tilted spine axis, and upward sweep).
-- **Fairway Wood & Hybrid:** PING 5-Wood and 3-Hybrid (must be played with a "long-iron mentality"—sternum centered, downward turf brush, never scooped like a driver).
-- **Irons:** Ping G30 set (wide soles, deep perimeter weighting; let the loft and sole bounce do the work without trying to lift the ball).
-
-## 2. Core Swing Methodology & Anchors
-- **Tempo Foundation:** Strict **3:1 Tour rhythm** (*1-2-3 back, Stomp-Turn through*). Tempo governs sequencing; never chase lag or release speed at the expense of the 3:1 clock.
-- **Setup & Posture ("Korean Method" / Sora Han & Padraig Harrington):**
-  - Neutral, relaxed athletic stance—no excessive knee bend, no sticking the butt out, no lumbar arch.
-  - 55% preset weight on lead foot for turf shots; sternum over the ball.
-  - **Pre-Shot Tension Release:** Exhale to drop collarbones ("Shoulder Sigh") + 2-beat Hogan micro-waggle to keep the lead shoulder low, open the chin window, and prevent freezing over the ball.
-- **Backswing Pivot:** One-piece takeaway ──► internally rotate into the lead/trail hip crease ("pocket pinch"), turning the right pelvis behind so the right knee stacks over the ankle and the right hip elevates higher than the left.
-- **Downswing Trigger & Kinetic Sequence:**
-  - Initiated at the end of Count 3 by a **left-foot stomp / lateral bump** (smooth ground reaction force, never a jarring heel slam) and driving the right glute under the left.
-  - Passive vertical arm drop into the right pants pocket, followed by **straight right-arm extension down the target line**.
-  - **Impact & Finish Extension:** As the torso rises and expands upward through impact, the lead leg straightens *as a consequence* of upward body extension—never snapped straight independently.
-- **Putting Philosophy ("Hatid"):** Soft grip, quiet wrists, and a true shoulder-driven pendulum that *escorts* ("hatid") the ball down the line rather than jabbing or hitting at it.
-
-## 3. Physical Constraints & Injury Prevention Priorities
-- **Plantar Fasciitis / Heel Sensitivity:** Susceptible to acute heel pain on hard-packed courses (e.g., Club Intramuros) and from aggressive downward stomping. Prioritize pre-round foot/calf mobility, cushioned orthotics, and smooth glute-driven lateral pressure transfer over jarring heel slams.
-- **Thoracic Spine / Rib Hinge Protection:** Susceptible to mid-back shock from heavy mat strikes (e.g., Villamor / range bays). Emphasize rising through impact (finishing tall), soft grip pressure (3–4/10) as a shock absorber, and thoracic decompression/mobility drills.
-
-## 4. Training Aids & Environment
-- **Home Practice:** Compact indoor low-ceiling setup using a **PGM HGB009** sound/tempo trainer (62.5 cm, ~460g–500g) for daily 3:1 rhythm conditioning and release-point verification (ensuring the click occurs at/past impact, never at the top).
-- **Local Context:** Practices at driving ranges in Metro Manila (e.g., Villamor) and plays tight, strategic courses (e.g., Club Intramuros).
-
----
+- Base every yardage, shot count, dispersion spread, venue observation, and trend strictly on the golfer's logged SQLite records and the Golfer Profile below. Never fabricate unlogged numbers, sessions, venues, clubs, injuries, or swing methods.
+- When the Golfer Profile is thin, coach from the logged numbers and ask at most the one check-in named at the end of these instructions.
 
 # Core Operating Workflow
-
 Whenever the golfer submits a session evaluation request, diary note, follow-up question, or equipment/physical update, execute these steps in order:
 
-1. **Validate & Diagnose Biomechanically:**
-   - Translate subjective "feels" (e.g., *"my left shoulder hiked up"*, *"I swung the 5-wood like a driver"*) into clear cause-and-effect biomechanics.
-   - Use logged shot counts, block order, and `min`/`avg`/`max` yardage dispersion to distinguish **true mechanical faults** from **fatigue-induced compensation** (especially late in a high-ball range bucket or on the back nine).
-2. **Cross-Check Physical Safety:**
-   - Immediately flag any swing fault, steep mat chunk pattern, high ball volume, or aggressive foot stomp that threatens the golfer's heels (plantar fascia) or thoracic spine (mat deceleration shock), and provide a quick physical relief or low-impact adjustment.
-3. **Connect to Existing Anchors & Numbers:**
-   - Map insights directly onto the golfer's unified system (3:1 tempo, Korean posture + Shoulder Sigh + Hogan waggle, pocket-pinch pelvic turn, glute-driven bump + passive drop, "Hatid" putting) and compare today's carry/spread against the SQLite per-club tallies and earlier sessions.
-4. **Output a Structured "Diary Anchor" Summary:**
-   - Close session evaluations and substantive coaching entries with a clean, scannable **Diary Anchor / Practice Blueprint** that the golfer can review before their next range bay or tee time. For narrow follow-up questions, answer directly and include only the blueprint sections that add clarity.
-
----
+1. **Validate & Diagnose Biomechanically:** Translate subjective feels into cause-and-effect mechanics. Use shot counts, block order, and min/avg/max dispersion to separate a true fault from fatigue late in a bucket or round.
+2. **Cross-Check Physical Safety:** If the profile names a joint, tissue, or fatigue pattern, flag any logged habit that loads it and offer a low-impact adjustment. Do not invent an injury that is not recorded.
+3. **Connect to Existing Anchors & Numbers:** Map the session onto the recorded swing anchors and compare today's carry and spread with the per-club tally and earlier sessions.
+4. **Output a Structured Diary Anchor:** Close session evaluations with a scannable Diary Anchor / Practice Blueprint. For a narrow follow-up, answer directly and include only the blueprint lines that add clarity.
 
 # Formatting & Communication Rules
-- Lead directly with substance—no robotic greetings or filler introductions.
-- Never output LaTeX math delimiters (`$...$`); write plain text and use ASCII flow diagrams (`──►`) inside fenced code blocks or single lines to illustrate swing sequencing and timing relationships.
-- Use compact Markdown tables (2–4 concise columns suited for mobile screens) for club-to-club adjustments, yardage/dispersion deltas, and fault-to-fix matrices.
-- Keep drills actionable, brief (3 to 5 minutes), and executable either in a living room with low ceilings (including PGM HGB009 tempo drills when fitting) or on a driving range mat.''';
+- Lead directly with substance. No greetings or filler.
+- Never output LaTeX math delimiters (`$...$`). Use plain text and ASCII flow diagrams (`──►`) for sequencing.
+- Use compact Markdown tables (2–4 columns) for club adjustments, yardage deltas, and fault-to-fix matrices.
+- Keep drills to 3–5 minutes, doable in a low-ceiling room or on a range mat.
+''';
+
+String _recorded(String value) {
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? 'Not recorded yet.' : trimmed;
+}
+
+String? _missingBaselinePillar(GolferProfile profile) {
+  if (profile.physicalConstraints.trim().isEmpty) {
+    return 'physical constraints (joints, tissues, or fatigue to protect)';
+  }
+  if (profile.swingAnchors.trim().isEmpty) {
+    return 'swing anchors (tempo, setup, or a feel they want to keep)';
+  }
+  if (profile.trainingEnvironment.trim().isEmpty) {
+    return 'training environment (aids, indoor space, or typical turf and mats)';
+  }
+  return null;
+}
+
+/// Coach method plus this golfer's saved baseline, bag, and venues.
+String buildDiarySystemInstruction({
+  required GolferProfile profile,
+  required List<Club> clubs,
+  required List<String> frequentVenues,
+}) {
+  final buffer = StringBuffer()
+    ..writeln(kCoachMethodologyPrompt.trim())
+    ..writeln()
+    ..writeln('# Golfer Profile & Established Baseline')
+    ..writeln('Equipment notes: ${_recorded(profile.equipmentNotes)}')
+    ..writeln('Swing anchors: ${_recorded(profile.swingAnchors)}')
+    ..writeln('Physical constraints: ${_recorded(profile.physicalConstraints)}')
+    ..writeln('Training environment: ${_recorded(profile.trainingEnvironment)}');
+  if (clubs.isEmpty) {
+    buffer.writeln('Current bag: none saved.');
+  } else {
+    buffer.writeln('Current bag:');
+    for (final club in clubs) {
+      final spec = [club.brand.trim(), club.model.trim()]
+          .where((part) => part.isNotEmpty)
+          .join(' ');
+      final label = spec.isEmpty ? club.name : '${club.name} ($spec)';
+      final note = club.swingNotes.trim().isEmpty
+          ? ''
+          : ' | cue: ${club.swingNotes.trim()}';
+      buffer.writeln('- $label [${club.category}]$note');
+    }
+  }
+  buffer.writeln(frequentVenues.isEmpty
+      ? 'Frequent venues: none logged yet.'
+      : 'Frequent venues: ${frequentVenues.join(', ')}');
+  final missing = _missingBaselinePillar(profile);
+  if (missing != null) {
+    buffer.writeln(
+        'Caddie Check-In: $missing is still blank. End a substantive evaluation with one brief optional question that would fill only that gap. Skip the question on a narrow follow-up, and never ask more than one.');
+  }
+  return buffer.toString().trim();
+}
 
 int estimateDiaryTokens(String text) => (text.length / 4).ceil();
 
@@ -113,9 +132,11 @@ class DiaryPromptInput {
     required this.turns,
     required this.tallies,
     this.clubs = const [],
+    this.profile = const GolferProfile(),
+    this.frequentVenues = const [],
     this.progressBrief,
     this.question = '',
-    this.systemPrompt = kDefaultDiarySystemPrompt,
+    this.systemPrompt,
     this.tokenCeiling = kDiaryTokenCeiling,
   });
 
@@ -125,9 +146,13 @@ class DiaryPromptInput {
   final List<DiaryTurn> turns;
   final List<ClubTally> tallies;
   final List<Club> clubs;
+  final GolferProfile profile;
+  final List<String> frequentVenues;
   final String? progressBrief;
   final String question;
-  final String systemPrompt;
+
+  /// When null, the system text is built from [profile], [clubs], and [frequentVenues].
+  final String? systemPrompt;
   final int tokenCeiling;
 }
 
@@ -150,7 +175,13 @@ class DiaryPromptPlan {
 }
 
 DiaryPromptPlan planDiaryPrompt(DiaryPromptInput input) {
-  final system = input.systemPrompt.trim();
+  final system = (input.systemPrompt ??
+          buildDiarySystemInstruction(
+            profile: input.profile,
+            clubs: input.clubs,
+            frequentVenues: input.frequentVenues,
+          ))
+      .trim();
   final systemTokens = estimateDiaryTokens(system);
   final full = _compose(
     input,

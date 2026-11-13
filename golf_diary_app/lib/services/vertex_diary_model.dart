@@ -64,4 +64,49 @@ class VertexDiaryModel implements DiaryModel {
       abort();
     }
   }
+
+  @override
+  Future<String?> generateJson({
+    required String prompt,
+    required String systemInstruction,
+    Schema? responseSchema,
+    DiaryCancel? cancel,
+  }) async {
+    final client = http.Client();
+    var closed = false;
+    void abort() {
+      if (closed) return;
+      closed = true;
+      client.close();
+    }
+
+    cancel?.bindAbort(abort);
+    try {
+      if (cancel?.isCancelled == true) throw const DiaryCancelled();
+      final trimmedSystem = systemInstruction.trim();
+      final model =
+          FirebaseAI.agentPlatform(location: location).generativeModel(
+        model: modelName,
+        systemInstruction:
+            trimmedSystem.isEmpty ? null : Content.system(trimmedSystem),
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+          responseSchema: responseSchema,
+        ),
+        httpClient: client,
+      );
+      final response = await model.generateContent([Content.text(prompt)]);
+      if (cancel?.isCancelled == true) throw const DiaryCancelled();
+      final text = response.text?.trim();
+      if (text == null || text.isEmpty) return null;
+      return text;
+    } on DiaryCancelled {
+      rethrow;
+    } catch (error) {
+      if (cancel?.isCancelled == true) throw const DiaryCancelled();
+      rethrow;
+    } finally {
+      abort();
+    }
+  }
 }

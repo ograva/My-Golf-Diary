@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/app_check_config.dart';
@@ -20,6 +21,7 @@ class FakeDiaryModel implements DiaryModel {
     this.reply = 'Solid contact.',
     this.hold = false,
     this.error,
+    this.jsonReply,
   });
 
   @override
@@ -32,6 +34,7 @@ class FakeDiaryModel implements DiaryModel {
   int calls = 0;
   String? lastPrompt;
   String? lastSystemInstruction;
+  String? jsonReply;
 
   @override
   String get modelName => 'gemini-3.8-flash';
@@ -60,6 +63,15 @@ class FakeDiaryModel implements DiaryModel {
     if (error != null) throw error!;
     yield reply;
   }
+
+  @override
+  Future<String?> generateJson({
+    required String prompt,
+    required String systemInstruction,
+    Schema? responseSchema,
+    DiaryCancel? cancel,
+  }) async =>
+      jsonReply;
 }
 
 void main() {
@@ -177,7 +189,7 @@ void main() {
 
     expect(model.calls, 1);
     expect(model.lastSystemInstruction, contains('Golf Biomechanics Coach'));
-    expect(model.lastSystemInstruction, contains('Sword Katana'));
+    expect(model.lastSystemInstruction, contains('Caddie Check-In'));
     expect(model.lastPrompt, contains('Current bag (SQLite):'));
     expect(model.lastPrompt, contains('YESTERDAY CUE'));
     expect(model.lastPrompt, contains('TODAY CUE'));
@@ -443,5 +455,85 @@ void main() {
     expect(find.textContaining('──►'), findsOneWidget);
     expect(find.byType(Table), findsOneWidget);
     expect(find.text('Sternum centered, turf brush'), findsOneWidget);
+  });
+
+  testWidgets('a lead-in chip fills the composer and a saved baseline reaches the model',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final model = FakeDiaryModel();
+    await pumpRange(tester, model);
+    await openDiary(tester);
+
+    final chip = find.byKey(const ValueKey('diary-lead-in-chip-physical'));
+    await tester.ensureVisible(chip);
+    await tester.tap(chip);
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('diary-composer-field')))
+          .controller!
+          .text,
+      contains('Body / physio watchout: '),
+    );
+
+    await tester.ensureVisible(find.byKey(const ValueKey('diary-baseline-btn')));
+    await tester.tap(find.byKey(const ValueKey('diary-baseline-btn')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(
+      find.byKey(const ValueKey('baseline-physical-field')),
+      'Heel pain on hard turf',
+    );
+    await tester.tap(find.byKey(const ValueKey('baseline-save-btn')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(model.lastSystemInstruction, contains('Heel pain on hard turf'));
+    expect(model.lastSystemInstruction, isNot(contains('physical constraints')));
+  });
+
+  testWidgets('a saved evaluation distills new golfer notes into the baseline',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final model = FakeDiaryModel(
+      jsonReply:
+          '{"equipmentNotes":"","swingAnchors":"3:1 tempo from the cue","physicalConstraints":"","trainingEnvironment":"","changedSummary":"Kept the tempo cue"}',
+    );
+    await pumpRange(tester, model);
+    await openDiary(tester);
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
+    expect(find.text('Kept the tempo cue'), findsOneWidget);
+    final profile = await tester
+        .runAsync(() => LocalDatabaseService.instance.getGolferProfile());
+    expect(profile!.swingAnchors, '3:1 tempo from the cue');
+    expect(profile.distilledThroughMs, greaterThan(0));
   });
 }

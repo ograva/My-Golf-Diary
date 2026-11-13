@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
+import 'package:golf_diary_app/models/golfer_profile.dart';
 import 'package:golf_diary_app/models/range_session.dart';
 import 'package:golf_diary_app/services/swing_diary_prompt.dart';
 
@@ -33,23 +34,47 @@ void main() {
     );
   }
 
-  test('default system instruction captures coaching persona, baseline, safety, and formatting rules', () {
-    expect(kDefaultDiarySystemPrompt, contains('Golf Biomechanics Coach'));
-    expect(kDefaultDiarySystemPrompt, contains('Performance Physiotherapist'));
-    expect(kDefaultDiarySystemPrompt, contains('Sword Katana'));
-    expect(kDefaultDiarySystemPrompt, contains('PING 5-Wood and 3-Hybrid'));
-    expect(kDefaultDiarySystemPrompt, contains('Ping G30'));
-    expect(kDefaultDiarySystemPrompt, contains('3:1 Tour rhythm'));
-    expect(kDefaultDiarySystemPrompt, contains('Korean Method'));
-    expect(kDefaultDiarySystemPrompt, contains('Shoulder Sigh'));
-    expect(kDefaultDiarySystemPrompt, contains('pocket pinch'));
-    expect(kDefaultDiarySystemPrompt, contains('Hatid'));
-    expect(kDefaultDiarySystemPrompt, contains('Plantar Fasciitis'));
-    expect(kDefaultDiarySystemPrompt, contains('Thoracic Spine'));
-    expect(kDefaultDiarySystemPrompt, contains('PGM HGB009'));
-    expect(kDefaultDiarySystemPrompt, contains('Diary Anchor'));
-    expect(kDefaultDiarySystemPrompt, contains('──►'));
-    expect(kDefaultDiarySystemPrompt, isNot(contains(r'$\rightarrow$')));
+  test('coach method stays universal and a saved profile fills the baseline', () {
+    expect(kCoachMethodologyPrompt, contains('Golf Biomechanics Coach'));
+    expect(kCoachMethodologyPrompt, contains('Performance Physiotherapist'));
+    expect(kCoachMethodologyPrompt, contains('Diary Anchor'));
+    expect(kCoachMethodologyPrompt, contains('──►'));
+    expect(kCoachMethodologyPrompt, isNot(contains('Sword Katana')));
+    expect(kCoachMethodologyPrompt, isNot(contains(r'$\rightarrow$')));
+
+    final fresh = buildDiarySystemInstruction(
+      profile: const GolferProfile(),
+      clubs: const [],
+      frequentVenues: const [],
+    );
+    expect(fresh, contains('Not recorded yet.'));
+    expect(fresh, contains('Caddie Check-In'));
+    expect(fresh, contains('physical constraints'));
+
+    final known = buildDiarySystemInstruction(
+      profile: const GolferProfile(
+        equipmentNotes: 'Sword Katana driver, hovering setup',
+        swingAnchors: '3:1 Tour rhythm',
+        physicalConstraints: 'Plantar fasciitis on hard turf',
+        trainingEnvironment: 'PGM HGB009 at home',
+      ),
+      clubs: [
+        Club(
+          id: 'driver',
+          name: 'Driver',
+          category: 'wood',
+          brand: 'Sword',
+          model: 'Katana',
+        ),
+      ],
+      frequentVenues: const ['Villamor Driving Range'],
+    );
+    expect(known, contains('Sword Katana driver'));
+    expect(known, contains('3:1 Tour rhythm'));
+    expect(known, contains('Plantar fasciitis'));
+    expect(known, contains('PGM HGB009'));
+    expect(known, contains('Villamor Driving Range'));
+    expect(known, isNot(contains('Caddie Check-In')));
   });
 
   test('a prompt under the ceiling keeps raw history, bag context, and deduplicates compiled blocks', () {

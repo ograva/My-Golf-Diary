@@ -138,6 +138,8 @@ class SwingDiaryService {
   }) async {
     final clock = now ?? DateTime.now();
     final clubs = await _database.getAllClubs();
+    final profile = await _database.getGolferProfile();
+    final venues = await _database.frequentVenueNames();
     final drills = await _database.listRangeDrills();
     final sessions = await _database.listRangeSessions();
     final messages = await listMessages();
@@ -146,6 +148,8 @@ class SwingDiaryService {
     final plan = planDiaryPrompt(DiaryPromptInput(
       now: clock,
       clubs: clubs,
+      profile: profile,
+      frequentVenues: venues,
       drills: drills,
       sessions: sessions,
       turns: [

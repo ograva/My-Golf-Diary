@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
+import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
 import '../models/range_session.dart';
 import '../services/diary_model.dart';
@@ -43,6 +44,9 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _sessionNoteController = TextEditingController();
   final TextEditingController _venueController = TextEditingController();
+  final FocusNode _sessionNoteFocus = FocusNode();
+  GolferProfile _profile = const GolferProfile();
+  bool _clubsMissingSpecs = false;
 
   @override
   void initState() {
@@ -59,16 +63,20 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     _notesController.dispose();
     _sessionNoteController.dispose();
     _venueController.dispose();
+    _sessionNoteFocus.dispose();
     super.dispose();
   }
 
   Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getAllClubs();
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
     final log = await LocalDatabaseService.instance.listUncompiledRangeDrills();
     final compiled = await LocalDatabaseService.instance.listRangeSessions();
     final venues = await LocalDatabaseService.instance.distinctVenueNames();
     if (!mounted) return;
     setState(() {
+      _profile = profile;
+      _clubsMissingSpecs = clubsMissingEquipmentSpecs(clubs);
       _clubs = clubs.where((c) => c.category != 'putter').toList();
       _log = log;
       _compiled = compiled;
@@ -149,6 +157,23 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     await reload();
   }
 
+  void _applyLeadIn(LeadInPrompt prompt) {
+    final current = _sessionNoteController.text.trim();
+    if (!current.contains(prompt.prefix)) {
+      _sessionNoteController.text =
+          current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
+    }
+    _sessionNoteFocus.requestFocus();
+  }
+
+  Future<void> _dismissLeadIn(LeadInPrompt prompt) async {
+    final dismissed = {..._profile.dismissedPrompts, prompt.id}.toList();
+    await LocalDatabaseService.instance.saveGolferProfile(
+      _profile.copyWith(dismissedPrompts: dismissed),
+    );
+    await reload();
+  }
+
   Future<void> _openDiary() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -156,6 +181,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
       showDragHandle: true,
       builder: (context) => SwingDiarySheet(diary: _diary, store: _diaryStore),
     );
+    await reload();
   }
 
   Future<void> _openDrills() async {
@@ -189,6 +215,11 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
         .map((entry) =>
             '${entry.clubName} · avg ${entry.drill.avgYards.round()} · ${entry.drill.tempoNotes}')
         .join('\n');
+    final leadIn = leadInPrompts(
+      _profile,
+      clubsMissingSpecs: _clubsMissingSpecs,
+      limit: 1,
+    ).firstOrNull;
     final emptyLogMessage = thisClubOnly
         ? 'No range sessions for ${_selectedClub!.name} yet.'
         : 'Saved drills show up here, newest first.';
@@ -374,6 +405,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                     TextField(
                       key: const ValueKey('range-session-note-field'),
                       controller: _sessionNoteController,
+                      focusNode: _sessionNoteFocus,
                       minLines: 2,
                       maxLines: 4,
                       decoration: const InputDecoration(
@@ -381,6 +413,29 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    if (leadIn != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: ActionChip(
+                                key: ValueKey('range-lead-in-chip-${leadIn.id}'),
+                                label: Text(leadIn.label),
+                                onPressed: () => _applyLeadIn(leadIn),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            key: ValueKey('range-lead-in-dismiss-${leadIn.id}'),
+                            tooltip: 'Dismiss',
+                            onPressed: () => _dismissLeadIn(leadIn),
+                            icon: const Icon(Icons.close, size: 18),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     Text(
                       visitLines.isEmpty

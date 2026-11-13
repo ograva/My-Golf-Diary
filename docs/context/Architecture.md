@@ -117,7 +117,7 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 7** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. Version 6 adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note compile into one Range Session Log. Version 7 adds `swing_diary_messages`, `range_evaluations`, and a local `diary_settings` opt-in row. `range_sessions`, the diary tables, and `practice_drills` stay out of `syncFull`.
+**DB:** `golf_diary.db`, currently **version 8** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. Version 6 adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note compile into one Range Session Log. Version 7 adds `swing_diary_messages`, `range_evaluations`, and a local `diary_settings` opt-in row. Version 8 adds one `golfer_profile` row: equipment notes, swing anchors, physical constraints, training environment, dismissed lead-in prompts, and `distilled_through_ms`. `range_sessions`, the diary tables, `golfer_profile`, and `practice_drills` stay out of `syncFull`.
 - Version 2 added `clubs.brand`, `clubs.model`, and `range_drills.venue_name`.
 - Version 3 added `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
 - Version 4 added `golf_rounds` to track round lifecycle (`started_at_ms`, `completed_at_ms`).
@@ -274,7 +274,7 @@ sequenceDiagram
 
 **What each call contains**, in order:
 
-1. **Coaching `systemInstruction`** (`Content.system` in `VertexDiaryModel`) plus a yardage-grounding header: biomechanics / performance-physio / caddie persona, equipment and swing baseline (3:1 Tour rhythm, Korean posture, pelvic pivot, glute-driven bump, "Hatid" putting, plantar fascia & thoracic spine safeguards, PGM HGB009 trainer), 4-step operating workflow, and mobile-friendly Markdown / `──►` sequence formatting rules—strictly grounded in the golfer's logged SQLite numbers in yards.
+1. **Coaching `systemInstruction`** (`Content.system` in `VertexDiaryModel`): a universal biomechanics / physio / caddie method, then this golfer's `golfer_profile` baseline, current bag, and frequent venues. Empty pillars add one optional Caddie Check-In. The method does not hard-code one person's clubs or injuries. Yardages stay grounded in the logged SQLite numbers.
 2. **Current bag (`clubs` from SQLite)** — club names, categories, brand/model specs, recorded `min / avg / max yd`, and per-club `swing_notes`.
 3. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
 4. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
@@ -366,7 +366,7 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** version 7 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7).
+- **DB:** version 8 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7; `golfer_profile` in v8).
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -416,3 +416,4 @@ Background location **not** required for current flows.
 | 1.9 | 2026-11-12 | Athena | Web startup activates Firebase App Check with the public reCAPTCHA Enterprise site key before diary calls. A failed activation does not turn Firebase off. Android and iOS providers stay off while those apps reuse the web client config |
 | 1.10 | 2026-11-12 | Athena | Swing diary model is `gemini-3.8-flash`. Agent Platform shut down `gemini-2.5-flash` on 2026-10-20 |
 | 1.11 | 2026-11-13 | Athena | Upgraded swing diary prompt with a structured biomechanics / physio / caddie `systemInstruction` (`Content.system`), live `clubs` bag snapshot, session venue/shot/spread formatting without duplicating compiled drill blocks, and zero-dependency Markdown table & `──►` diagram rendering in `SwingDiarySheet` |
+| 1.12 | 2026-11-13 | Athena | DB v8 `golfer_profile` replaces the hardcoded personal baseline. Lead-in chips sit beside the session note and diary composer. Distillation reads only golfer-written notes after `distilled_through_ms` and never model replies |

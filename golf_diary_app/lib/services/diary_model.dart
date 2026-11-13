@@ -10,7 +10,11 @@ abstract class DiaryModel {
 
   /// Yields each text chunk as it arrives. A cancel ends the stream with
   /// [DiaryCancelled] and must not be treated as a finished reply.
-  Stream<String> generate(String prompt, {DiaryCancel? cancel});
+  Stream<String> generate(
+    String prompt, {
+    String? systemInstruction,
+    DiaryCancel? cancel,
+  });
 }
 
 /// Stops an in-flight [DiaryModel.generate] call.

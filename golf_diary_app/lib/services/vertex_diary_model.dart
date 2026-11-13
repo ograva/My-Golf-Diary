@@ -23,7 +23,11 @@ class VertexDiaryModel implements DiaryModel {
   String get location => defaultLocation;
 
   @override
-  Stream<String> generate(String prompt, {DiaryCancel? cancel}) async* {
+  Stream<String> generate(
+    String prompt, {
+    String? systemInstruction,
+    DiaryCancel? cancel,
+  }) async* {
     final client = http.Client();
     var closed = false;
     void abort() {
@@ -35,9 +39,12 @@ class VertexDiaryModel implements DiaryModel {
     cancel?.bindAbort(abort);
     try {
       if (cancel?.isCancelled == true) throw const DiaryCancelled();
+      final trimmedSystem = systemInstruction?.trim() ?? '';
       final model =
           FirebaseAI.agentPlatform(location: location).generativeModel(
         model: modelName,
+        systemInstruction:
+            trimmedSystem.isEmpty ? null : Content.system(trimmedSystem),
         httpClient: client,
       );
       await for (final response

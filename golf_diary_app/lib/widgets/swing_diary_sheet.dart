@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app_check_config.dart';
 import '../services/diary_model.dart';
 import '../services/swing_diary_service.dart';
+import 'diary_markdown_body.dart';
 
 /// Opt-in swing diary. The model is only called after Continue, and only
 /// when [diary] reports that Vertex is available.
@@ -117,13 +118,16 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
       setState(() {
         _phase = 'request';
         _status = 'Waiting for Vertex';
-        _promptChars = plan.prompt.length;
+        _promptChars = plan.systemInstruction.length + plan.prompt.length;
         _promptTokens = plan.tokens;
         _appCheck = appCheck;
       });
       final buffer = StringBuffer();
-      await for (final chunk
-          in widget.diary.generate(plan.prompt, cancel: cancel)) {
+      await for (final chunk in widget.diary.generate(
+        plan.prompt,
+        systemInstruction: plan.systemInstruction,
+        cancel: cancel,
+      )) {
         if (cancel.isCancelled) throw const DiaryCancelled();
         buffer.write(chunk);
         if (!mounted) return;
@@ -140,6 +144,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
       final sessionId = await widget.store.latestTodaySessionId();
       final saved = await widget.store.ask(
         prompt: plan.prompt,
+        promptTokens: plan.tokens,
         reply: buffer.toString(),
         userText: question,
         sessionId: sessionId,
@@ -256,13 +261,16 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                     title: Text(message.role == 'model'
                                         ? 'Evaluation'
                                         : 'You'),
-                                    subtitle: Text(message.content),
+                                    subtitle: message.role == 'model'
+                                        ? DiaryMarkdownBody(
+                                            data: message.content)
+                                        : Text(message.content),
                                   ),
                                 if (_draft.isNotEmpty)
                                   ListTile(
                                     key: const ValueKey('diary-eval-draft'),
                                     title: const Text('Evaluation'),
-                                    subtitle: Text(_draft),
+                                    subtitle: DiaryMarkdownBody(data: _draft),
                                   ),
                                 if (_status != null) ...[
                                   const SizedBox(height: 8),
@@ -366,7 +374,7 @@ class _EvaluationLog extends StatelessWidget {
               title: Text(row.kind == 'periodic_summary'
                   ? 'Progress brief'
                   : 'Evaluation ${row.sessionDate ?? ''}'),
-              subtitle: Text(row.content),
+              subtitle: DiaryMarkdownBody(data: row.content),
             ),
       ],
     );

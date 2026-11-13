@@ -31,6 +31,7 @@ class FakeDiaryModel implements DiaryModel {
   Object? error;
   int calls = 0;
   String? lastPrompt;
+  String? lastSystemInstruction;
 
   @override
   String get modelName => 'gemini-3.8-flash';
@@ -39,9 +40,14 @@ class FakeDiaryModel implements DiaryModel {
   String get location => 'global';
 
   @override
-  Stream<String> generate(String prompt, {DiaryCancel? cancel}) async* {
+  Stream<String> generate(
+    String prompt, {
+    String? systemInstruction,
+    DiaryCancel? cancel,
+  }) async* {
     calls += 1;
     lastPrompt = prompt;
+    lastSystemInstruction = systemInstruction;
     if (cancel?.isCancelled == true) throw const DiaryCancelled();
     if (hold) {
       final gate = Completer<void>();
@@ -170,6 +176,9 @@ void main() {
     await tester.pump();
 
     expect(model.calls, 1);
+    expect(model.lastSystemInstruction, contains('Golf Biomechanics Coach'));
+    expect(model.lastSystemInstruction, contains('Sword Katana'));
+    expect(model.lastPrompt, contains('Current bag (SQLite):'));
     expect(model.lastPrompt, contains('YESTERDAY CUE'));
     expect(model.lastPrompt, contains('TODAY CUE'));
     expect(model.lastPrompt, contains('3:1 Tour Tempo Rhythm'));
@@ -397,5 +406,42 @@ void main() {
     final summarizeButton = tester.widget<OutlinedButton>(
         find.byKey(const ValueKey('diary-summarize-today-btn')));
     expect(summarizeButton.onPressed, isNotNull);
+  });
+
+  testWidgets('renders structured Markdown tables, headings, and flow diagrams',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+
+    const structuredReply = '''
+## Diary Anchor Blueprint
+1-2-3 Backswing ──► Left-Foot Bump ──► Passive Drop
+
+| Club | Fault | Fix |
+| --- | --- | --- |
+| 5-Wood | Scooped upward | Sternum centered, turf brush |
+
+- Soft grip 3/10 to protect thoracic spine
+''';
+    final model = FakeDiaryModel(reply: structuredReply);
+    await pumpRange(tester, model);
+    await openDiary(tester);
+
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    expect(find.text('Diary Anchor Blueprint'), findsOneWidget);
+    expect(find.textContaining('──►'), findsOneWidget);
+    expect(find.byType(Table), findsOneWidget);
+    expect(find.text('Sternum centered, turf brush'), findsOneWidget);
   });
 }

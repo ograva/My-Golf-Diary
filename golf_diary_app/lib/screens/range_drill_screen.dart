@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/ph_golf_catalog.dart';
+import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
@@ -14,7 +15,7 @@ import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
-import '../widgets/swing_diary_sheet.dart';
+import '../widgets/diary_launcher.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 
@@ -217,16 +218,6 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     await reload();
   }
 
-  Future<void> _openDiary() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => SwingDiarySheet(diary: _diary, store: _diaryStore),
-    );
-    await reload();
-  }
-
   Widget _buildYardageInputs(BuildContext context) {
     final statLabels = YardageStatLabels.forDensity(yardageDensity);
     final usualLabel = _showAllYardageFields
@@ -372,11 +363,14 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
         ),
         title: const Text('Range'),
         actions: [
-          IconButton(
+          SizedBox(
             key: const ValueKey('range-swing-diary-btn'),
-            tooltip: 'Swing diary',
-            onPressed: _openDiary,
-            icon: const Icon(Icons.auto_stories_outlined),
+            child: DiaryEntryButton(
+              entryKey: 'diary-entry-range',
+              diary: _diary,
+              store: _diaryStore,
+              entrySource: DiaryContextSource.range,
+            ),
           ),
           const SyncCloudButton(),
         ],

@@ -5,6 +5,7 @@ import '../models/golfer_profile.dart';
 import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../ui/yardage_display_copy.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/sync_cloud_button.dart';
 
@@ -82,6 +83,29 @@ class ClubsScreenState extends State<ClubsScreen> {
     await reload();
   }
 
+  Future<void> _showBagDetails(Club club, int sessionCount) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => ClubBagDetailsSheet(
+        club: club,
+        sessionCount: sessionCount,
+        trendYards: _trends[club.id] ?? const [],
+        density: yardageDensity,
+        onEditNotes: () {
+          Navigator.pop(context);
+          _editNotes(club);
+        },
+        onShowRangeLogs: () {
+          Navigator.pop(context);
+          _showRangeLogs(club);
+        },
+      ),
+    );
+  }
+
   Future<void> _showRangeLogs(Club club) async {
     final sessions = await LocalDatabaseService.instance.listRangeDrills(clubId: club.id);
     if (!mounted) return;
@@ -157,7 +181,7 @@ class ClubsScreenState extends State<ClubsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: categories.map((cat) {
-                final label = _categoryLabel(cat);
+                final label = bagCategoryLabel(cat);
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
@@ -180,83 +204,16 @@ class ClubsScreenState extends State<ClubsScreen> {
                     itemCount: _clubs.length,
                     itemBuilder: (context, index) {
                       final club = _clubs[index];
-                      final identity = [club.brand, club.model].where((part) => part.trim().isNotEmpty).join(' · ');
-                      final notes = club.swingNotes.trim();
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: InkWell(
-                                  onTap: () => _editClub(club),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                    child: Text(
-                                      club.name,
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            color: Theme.of(context).colorScheme.primary,
-                                            decoration: TextDecoration.underline,
-                                            decorationColor: Theme.of(context).colorScheme.primary,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (identity.isNotEmpty) ...[
-                                Text(identity, style: Theme.of(context).textTheme.bodyMedium),
-                                const SizedBox(height: 8),
-                              ] else
-                                const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _StatChip(label: 'Min', value: '${club.minDistance.round()} yds'),
-                                  _StatChip(label: 'Avg', value: '${club.avgDistance.round()} yds'),
-                                  _StatChip(label: 'Max', value: '${club.maxDistance.round()} yds'),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              _YardageTrend(yards: _trends[club.id] ?? const []),
-                              const SizedBox(height: 12),
-                              Text('Swing notes', style: Theme.of(context).textTheme.labelMedium),
-                              const SizedBox(height: 4),
-                              Text(
-                                notes.isEmpty ? 'No swing notes' : club.swingNotes,
-                                style: notes.isEmpty
-                                    ? Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        )
-                                    : Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: TextButton.icon(
-                                      key: ValueKey('bag-range-logs-${club.id}'),
-                                      onPressed: () => _showRangeLogs(club),
-                                      icon: const Icon(Icons.history),
-                                      label: Text(
-                                        'Range logs (${_trends[club.id]?.length ?? 0})',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: () => _editNotes(club),
-                                    icon: const Icon(Icons.edit_outlined),
-                                    label: const Text('Edit notes'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                      final sessionCount = _trends[club.id]?.length ?? 0;
+                      return _ClubBagCard(
+                        club: club,
+                        sessionCount: sessionCount,
+                        trendYards: _trends[club.id] ?? const [],
+                        density: yardageDensity,
+                        onEditClub: () => _editClub(club),
+                        onDetails: () => _showBagDetails(club, sessionCount),
+                        onRangeLogs: () => _showRangeLogs(club),
+                        onEditNotes: () => _editNotes(club),
                       );
                     },
                   ),
@@ -403,7 +360,7 @@ class _EditClubDialogState extends State<EditClubDialog> {
               value: ClubsScreenState.categories.contains(_category) ? _category : 'other',
               decoration: const InputDecoration(labelText: 'Category'),
               items: ClubsScreenState.categories
-                  .map((cat) => DropdownMenuItem(value: cat, child: Text(_categoryLabel(cat))))
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(bagCategoryLabel(cat))))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _category = value);
@@ -482,7 +439,232 @@ class _SwingNotesDialogState extends State<SwingNotesDialog> {
   }
 }
 
-String _categoryLabel(String cat) => cat.isEmpty ? cat : cat[0].toUpperCase() + cat.substring(1);
+@visibleForTesting
+class ClubBagDetailsSheet extends StatelessWidget {
+  const ClubBagDetailsSheet({
+    super.key,
+    required this.club,
+    required this.sessionCount,
+    required this.trendYards,
+    required this.density,
+    required this.onEditNotes,
+    required this.onShowRangeLogs,
+  });
+
+  final Club club;
+  final int sessionCount;
+  final List<double> trendYards;
+  final YardageUiDensity density;
+  final VoidCallback onEditNotes;
+  final VoidCallback onShowRangeLogs;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = YardageStatLabels.forDensity(density);
+  final notes = club.swingNotes.trim();
+    final height = MediaQuery.sizeOf(context).height * 0.65;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: SizedBox(
+          height: height,
+          child: ListView(
+            children: [
+              Text(club.name, style: Theme.of(context).textTheme.titleLarge),
+              if (sessionCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Based on $sessionCount range ${sessionCount == 1 ? 'session' : 'sessions'}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _StatChip(label: labels.shortest, value: formatCarryYards(club.minDistance)),
+                  _StatChip(label: labels.usual, value: formatCarryYards(club.avgDistance)),
+                  _StatChip(label: labels.longest, value: formatCarryYards(club.maxDistance)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _YardageTrend(yards: trendYards),
+              const SizedBox(height: 16),
+              Text('Swing notes', style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                notes.isEmpty ? 'No swing notes yet' : club.swingNotes,
+                style: notes.isEmpty
+                    ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        )
+                    : Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: onEditNotes,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit notes'),
+                  ),
+                  TextButton.icon(
+                    key: ValueKey('bag-range-logs-${club.id}'),
+                    onPressed: onShowRangeLogs,
+                    icon: const Icon(Icons.history),
+                    label: Text('Range logs ($sessionCount)'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClubBagCard extends StatelessWidget {
+  const _ClubBagCard({
+    required this.club,
+    required this.sessionCount,
+    required this.trendYards,
+    required this.density,
+    required this.onEditClub,
+    required this.onDetails,
+    required this.onRangeLogs,
+    required this.onEditNotes,
+  });
+
+  final Club club;
+  final int sessionCount;
+  final List<double> trendYards;
+  final YardageUiDensity density;
+  final VoidCallback onEditClub;
+  final VoidCallback onDetails;
+  final VoidCallback onRangeLogs;
+  final VoidCallback onEditNotes;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = YardageStatLabels.forDensity(density);
+    final identity = [club.brand, club.model].where((part) => part.trim().isNotEmpty).join(' · ');
+    final showFullStats = density == YardageUiDensity.full;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                onTap: onEditClub,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    club.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+            if (identity.isNotEmpty) ...[
+              Text(identity, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 8),
+            ] else
+              const SizedBox(height: 8),
+            if (showFullStats) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _StatChip(label: labels.shortest, value: formatCarryYards(club.minDistance)),
+                  _StatChip(label: labels.usual, value: formatCarryYards(club.avgDistance)),
+                  _StatChip(label: labels.longest, value: formatCarryYards(club.maxDistance)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _YardageTrend(yards: trendYards),
+            ] else ...[
+              Text(
+                labels.usual,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                formatCarryYards(club.avgDistance),
+                key: ValueKey('bag-hero-yards-${club.id}'),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontFamily: 'Roboto Mono',
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              if (sessionCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Based on $sessionCount range ${sessionCount == 1 ? 'session' : 'sessions'}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ElevatedButton(
+                    key: ValueKey('bag-details-btn-${club.id}'),
+                    onPressed: onDetails,
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(48, 48)),
+                    child: const Text('Details'),
+                  ),
+                ],
+              ),
+            ],
+            if (showFullStats) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Flexible(
+                    child: TextButton.icon(
+                      key: ValueKey('bag-range-logs-${club.id}'),
+                      onPressed: onRangeLogs,
+                      icon: const Icon(Icons.history),
+                      label: Text(
+                        'Range logs ($sessionCount)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onEditNotes,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit notes'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _AddClubDialog extends StatefulWidget {
   const _AddClubDialog({required this.initialCategory});
@@ -550,7 +732,7 @@ class _AddClubDialogState extends State<_AddClubDialog> {
               value: _category,
               decoration: const InputDecoration(labelText: 'Category'),
               items: ClubsScreenState.categories
-                  .map((cat) => DropdownMenuItem(value: cat, child: Text(_categoryLabel(cat))))
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(bagCategoryLabel(cat))))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _category = value);

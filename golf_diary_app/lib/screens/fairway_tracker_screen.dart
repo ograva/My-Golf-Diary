@@ -394,7 +394,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fairway HUD'),
+        title: const Text('On Course'),
         actions: [
           const SyncCloudButton(),
         ],

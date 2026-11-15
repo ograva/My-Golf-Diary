@@ -11,6 +11,7 @@ import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import '../services/vertex_diary_model.dart';
 import '../theme/app_theme.dart';
+import '../ui/yardage_display_copy.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/swing_diary_sheet.dart';
@@ -49,6 +50,12 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   GolferProfile _profile = const GolferProfile();
   bool _clubsMissingSpecs = false;
   GolferProfileStore? _profileStore;
+  bool _yardageExpanded = false;
+
+  YardageUiDensity get yardageDensity => resolveYardageUiDensity(_profile);
+
+  bool get _showAllYardageFields =>
+      yardageDensity == YardageUiDensity.full || _yardageExpanded;
 
   @override
   void initState() {
@@ -73,7 +80,12 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   void _onProfileStoreChanged() {
     final store = _profileStore;
     if (store == null || !mounted) return;
-    setState(() => _profile = store.profile);
+    setState(() {
+      _profile = store.profile;
+      if (yardageDensity == YardageUiDensity.full) {
+        _yardageExpanded = false;
+      }
+    });
   }
 
   @override
@@ -122,13 +134,22 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   Future<void> _saveDrillSet({bool quiet = false}) async {
     if (_selectedClub == null) return;
 
+    // Simple-mode saves may only fill usual carry; mirror to min/max so blends stay valid.
+    var minYards = double.tryParse(_minController.text) ?? 0.0;
+    var maxYards = double.tryParse(_maxController.text) ?? 0.0;
+    var avgYards = double.tryParse(_avgController.text) ?? 0.0;
+    if (avgYards > 0 && minYards == 0 && maxYards == 0) {
+      minYards = avgYards;
+      maxYards = avgYards;
+    }
+
     final log = RangeDrillLog(
       id: 'drill_${DateTime.now().millisecondsSinceEpoch}',
       clubId: _selectedClub!.id,
       shotCount: _shotCounter > 0 ? _shotCounter : 10,
-      minYards: double.tryParse(_minController.text) ?? 0.0,
-      maxYards: double.tryParse(_maxController.text) ?? 0.0,
-      avgYards: double.tryParse(_avgController.text) ?? 0.0,
+      minYards: minYards,
+      maxYards: maxYards,
+      avgYards: avgYards,
       tempoNotes: _notesController.text,
       venueName: _venueController.text.trim(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
@@ -206,6 +227,101 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     await reload();
   }
 
+  Widget _buildYardageInputs(BuildContext context) {
+    final statLabels = YardageStatLabels.forDensity(yardageDensity);
+    final usualLabel = _showAllYardageFields
+        ? (yardageDensity == YardageUiDensity.full
+            ? 'Avg (yds)'
+            : 'Usual (yds)')
+        : 'Usual (yds)';
+
+    if (!_showAllYardageFields) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            key: const ValueKey('range-usual-yards-field'),
+            controller: _avgController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: usualLabel,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if (yardageDensity != YardageUiDensity.full) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: const ValueKey('range-yardage-mode-expand'),
+                onPressed: () => setState(() => _yardageExpanded = true),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                child: const Text('More numbers'),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _minController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: '${statLabels.shortest} (yds)',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                key: const ValueKey('range-usual-yards-field'),
+                controller: _avgController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: usualLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _maxController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: '${statLabels.longest} (yds)',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (yardageDensity != YardageUiDensity.full) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() {
+                _yardageExpanded = false;
+                _minController.clear();
+                _maxController.clear();
+              }),
+              child: const Text('Fewer numbers'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Future<void> _openDrills() async {
     final pick = await showModalBottomSheet<PracticeDrillPick>(
       context: context,
@@ -254,7 +370,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
           icon: const Icon(Icons.list_alt),
           style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
         ),
-        title: const Text('Range Drill Instructor'),
+        title: const Text('Range'),
         actions: [
           IconButton(
             key: const ValueKey('range-swing-diary-btn'),
@@ -298,7 +414,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             Text('Select club', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             SizedBox(
-              height: 44,
+              height: 48,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: _clubs.map((club) {
@@ -332,7 +448,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                       children: [
                         Icon(Icons.lightbulb_outline, color: AppColors.amber),
                         SizedBox(width: 8),
-                        Text('Swing Cue & Mechanics Note',
+                        Text('Swing cue',
                             style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -354,7 +470,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Shots: $_shotCounter / 10',
+                  'Balls hit: $_shotCounter / 10',
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -370,39 +486,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _minController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'Min (Yds)', border: OutlineInputBorder()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _avgController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'Avg (Yds)', border: OutlineInputBorder()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _maxController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'Max (Yds)', border: OutlineInputBorder()),
-                  ),
-                ),
-              ],
-            ),
+            _buildYardageInputs(context),
             const SizedBox(height: 24),
             SizedBox(
               height: 72,

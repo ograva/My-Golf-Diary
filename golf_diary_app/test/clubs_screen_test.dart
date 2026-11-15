@@ -89,7 +89,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Model (optional)'), 'Qi10');
     await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Category'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Iron').last);
+    await tester.tap(find.text('Irons').last);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
     await tester.pumpAndSettle();

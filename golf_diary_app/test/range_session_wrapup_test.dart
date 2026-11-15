@@ -22,11 +22,7 @@ void main() {
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
   }
 
-  Finder labeled(String label) {
-    return find.byWidgetPredicate(
-      (widget) => widget is TextField && widget.decoration?.labelText == label,
-    );
-  }
+  Finder usualYardsField() => find.byKey(const ValueKey('range-usual-yards-field'));
 
   testWidgets('session note survives club changes and compiles into the log', (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
@@ -54,7 +50,7 @@ void main() {
     clearSnackBars(tester);
     await tester.pump();
 
-    await tester.enterText(labeled('Avg (Yds)'), '220');
+    await tester.enterText(usualYardsField(), '220');
     final save = find.text('Save Drill Session');
     await tester.ensureVisible(save);
     await tester.tap(save);
@@ -73,7 +69,7 @@ void main() {
       'Smooth session',
     );
 
-    await tester.enterText(labeled('Avg (Yds)'), '150');
+    await tester.enterText(usualYardsField(), '150');
     await tester.ensureVisible(save);
     await tester.tap(save);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));

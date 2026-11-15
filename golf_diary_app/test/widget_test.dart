@@ -40,7 +40,7 @@ void main() {
         of: find.byType(AppBar),
         matching: find.text('On Course'),
       ),
-      findsOneWidget,
+      findsAtLeastNWidgets(1),
     );
     final bar = tester
         .widget<NavigationBar>(find.byKey(const ValueKey('shell-nav-bar')));

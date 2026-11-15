@@ -49,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -101,6 +101,9 @@ class LocalDatabaseService {
     if (oldVersion < 12) {
       await _createPracticeDrillsTable(db);
       await _seedPracticeDrills(db);
+    }
+    if (oldVersion < 13) {
+      await _upgradeGolferProfileScorecardView(db);
     }
   }
 
@@ -977,6 +980,53 @@ class LocalDatabaseService {
     await upsertHoleScore(updated);
   }
 
+  /// Ensures a [round_scores] row exists for manual cart/classic edits.
+  Future<RoundScore> ensureHoleRow({
+    required String roundId,
+    required String courseName,
+    required int holeNumber,
+  }) async {
+    final existing = await getHoleScore(roundId, holeNumber);
+    if (existing != null) return existing;
+    final par = PhGolfCatalog.parForHole(courseName, holeNumber) ?? 4;
+    final row = RoundScore(
+      id: '${roundId}_h$holeNumber',
+      roundId: roundId,
+      courseName: courseName,
+      holeNumber: holeNumber,
+      par: par,
+    );
+    await upsertHoleScore(row);
+    return row;
+  }
+
+  /// Adds [delta] to stroke count (cart +1). Clears concede when adding strokes.
+  Future<void> incrementStrokes({
+    required String roundId,
+    required String courseName,
+    required int holeNumber,
+    int delta = 1,
+  }) async {
+    final hole = await ensureHoleRow(
+      roundId: roundId,
+      courseName: courseName,
+      holeNumber: holeNumber,
+    );
+    final clearedConcede = delta > 0 && hole.conceded == 1;
+    final strokes = (clearedConcede ? 0 : hole.strokes) + delta;
+    final strokeCount = strokes.clamp(0, 99);
+    final finalScore = strokeCount > 0 || hole.penalties > 0
+        ? computeFinalScore(strokes: strokeCount, penalties: hole.penalties)
+        : 0;
+    final updated = hole.copyWith(
+      strokes: strokeCount,
+      conceded: clearedConcede ? 0 : hole.conceded,
+      finalScore: finalScore,
+      isSynced: 0,
+    );
+    await upsertHoleScore(updated);
+  }
+
   Future<void> incrementPenalties(
       String roundId, int holeNumber, int delta) async {
     final hole = await getHoleScore(roundId, holeNumber);
@@ -1360,6 +1410,8 @@ class LocalDatabaseService {
         yardage_display_mode TEXT NOT NULL DEFAULT 'follow_skill_tier',
         onboarding_completed INTEGER NOT NULL DEFAULT 0,
         bag_nickname TEXT NOT NULL DEFAULT '',
+        scorecard_view_mode TEXT NOT NULL DEFAULT 'classic',
+        scorecard_cart_high_contrast INTEGER NOT NULL DEFAULT 0,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
         deleted INTEGER NOT NULL DEFAULT 0
@@ -1370,6 +1422,15 @@ class LocalDatabaseService {
   Future<void> _upgradeGolferProfileYardageDisplay(Database db) async {
     await db.execute(
       "ALTER TABLE golfer_profile ADD COLUMN yardage_display_mode TEXT NOT NULL DEFAULT 'follow_skill_tier'",
+    );
+  }
+
+  Future<void> _upgradeGolferProfileScorecardView(Database db) async {
+    await db.execute(
+      "ALTER TABLE golfer_profile ADD COLUMN scorecard_view_mode TEXT NOT NULL DEFAULT 'classic'",
+    );
+    await db.execute(
+      'ALTER TABLE golfer_profile ADD COLUMN scorecard_cart_high_contrast INTEGER NOT NULL DEFAULT 0',
     );
   }
 

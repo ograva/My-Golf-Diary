@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../data/ph_golf_catalog.dart';
+import '../models/scorecard_preferences.dart';
 import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
@@ -9,6 +11,7 @@ import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/save_round_before_new_dialog.dart';
+import '../widgets/scorecard_cart_panel.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
@@ -30,11 +33,86 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   List<RoundScore> _holes = [];
   RoundTotals? _totals;
   bool _loading = true;
+  String _viewMode = ScorecardViewMode.classic;
+  bool _cartHighContrast = false;
+  int _cartSelectedHole = 1;
+  bool _wakelockActive = false;
 
   @override
   void initState() {
     super.initState();
+    _loadViewPreferences();
     loadScorecard();
+  }
+
+  @override
+  void dispose() {
+    if (_wakelockActive) {
+      try {
+        WakelockPlus.disable();
+      } catch (_) {}
+      _wakelockActive = false;
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadViewPreferences() async {
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
+    if (!mounted) return;
+    setState(() {
+      _viewMode = profile.scorecardViewMode;
+      _cartHighContrast = profile.scorecardCartHighContrastEnabled;
+    });
+  }
+
+  Future<void> _persistViewMode(String mode) async {
+    final db = LocalDatabaseService.instance;
+    final profile = await db.getGolferProfile();
+    await db.saveGolferProfile(profile.copyWith(scorecardViewMode: mode));
+    if (!mounted) return;
+    setState(() => _viewMode = mode);
+    await _syncWakelock();
+  }
+
+  Future<void> _persistHighContrast(bool value) async {
+    final db = LocalDatabaseService.instance;
+    final profile = await db.getGolferProfile();
+    await db.saveGolferProfile(
+      profile.copyWith(scorecardCartHighContrast: value ? 1 : 0),
+    );
+    if (!mounted) return;
+    setState(() => _cartHighContrast = value);
+  }
+
+  Future<void> _syncWakelock() async {
+    final roundActive = _selectedRoundId != null &&
+        _recentRounds.any(
+          (r) => r.roundId == _selectedRoundId && !r.isCompleted,
+        );
+    final shouldLock =
+        _viewMode == ScorecardViewMode.cart && roundActive;
+    if (shouldLock && !_wakelockActive) {
+      try {
+        await WakelockPlus.enable();
+        _wakelockActive = true;
+      } catch (_) {
+        // Unsupported in widget tests and some desktop embedders.
+      }
+    } else if (!shouldLock && _wakelockActive) {
+      try {
+        await WakelockPlus.disable();
+        _wakelockActive = false;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _primeCartHole() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    final current = await LocalDatabaseService.instance
+        .currentHoleNumber(roundId);
+    if (!mounted) return;
+    setState(() => _cartSelectedHole = current.clamp(1, _holesOnCard));
   }
 
   Future<void> loadScorecard() async {
@@ -53,14 +131,25 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       totals = await db.computeRoundTotals(roundId);
     }
     if (!mounted) return;
+    final loadedCourse = totals?.courseName ??
+        (holes.isNotEmpty ? holes.first.courseName : 'Local Course');
+    final holeCount = _holesOnCardForCourse(loadedCourse);
     setState(() {
       _recentRounds = recent;
       _selectedRoundId = roundId;
       _holes = holes;
       _totals = totals;
       _loading = false;
+      if (_cartSelectedHole > holeCount) {
+        _cartSelectedHole = 1;
+      }
     });
+    await _primeCartHole();
+    await _syncWakelock();
   }
+
+  int _holesOnCardForCourse(String courseName) =>
+      PhGolfCatalog.holeCount(courseName);
 
   Future<void> _startNewRound() async {
     final db = LocalDatabaseService.instance;
@@ -118,6 +207,63 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final row = _holeRow(hole);
     if (row != null) return row.par;
     return PhGolfCatalog.parForHole(_courseName, hole);
+  }
+
+  Future<void> _cartMutation(Future<void> Function() action) async {
+    await action();
+    await loadScorecard();
+  }
+
+  Future<void> _cartPlusStroke() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    await _cartMutation(() => LocalDatabaseService.instance.incrementStrokes(
+          roundId: roundId,
+          courseName: _courseName,
+          holeNumber: _cartSelectedHole,
+        ));
+  }
+
+  Future<void> _cartPenalty() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    await _cartMutation(() async {
+      await LocalDatabaseService.instance.ensureHoleRow(
+        roundId: roundId,
+        courseName: _courseName,
+        holeNumber: _cartSelectedHole,
+      );
+      await LocalDatabaseService.instance
+          .incrementPenalties(roundId, _cartSelectedHole, 1);
+    });
+  }
+
+  Future<void> _cartMulligan() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    await _cartMutation(() async {
+      await LocalDatabaseService.instance.ensureHoleRow(
+        roundId: roundId,
+        courseName: _courseName,
+        holeNumber: _cartSelectedHole,
+      );
+      await LocalDatabaseService.instance
+          .incrementMulligans(roundId, _cartSelectedHole);
+    });
+  }
+
+  Future<void> _cartGimme() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    await _cartMutation(() async {
+      await LocalDatabaseService.instance.ensureHoleRow(
+        roundId: roundId,
+        courseName: _courseName,
+        holeNumber: _cartSelectedHole,
+      );
+      await LocalDatabaseService.instance
+          .concedeHole(roundId, _cartSelectedHole);
+    });
   }
 
   Future<void> _editHole(int holeNumber) async {
@@ -227,17 +373,60 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                           }).toList(),
                         ),
                       ),
-                    const SizedBox(height: 12),
-                    _SummaryBanner(totals: _totals),
-                    const SizedBox(height: 16),
-                    _NineGrid(
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      key: const ValueKey('scorecard-view-mode-toggle'),
+                      segments: [
+                        ButtonSegment(
+                          value: ScorecardViewMode.classic,
+                          label: const Text('Classic'),
+                          icon: const Icon(Icons.grid_view),
+                        ),
+                        ButtonSegment(
+                          value: ScorecardViewMode.cart,
+                          label: const Text('Cart scoring'),
+                          icon: const Icon(Icons.sports_golf),
+                        ),
+                      ],
+                      selected: {_viewMode},
+                      onSelectionChanged: (selection) {
+                        _persistViewMode(selection.first);
+                      },
+                      showSelectedIcon: false,
+                    ),
+                    const SizedBox(height: 4),
+                    if (_viewMode == ScorecardViewMode.classic) ...[
+                      const SizedBox(height: 8),
+                      _SummaryBanner(totals: _totals),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_viewMode == ScorecardViewMode.cart &&
+                        _selectedRoundId != null)
+                      ScorecardCartPanel(
+                        courseName: _courseName,
+                        holeCount: _holesOnCard,
+                        selectedHole: _cartSelectedHole,
+                        totals: _totals,
+                        holeRow: _holeRow,
+                        highContrast: _cartHighContrast,
+                        onHoleSelected: (hole) =>
+                            setState(() => _cartSelectedHole = hole),
+                        onPlusStroke: _cartPlusStroke,
+                        onPenalty: _cartPenalty,
+                        onMulligan: _cartMulligan,
+                        onGimme: _cartGimme,
+                        onHighContrastChanged: _persistHighContrast,
+                      ),
+                    if (_viewMode == ScorecardViewMode.classic)
+                      _NineGrid(
                       title: 'FRONT 9',
                       startHole: 1,
                       holeRow: _holeRow,
                       unplayedPar: _unplayedPar,
-                      onHoleTap: _editHole,
-                    ),
-                    if (_holesOnCard > 9) ...[
+                        onHoleTap: _editHole,
+                      ),
+                    if (_viewMode == ScorecardViewMode.classic &&
+                        _holesOnCard > 9) ...[
                       const SizedBox(height: 16),
                       _NineGrid(
                         title: 'BACK 9',

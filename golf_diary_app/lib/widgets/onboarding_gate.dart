@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../screens/home_shell.dart';
 import '../models/golfer_profile.dart';
+import '../screens/home_shell.dart';
 import '../screens/onboarding_starter_wizard.dart';
+import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 
 /// Shows [OnboardingStarterWizard] until the golfer completes or defers.
@@ -17,6 +18,7 @@ class _OnboardingGateState extends State<OnboardingGate> {
   bool _loading = true;
   bool _showShell = false;
   GolferProfile _profile = const GolferProfile();
+  final GolferProfileStore _profileStore = GolferProfileStore();
 
   @override
   void initState() {
@@ -26,6 +28,9 @@ class _OnboardingGateState extends State<OnboardingGate> {
 
   Future<void> _refresh() async {
     final profile = await LocalDatabaseService.instance.getGolferProfile();
+    if (profile.hasCompletedOnboarding) {
+      await _profileStore.load();
+    }
     if (!mounted) return;
     setState(() {
       _profile = profile;
@@ -35,6 +40,7 @@ class _OnboardingGateState extends State<OnboardingGate> {
   }
 
   void _enterShell() {
+    _profileStore.load();
     setState(() => _showShell = true);
   }
 
@@ -46,7 +52,10 @@ class _OnboardingGateState extends State<OnboardingGate> {
       );
     }
     if (_showShell) {
-      return const HomeShell();
+      return GolferProfileScope(
+        store: _profileStore,
+        child: const HomeShell(),
+      );
     }
     return OnboardingStarterWizard(
       initialProfile: _profile,

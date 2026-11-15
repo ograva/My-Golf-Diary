@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/app_check_config.dart';
 import 'package:golf_diary_app/main.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
+import 'package:golf_diary_app/models/golfer_profile.dart';
 import 'package:golf_diary_app/screens/range_drill_screen.dart';
 import 'package:golf_diary_app/services/diary_model.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
@@ -275,11 +276,21 @@ void main() {
     expect(
         find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);
 
+    await tester.runAsync(() async {
+      await LocalDatabaseService.instance.saveGolferProfile(
+        const GolferProfile(onboardingCompleted: 1),
+      );
+    });
     await tester.pumpWidget(
         MaterialApp(theme: buildGolfTheme(), home: const GolfDiaryApp()));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    for (var i = 0; i < 40; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (find.byKey(const ValueKey('shell-nav-bar')).evaluate().isNotEmpty) {
+        break;
+      }
+    }
     expect(find.byKey(const ValueKey('shell-tab-range')), findsOneWidget);
     expect(
         find.byKey(const ValueKey('diary-evaluation-log-btn')), findsNothing);

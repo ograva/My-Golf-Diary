@@ -105,6 +105,7 @@ On the range, players often hit a **block** (e.g. ten balls) then want **min / m
 | Logging cadence at cart/bag | M | M | Keep **On Course** as hub; minimize taps; validate in usability tests |
 | Fairway totals vs manual scorecard | M | M | PRD defines source of truth; Architecture documents rules |
 | Sync & privacy | L | H | Default anonymous/local user until auth; rules TBD |
+| V2 cart / caddy / club ops scope | M | M | **Pilot at Club Intramuros Golf Course** before generalizing PH clubs; keep local-first and anonymous auth until MGDV-6 tournament enrollment |
 
 **Open (for PRD):** yards vs meters; iOS location copy; whether drill stats **replace** or **blend** club aggregates; presentation of **mulligans** vs “official” score.
 

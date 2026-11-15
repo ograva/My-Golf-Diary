@@ -2,7 +2,24 @@
 
 Index only. Shard bodies live under `docs/shards/`.
 
-Checked against the working tree on 2026-11-11, after the range session log and swing diary shipped.
+Checked against the working tree on 2026-11-15, after V2 product decisions (MGDV epics locked).
+
+## V2 program epics (MGDV)
+
+Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-11-16). Implementation shards use prefix **`MGDV`** under `docs/shards/MGDV/`. Ship order: **MGDV-2** first, then parallel **MGDV-3** / **MGDV-4** where design allows.
+
+| Epic | One-line outcome | Depends on | Pilot / notes |
+| :--- | :--- | :--- | :--- |
+| **MGDV-2** | Onboarding wizard, skill-tier profile, warmer Bag/Range copy & progressive disclosure | — | Diary chat area = MGDV-205 (optional MGDV-2b) |
+| **MGDV-3** | Putting & approach drills in seed, sheet categories, putter logging (yards in DB) | MGDV-2 | — |
+| **MGDV-4** | **Cart terminal** as default on-course layout; score-first, large targets | SCOR/CRSE stable | **Intramuros Club** — mapped 18-hole validation |
+| **MGDV-5** | Caddy pairing v1: Wi‑Fi/LAN session, multi-golfer cart scoring, accept workflow | MGDV-4 | **Intramuros Club** — PH caddy norms |
+| **MGDV-6** | Club & tournament: attestation, events, leaderboard phases (Gscore-class) | MGDV-5 optional; enrolled auth | **Intramuros Club** first rollout |
+| **MGDV-7** | Barefoot / no-glove practice tab | Local stroke **video storage** spike | Blocked until storage architecture decided |
+
+---
+
+## V1 shards (shipped or in flight)
 
 | Shard ID | Title | Module | Priority | Status | Complexity | Story Ref | File |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -39,6 +56,15 @@ RNGE-025 and RNGE-026 are done. The database is version 7. A visit note stays pu
 
 RNGE-022, RNGE-023, and RNGE-024 are done. The Range header opens an opt-in swing diary. Summarize today and follow-ups go through `FirebaseAI.agentPlatform()` when Firebase is available, and the reply is stored in `swing_diary_messages` and `range_evaluations`. Past about 250,000 tokens the oldest notes fold into a periodic summary. The evaluation log opens from inside the diary.
 
-Next to build:
+Next to build (v1):
 
 - CRSE-022: the hole map (`CRSE-006`).
+
+Next to build (V2 — MGDV-2):
+
+| Shard ID | Title | Module | Priority | Status | Complexity | Story Ref | File |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| MGDV-201 | Onboarding starter wizard | MGDV | High | Not Started | M | MGDV-2 | [MGDV-201](../shards/MGDV/MGDV-201-onboarding-starter-wizard.md) |
+| MGDV-202 | Golfer profile & skill tier | MGDV | High | Not Started | S | MGDV-2 | [MGDV-202](../shards/MGDV/MGDV-202-golfer-profile-skill-tier.md) |
+| MGDV-203 | Range & Bag progressive disclosure | BAG + RNGE | High | Not Started | M | MGDV-2 | [MGDV-203](../shards/MGDV/MGDV-203-range-bag-progressive-disclosure.md) |
+| MGDV-205 | Swing diary chat area | RNGE + CRSE + SCOR | Medium | Not Started | L | MGDV-2b, RNGE-004 | [MGDV-205](../shards/MGDV/MGDV-205-swing-diary-chat-area.md) |

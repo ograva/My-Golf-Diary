@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../data/ph_golf_catalog.dart';
+import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
+import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/diary_launcher.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
-  const ScorecardScreen({super.key});
+  const ScorecardScreen({super.key, this.diary});
+
+  /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
+  final DiaryModel? diary;
 
   @override
   State<ScorecardScreen> createState() => ScorecardScreenState();
@@ -133,7 +139,16 @@ class ScorecardScreenState extends State<ScorecardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Scorecard'), actions: const [SyncCloudButton()]),
+        title: const Text('Scorecard'),
+        actions: [
+          DiaryEntryButton(
+            entryKey: 'diary-entry-scorecard',
+            diary: widget.diary,
+            entrySource: DiaryContextSource.scorecard,
+          ),
+          const SyncCloudButton(),
+        ],
+      ),
       body: _loading
           ? const Center(
               child:

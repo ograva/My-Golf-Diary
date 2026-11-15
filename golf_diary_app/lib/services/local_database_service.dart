@@ -49,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 10,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -94,6 +94,13 @@ class LocalDatabaseService {
     }
     if (oldVersion < 10) {
       await _upgradeGolferProfileYardageDisplay(db);
+    }
+    if (oldVersion < 11) {
+      await _createDiaryContextNotesTable(db);
+    }
+    if (oldVersion < 12) {
+      await _createPracticeDrillsTable(db);
+      await _seedPracticeDrills(db);
     }
   }
 
@@ -1265,7 +1272,24 @@ class LocalDatabaseService {
     ''');
   }
 
+  Future<void> _createDiaryContextNotesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS diary_context_notes (
+        id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        content TEXT NOT NULL,
+        context_date TEXT NOT NULL,
+        round_id TEXT,
+        timestamp INTEGER NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
   Future<void> _createDiaryTables(Database db) async {
+    await _createDiaryContextNotesTable(db);
     await db.execute('''
       CREATE TABLE IF NOT EXISTS swing_diary_messages (
         id TEXT PRIMARY KEY,

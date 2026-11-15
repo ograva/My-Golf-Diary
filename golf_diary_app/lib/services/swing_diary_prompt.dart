@@ -1,3 +1,4 @@
+import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/golfer_profile.dart';
 import '../models/range_session.dart';
@@ -139,6 +140,7 @@ class DiaryPromptInput {
     required this.sessions,
     required this.turns,
     required this.tallies,
+    this.contextNotes = const [],
     this.clubs = const [],
     this.profile = const GolferProfile(),
     this.frequentVenues = const [],
@@ -153,6 +155,7 @@ class DiaryPromptInput {
   final List<RangeSession> sessions;
   final List<DiaryTurn> turns;
   final List<ClubTally> tallies;
+  final List<DiaryContextNote> contextNotes;
   final List<Club> clubs;
   final GolferProfile profile;
   final List<String> frequentVenues;
@@ -347,11 +350,23 @@ String _compose(
         .toList(),
     todaySessions,
   );
-  if (todaySessions.isEmpty && todayDrills.isEmpty) {
+  final todayNotes = input.contextNotes
+      .where((note) => note.contextDate == _day(input.now.millisecondsSinceEpoch))
+      .toList();
+  if (todaySessions.isEmpty && todayDrills.isEmpty && todayNotes.isEmpty) {
     buffer.writeln('No sessions or drills logged today yet.');
   } else {
     _writeSessions(buffer, todaySessions);
     _writeDrills(buffer, todayDrills);
+    _writeContextNotes(buffer, todayNotes);
+  }
+
+  final earlierNotes = input.contextNotes
+      .where((note) => note.contextDate != _day(input.now.millisecondsSinceEpoch))
+      .toList();
+  if (earlierNotes.isNotEmpty) {
+    buffer.writeln('\nDiary notes (on-course, scorecard, and other tabs):');
+    _writeContextNotes(buffer, earlierNotes);
   }
 
   buffer.writeln('\nLatest turns:');
@@ -397,6 +412,13 @@ void _writeDrills(StringBuffer buffer, List<RangeDrillSummary> drills) {
     buffer.writeln(
         '- ${_day(drill.timestamp)}$venue | ${entry.clubName} (${drill.shotCount} shots): '
         'min ${drill.minYards.round()} / avg ${drill.avgYards.round()} / max ${drill.maxYards.round()} yd (spread $spread yd) | cue: $cue');
+  }
+}
+
+void _writeContextNotes(StringBuffer buffer, List<DiaryContextNote> notes) {
+  for (final note in notes) {
+    buffer.writeln(
+        '- ${note.contextDate} [${note.source.promptLabel}]: ${note.content.trim()}');
   }
 }
 

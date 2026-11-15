@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/models/diary_context_note.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/models/golfer_profile.dart';
 import 'package:golf_diary_app/models/range_session.dart';
@@ -250,5 +251,39 @@ void main() {
     expect(again.summary, isNull);
     expect(again.prompt, contains('Previous brief fact: held the face'));
     expect(again.prompt, contains('TODAY CUE'));
+  });
+
+  test('on-course and scorecard diary notes appear in the composed prompt', () {
+    final now = DateTime(2026, 11, 11, 16);
+    final plan = planDiaryPrompt(DiaryPromptInput(
+      now: now,
+      drills: const [],
+      sessions: const [],
+      turns: const [],
+      tallies: const [],
+      contextNotes: [
+        DiaryContextNote(
+          id: 'n1',
+          source: DiaryContextSource.onCourse,
+          content: 'Hamstrings tight on the turn.',
+          contextDate: '2026-11-11',
+          timestamp: now.millisecondsSinceEpoch,
+        ),
+        DiaryContextNote(
+          id: 'n2',
+          source: DiaryContextSource.scorecard,
+          content: 'Putting felt calmer on the back nine.',
+          contextDate: '2026-11-10',
+          timestamp: now.subtract(const Duration(days: 1)).millisecondsSinceEpoch,
+        ),
+      ],
+      question: 'How did I feel?',
+    ));
+    expect(plan.prompt, contains('[On course]: Hamstrings tight on the turn.'));
+    expect(
+      plan.prompt,
+      contains('[Scorecard]: Putting felt calmer on the back nine.'),
+    );
+    expect(plan.prompt, contains('Diary notes (on-course, scorecard, and other tabs):'));
   });
 }

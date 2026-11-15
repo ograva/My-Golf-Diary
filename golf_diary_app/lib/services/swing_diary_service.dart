@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../models/diary_context_note.dart';
 import 'local_database_service.dart';
 import 'swing_diary_prompt.dart';
 
@@ -105,7 +106,9 @@ class SwingDiaryService {
         .toList();
   }
 
-  Future<bool> hasDrillToday({DateTime? now}) async {
+  Future<bool> hasDrillToday({DateTime? now}) async => hasDiaryActivityToday(now: now);
+
+  Future<bool> hasDiaryActivityToday({DateTime? now}) async {
     final clock = now ?? DateTime.now();
     final start =
         DateTime(clock.year, clock.month, clock.day).millisecondsSinceEpoch;
@@ -126,7 +129,96 @@ class SwingDiaryService {
       whereArgs: [start, end],
       limit: 1,
     );
-    return sessions.isNotEmpty;
+    if (sessions.isNotEmpty) return true;
+    final shots = await db.query(
+      'shots',
+      columns: ['id'],
+      where: 'deleted = 0 AND timestamp >= ? AND timestamp < ?',
+      whereArgs: [start, end],
+      limit: 1,
+    );
+    if (shots.isNotEmpty) return true;
+    final notes = await db.query(
+      'diary_context_notes',
+      columns: ['id'],
+      where: 'deleted = 0 AND timestamp >= ? AND timestamp < ?',
+      whereArgs: [start, end],
+      limit: 1,
+    );
+    return notes.isNotEmpty;
+  }
+
+  Future<List<DiaryContextNote>> listContextNotes({int? sinceMs}) async {
+    final db = await _db;
+    final rows = sinceMs == null
+        ? await db.query(
+            'diary_context_notes',
+            where: 'deleted = 0',
+            orderBy: 'timestamp ASC',
+          )
+        : await db.query(
+            'diary_context_notes',
+            where: 'deleted = 0 AND timestamp >= ?',
+            whereArgs: [sinceMs],
+            orderBy: 'timestamp ASC',
+          );
+    return rows
+        .map(
+          (row) => DiaryContextNote(
+            id: row['id'] as String,
+            source: DiaryContextSourceLabels.fromStorage(row['source'] as String),
+            content: row['content'] as String,
+            contextDate: row['context_date'] as String,
+            timestamp: row['timestamp'] as int,
+            roundId: row['round_id'] as String?,
+          ),
+        )
+        .toList();
+  }
+
+  Future<DiaryMessage> appendContextNote({
+    required String content,
+    required DiaryContextSource source,
+    String? roundId,
+    DateTime? now,
+  }) async {
+    final text = content.trim();
+    if (text.isEmpty) {
+      throw ArgumentError('Note cannot be empty');
+    }
+    final clock = now ?? DateTime.now();
+    final db = await _db;
+    final noteId = 'dctx_${clock.microsecondsSinceEpoch}';
+    final messageId = 'dmsg_${clock.millisecondsSinceEpoch}';
+    final ms = clock.millisecondsSinceEpoch;
+    await db.transaction((txn) async {
+      await txn.insert('diary_context_notes', {
+        'id': noteId,
+        'source': source.storageValue,
+        'content': text,
+        'context_date': _ymd(clock),
+        'round_id': roundId,
+        'timestamp': ms,
+        'is_synced': 0,
+        'updated_at_ms': ms,
+        'deleted': 0,
+      });
+      await txn.insert('swing_diary_messages', {
+        'id': messageId,
+        'role': 'user',
+        'content': text,
+        'timestamp': ms,
+        'is_synced': 0,
+        'updated_at_ms': ms,
+        'deleted': 0,
+      });
+    });
+    return DiaryMessage(
+      id: messageId,
+      role: 'user',
+      content: text,
+      timestamp: ms,
+    );
   }
 
   /// Builds the next prompt and, only when it would pass [tokenCeiling],
@@ -145,6 +237,10 @@ class SwingDiaryService {
     final messages = await listMessages();
     final tallies = await _tallies(clock);
     final existing = await _latestBrief();
+    final windowStart = clock
+        .subtract(const Duration(days: kDiaryRecentWindowDays))
+        .millisecondsSinceEpoch;
+    final contextNotes = await listContextNotes(sinceMs: windowStart);
     final plan = planDiaryPrompt(DiaryPromptInput(
       now: clock,
       clubs: clubs,
@@ -156,6 +252,7 @@ class SwingDiaryService {
         for (final message in messages)
           DiaryTurn(role: message.role, content: message.content),
       ],
+      contextNotes: contextNotes,
       tallies: tallies,
       progressBrief: existing,
       question: question,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
+import 'package:golf_diary_app/models/golfer_profile.dart';
 import 'package:golf_diary_app/screens/clubs_screen.dart';
 import 'package:golf_diary_app/screens/range_drill_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
@@ -87,6 +88,12 @@ void main() {
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
     await tester.runAsync(() async {
+      await db.saveGolferProfile(
+        const GolferProfile(
+          yardageDisplayMode: YardageDisplayMode.full,
+          onboardingCompleted: 1,
+        ),
+      );
       await db.saveRangeDrill(RangeDrillLog(
         id: 'drill_driver',
         clubId: 'driver',

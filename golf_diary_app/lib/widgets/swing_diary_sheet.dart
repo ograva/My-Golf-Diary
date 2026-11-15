@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_check_config.dart';
+import '../models/diary_context_note.dart';
 import '../models/golfer_profile.dart';
 import '../services/diary_model.dart';
 import '../services/golfer_profile_service.dart';
@@ -14,10 +15,16 @@ import 'golfer_baseline_sheet.dart';
 /// Opt-in swing diary. The model is only called after Continue, and only
 /// when [diary] reports that Vertex is available.
 class SwingDiarySheet extends StatefulWidget {
-  const SwingDiarySheet({super.key, required this.diary, required this.store});
+  const SwingDiarySheet({
+    super.key,
+    required this.diary,
+    required this.store,
+    this.entrySource,
+  });
 
   final DiaryModel diary;
   final SwingDiaryService store;
+  final DiaryContextSource? entrySource;
 
   @override
   State<SwingDiarySheet> createState() => _SwingDiarySheetState();
@@ -54,6 +61,9 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   @override
   void initState() {
     super.initState();
+    _composer.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -101,6 +111,25 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   void _stopClock() {
     _ticker?.cancel();
     _ticker = null;
+  }
+
+  DiaryContextSource get _noteSource =>
+      widget.entrySource ?? DiaryContextSource.diary;
+
+  Future<void> _saveLocalNote() async {
+    final text = _composer.text.trim();
+    if (text.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.store.appendContextNote(
+        content: text,
+        source: _noteSource,
+      );
+      _composer.clear();
+      await _load();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _send(String text) async {
@@ -282,7 +311,9 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                             children: [
                               if (!_optedIn) ...[
                                 const Text(
-                                  'Range notes are sent to produce an evaluation of this session. No API key is stored on this phone.',
+                                  'When you evaluate or ask a question, Golf Diary may send your '
+                                  'range logs, on-course notes, scorecard reflections, club yardages, '
+                                  'and swing notes to Google Vertex AI. No API key is stored on this phone.',
                                 ),
                                 const SizedBox(height: 12),
                                 Wrap(
@@ -307,24 +338,23 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                 const Padding(
                                   padding: EdgeInsets.only(top: 12),
                                   child: Text(
-                                    'Your range log is still on this phone.',
+                                    'Your practice and round logs stay on this phone. '
+                                    'Connect to the internet to run Vertex AI evaluation.',
                                     key: ValueKey('diary-offline-copy'),
                                   ),
                                 ),
+                              const SizedBox(height: 12),
+                              for (final message in _messages)
+                                ListTile(
+                                  key: ValueKey('diary-message-${message.id}'),
+                                  title: Text(message.role == 'model'
+                                      ? 'Evaluation'
+                                      : 'You'),
+                                  subtitle: message.role == 'model'
+                                      ? DiaryMarkdownBody(data: message.content)
+                                      : Text(message.content),
+                                ),
                               if (_optedIn) ...[
-                                const SizedBox(height: 12),
-                                for (final message in _messages)
-                                  ListTile(
-                                    key:
-                                        ValueKey('diary-message-${message.id}'),
-                                    title: Text(message.role == 'model'
-                                        ? 'Evaluation'
-                                        : 'You'),
-                                    subtitle: message.role == 'model'
-                                        ? DiaryMarkdownBody(
-                                            data: message.content)
-                                        : Text(message.content),
-                                  ),
                                 if (_draft.isNotEmpty)
                                   ListTile(
                                     key: const ValueKey('diary-eval-draft'),
@@ -383,16 +413,26 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                       ),
                                     ],
                                   ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  key: const ValueKey('diary-composer-field'),
-                                  controller: _composer,
-                                  enabled: available && !_busy,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Ask about a session',
-                                    border: OutlineInputBorder(),
-                                  ),
+                              ],
+                              const SizedBox(height: 8),
+                              TextField(
+                                key: const ValueKey('diary-composer-field'),
+                                controller: _composer,
+                                enabled: !_busy,
+                                decoration: const InputDecoration(
+                                  hintText: 'How did your body feel?',
+                                  border: OutlineInputBorder(),
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              OutlinedButton(
+                                key: const ValueKey('diary-save-note-btn'),
+                                onPressed: !_busy && _composer.text.trim().isNotEmpty
+                                    ? _saveLocalNote
+                                    : null,
+                                child: const Text('Save note on this device'),
+                              ),
+                              if (_optedIn) ...[
                                 const SizedBox(height: 8),
                                 OutlinedButton(
                                   key: const ValueKey(

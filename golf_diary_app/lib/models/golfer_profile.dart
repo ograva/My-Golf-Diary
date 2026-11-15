@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'golf_models.dart';
+import 'scorecard_preferences.dart';
 
 /// Stored in [GolferProfile.skillTier]; drives copy density (MGDV-203).
 abstract final class GolferSkillTier {
@@ -110,6 +111,8 @@ class GolferProfile {
     this.yardageDisplayMode = YardageDisplayMode.defaultMode,
     this.onboardingCompleted = 0,
     this.bagNickname = '',
+    this.scorecardViewMode = ScorecardViewMode.defaultMode,
+    this.scorecardCartHighContrast = 0,
     this.isSynced = 0,
     this.updatedAtMs = 0,
   });
@@ -129,8 +132,12 @@ class GolferProfile {
   final String yardageDisplayMode;
   final int onboardingCompleted;
   final String bagNickname;
+  final String scorecardViewMode;
+  final int scorecardCartHighContrast;
   final int isSynced;
   final int updatedAtMs;
+
+  bool get scorecardCartHighContrastEnabled => scorecardCartHighContrast == 1;
 
   bool get hasCompletedOnboarding => onboardingCompleted == 1;
 
@@ -160,6 +167,8 @@ class GolferProfile {
     String? yardageDisplayMode,
     int? onboardingCompleted,
     String? bagNickname,
+    String? scorecardViewMode,
+    int? scorecardCartHighContrast,
     int? isSynced,
     int? updatedAtMs,
   }) {
@@ -178,6 +187,9 @@ class GolferProfile {
       yardageDisplayMode: yardageDisplayMode ?? this.yardageDisplayMode,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       bagNickname: bagNickname ?? this.bagNickname,
+      scorecardViewMode: scorecardViewMode ?? this.scorecardViewMode,
+      scorecardCartHighContrast:
+          scorecardCartHighContrast ?? this.scorecardCartHighContrast,
       isSynced: isSynced ?? this.isSynced,
       updatedAtMs: updatedAtMs ?? this.updatedAtMs,
     );
@@ -198,6 +210,8 @@ class GolferProfile {
         'yardage_display_mode': yardageDisplayMode,
         'onboarding_completed': onboardingCompleted,
         'bag_nickname': bagNickname,
+        'scorecard_view_mode': scorecardViewMode,
+        'scorecard_cart_high_contrast': scorecardCartHighContrast,
         'is_synced': isSynced,
         'updated_at_ms': updatedAtMs,
         'deleted': 0,
@@ -223,6 +237,10 @@ class GolferProfile {
           YardageDisplayMode.defaultMode,
       onboardingCompleted: map['onboarding_completed'] as int? ?? 0,
       bagNickname: map['bag_nickname'] as String? ?? '',
+      scorecardViewMode: map['scorecard_view_mode'] as String? ??
+          ScorecardViewMode.defaultMode,
+      scorecardCartHighContrast:
+          map['scorecard_cart_high_contrast'] as int? ?? 0,
       isSynced: map['is_synced'] as int? ?? 0,
       updatedAtMs: map['updated_at_ms'] as int? ?? 0,
     );

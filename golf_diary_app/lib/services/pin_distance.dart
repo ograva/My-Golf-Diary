@@ -24,6 +24,18 @@ int yardsToHole(HoleCoordinates hole,
   );
 }
 
+/// Published tee-to-green yardage from the survey catalog, when available.
+int? catalogTeeToGreenYards(String courseName, int holeNumber) {
+  final hole = holeCoordinates(courseName, holeNumber);
+  if (hole == null) return null;
+  return yardsToPin(
+    fromLat: hole.teeLat,
+    fromLon: hole.teeLon,
+    greenLat: hole.greenLat,
+    greenLon: hole.greenLon,
+  );
+}
+
 class PinFix {
   const PinFix({required this.latitude, required this.longitude});
 

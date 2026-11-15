@@ -5,18 +5,24 @@ import 'package:geolocator/geolocator.dart';
 
 import '../data/ph_golf_catalog.dart';
 import '../data/ph_golf_hole_coords.dart';
+import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
+import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
+import '../widgets/diary_launcher.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
-  const FairwayTrackerScreen({super.key, this.pinDistance});
+  const FairwayTrackerScreen({super.key, this.pinDistance, this.diary});
 
   /// When null, the screen uses [GeolocatorPinDistanceClient].
   final PinDistanceClient? pinDistance;
+
+  /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
+  final DiaryModel? diary;
 
   @override
   State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
@@ -396,6 +402,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       appBar: AppBar(
         title: const Text('On Course'),
         actions: [
+          DiaryEntryButton(
+            entryKey: 'diary-entry-on-course',
+            diary: widget.diary,
+            entrySource: DiaryContextSource.onCourse,
+          ),
           const SyncCloudButton(),
         ],
       ),

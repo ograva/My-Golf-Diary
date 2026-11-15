@@ -6,7 +6,7 @@
 | **Module** | RNGE + CRSE + SCOR (diary shell) |
 | **Story Ref** | MGDV-2b, RNGE-004 |
 | **Priority** | Medium |
-| **Status** | Not Started |
+| **Status** | In Review |
 | **Complexity** | L |
 | **Depends On** | MGDV-201, RNGE-022 (completed) |
 
@@ -26,9 +26,9 @@ UI is **conversation-first** (composer + thread), not a form grid. Default compo
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Opening diary from On Course finds prior Range messages. Opt-in dismiss still blocks model on all entry paths.
-- [ ] **Integration (if needed):** Fake model receives compiled session + appended on-course note in one prompt when user asks a follow-up.
-- [ ] **Keys:** `diary-entry-range`, `diary-entry-on-course`, `diary-entry-scorecard`, plus existing `range-swing-diary-btn`, `diary-composer-field`, `diary-send-btn`, `diary-message-{id}` from `Wireframe_SwingDiary.md`.
+- [x] **Unit/widget:** Opening diary from On Course finds prior Range messages. Opt-in dismiss still blocks model on all entry paths.
+- [x] **Integration (if needed):** Fake model receives compiled session + appended on-course note in one prompt when user asks a follow-up.
+- [x] **Keys:** `diary-entry-range`, `diary-entry-on-course`, `diary-entry-scorecard`, plus existing `range-swing-diary-btn`, `diary-composer-field`, `diary-send-btn`, `diary-message-{id}` from `Wireframe_SwingDiary.md`.
 
 ## Dev notes
 

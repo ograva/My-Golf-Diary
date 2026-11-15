@@ -7,7 +7,11 @@ import 'package:golf_diary_app/app_check_config.dart';
 import 'package:golf_diary_app/main.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/models/golfer_profile.dart';
+import 'package:golf_diary_app/models/diary_context_note.dart';
+import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/screens/range_drill_screen.dart';
+import 'package:golf_diary_app/screens/scorecard_screen.dart';
+import 'package:golf_diary_app/screens/home_shell.dart';
 import 'package:golf_diary_app/services/diary_model.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/services/swing_diary_service.dart';
@@ -297,7 +301,10 @@ void main() {
 
     await pumpRange(tester, model);
     await openDiary(tester);
-    expect(find.text('Your range log is still on this phone.'), findsOneWidget);
+    expect(
+      find.textContaining('stay on this phone'),
+      findsOneWidget,
+    );
     final send = tester
         .widget<ElevatedButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNull);
@@ -546,5 +553,100 @@ void main() {
         .runAsync(() => LocalDatabaseService.instance.getGolferProfile());
     expect(profile!.swingAnchors, '3:1 tempo from the cue');
     expect(profile.distilledThroughMs, greaterThan(0));
+  });
+
+  testWidgets('on-course entry shows the same thread as range', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    final store = SwingDiaryService();
+    await tester.runAsync(() => store.appendContextNote(
+          content: 'Range legs felt heavy.',
+          source: DiaryContextSource.range,
+        ));
+    final model = FakeDiaryModel();
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: FairwayTrackerScreen(diary: model),
+    ));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('diary-entry-on-course')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Range legs felt heavy.'), findsOneWidget);
+    Navigator.of(tester.element(find.byType(SwingDiarySheet))).pop();
+    await tester.pump();
+  });
+
+  testWidgets('opt-in dismiss on scorecard entry never calls the model',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    final model = FakeDiaryModel();
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: ScorecardScreen(diary: model),
+    ));
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('diary-entry-scorecard')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('diary-opt-in-dismiss')));
+    await tester.tap(find.byKey(const ValueKey('diary-opt-in-dismiss')));
+    await tester.pump();
+    expect(model.calls, 0);
+  });
+
+  testWidgets('on-course note is included when Vertex is asked from range',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final store = SwingDiaryService();
+    await tester.runAsync(() => store.appendContextNote(
+          content: 'Back nine felt loose.',
+          source: DiaryContextSource.onCourse,
+        ));
+    final model = FakeDiaryModel();
+    await pumpRange(tester, model);
+    await openDiary(tester);
+    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
+    await tester.ensureVisible(summarize);
+    await tester.tap(summarize);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(model.lastPrompt, contains('Back nine felt loose.'));
+  });
+
+  testWidgets('home shell keeps four tabs without a diary tab', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: const HomeShell(),
+    ));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('shell-nav-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-bag')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-range')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-oncourse')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-scorecard')), findsOneWidget);
+    expect(find.text('Diary'), findsNothing);
   });
 }

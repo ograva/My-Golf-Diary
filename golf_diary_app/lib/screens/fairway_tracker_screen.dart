@@ -11,6 +11,7 @@ import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
 import '../widgets/diary_launcher.dart';
+import '../widgets/caddy_invite_sheet.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
@@ -402,6 +403,20 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       appBar: AppBar(
         title: const Text('On Course'),
         actions: [
+          IconButton(
+            key: const ValueKey('on-course-invite-caddy'),
+            tooltip: 'Invite caddy',
+            onPressed: _roundId == null
+                ? null
+                : () async {
+                    await showCaddyInviteSheet(
+                      context,
+                      roundId: _roundId!,
+                      courseName: _appliedCourseName,
+                    );
+                  },
+            icon: const Icon(Icons.qr_code_2),
+          ),
           DiaryEntryButton(
             entryKey: 'diary-entry-on-course',
             diary: widget.diary,

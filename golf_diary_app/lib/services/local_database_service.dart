@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../data/ph_golf_catalog.dart';
 import '../data/practice_drill_seed.dart';
+import '../models/caddy_session.dart';
 import '../models/golf_models.dart';
 import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
@@ -49,7 +50,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -104,6 +105,9 @@ class LocalDatabaseService {
     }
     if (oldVersion < 13) {
       await _upgradeGolferProfileScorecardView(db);
+    }
+    if (oldVersion < 14) {
+      await _createCaddyTables(db);
     }
   }
 
@@ -218,6 +222,7 @@ class LocalDatabaseService {
     await _createRangeSessionsTable(db);
     await _createDiaryTables(db);
     await _createGolferProfileTable(db);
+    await _createCaddyTables(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -1184,6 +1189,194 @@ class LocalDatabaseService {
     await db.insert('shots', _newRow(newShot.toMap()),
         conflictAlgorithm: ConflictAlgorithm.replace);
     await syncStrokeCountFromShots(roundId, holeNumber);
+  }
+
+  /// Caddy stroke without GPS — inserts audit shot then derives [round_scores].
+  Future<void> recordCaddyStroke({
+    required String roundId,
+    required int holeNumber,
+    required String courseName,
+    String clubId = 'caddy-log',
+    String lieType = 'fairway',
+  }) async {
+  await ensureHoleRow(
+      roundId: roundId,
+      courseName: courseName,
+      holeNumber: holeNumber,
+    );
+    final db = await database;
+    final prevShotMaps = await db.query(
+      'shots',
+      where: 'round_id = ? AND hole_number = ? AND deleted = 0',
+      whereArgs: [roundId, holeNumber],
+      orderBy: 'stroke_number DESC',
+      limit: 1,
+    );
+    var strokeNumber = 1;
+    if (prevShotMaps.isNotEmpty) {
+      strokeNumber = (prevShotMaps.first['stroke_number'] as int) + 1;
+    }
+    final newShot = ShotRecord(
+      id: 'caddy_shot_${_nowMs()}',
+      roundId: roundId,
+      holeNumber: holeNumber,
+      strokeNumber: strokeNumber,
+      clubId: clubId,
+      lieType: lieType,
+      startLat: 0,
+      startLon: 0,
+      distanceYards: 0,
+      timestamp: _nowMs(),
+    );
+    await db.insert('shots', _newRow(newShot.toMap()),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await syncStrokeCountFromShots(roundId, holeNumber);
+  }
+
+  Future<void> _createCaddyTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS caddy_sessions (
+        channel_id TEXT PRIMARY KEY,
+        round_id TEXT NOT NULL,
+        request_token TEXT NOT NULL,
+        status TEXT NOT NULL,
+        role TEXT NOT NULL,
+        golfer_uid TEXT,
+        caddy_uid TEXT,
+        course_name TEXT NOT NULL DEFAULT '',
+        created_at_ms INTEGER NOT NULL DEFAULT 0,
+        redeemed_at_ms INTEGER NOT NULL DEFAULT 0,
+        last_event_ms INTEGER NOT NULL DEFAULT 0,
+        expires_at_ms INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS caddy_pending_events (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> upsertCaddySession(CaddySessionRecord session) async {
+    final db = await database;
+    await db.insert(
+      'caddy_sessions',
+      {
+        ...session.toMap(),
+        'updated_at_ms': _nowMs(),
+        'deleted': 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<CaddySessionRecord?> getCaddySession(String channelId) async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_sessions',
+      where: 'channel_id = ? AND deleted = 0',
+      whereArgs: [channelId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return CaddySessionRecord.fromMap(rows.first);
+  }
+
+  Future<CaddySessionRecord?> getActiveCaddySessionForGolfer() async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_sessions',
+      where:
+          "role = 'golfer' AND deleted = 0 AND status IN ('pending', 'active')",
+      orderBy: 'updated_at_ms DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return CaddySessionRecord.fromMap(rows.first);
+  }
+
+  Future<CaddySessionRecord?> getActiveCaddySessionForCaddy() async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_sessions',
+      where: "role = 'caddy' AND deleted = 0 AND status = 'active'",
+      orderBy: 'updated_at_ms DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return CaddySessionRecord.fromMap(rows.first);
+  }
+
+  Future<void> updateCaddySessionStatus(
+    String channelId,
+    CaddySessionStatus status,
+  ) async {
+    final db = await database;
+    await db.update(
+      'caddy_sessions',
+      {
+        'status': status.wire,
+        'updated_at_ms': _nowMs(),
+      },
+      where: 'channel_id = ?',
+      whereArgs: [channelId],
+    );
+  }
+
+  Future<void> setCaddySessionLastEventMs(String channelId, int ms) async {
+    final db = await database;
+    await db.update(
+      'caddy_sessions',
+      {'last_event_ms': ms, 'updated_at_ms': _nowMs()},
+      where: 'channel_id = ?',
+      whereArgs: [channelId],
+    );
+  }
+
+  Future<void> queueCaddyPendingEvent(
+    String channelId,
+    CaddyRoundEvent event,
+  ) async {
+    final db = await database;
+    await db.insert(
+      'caddy_pending_events',
+      {
+        'id': event.id,
+        'channel_id': channelId,
+        'payload_json': jsonEncode(event.toFirestore()),
+        'updated_at_ms': event.updatedAtMs,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<CaddyRoundEvent>> takeCaddyPendingEvents(String channelId) async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_pending_events',
+      where: 'channel_id = ?',
+      whereArgs: [channelId],
+      orderBy: 'updated_at_ms',
+    );
+    final events = <CaddyRoundEvent>[];
+    for (final row in rows) {
+      final decoded = jsonDecode(row['payload_json'] as String);
+      if (decoded is Map<String, dynamic>) {
+        events.add(CaddyRoundEvent.fromFirestore(
+            row['id'] as String, decoded));
+      }
+      await db.delete(
+        'caddy_pending_events',
+        where: 'id = ?',
+        whereArgs: [row['id']],
+      );
+    }
+    return events;
   }
 
   Future<List<Map<String, dynamic>>> getUnsynced(String table) async {

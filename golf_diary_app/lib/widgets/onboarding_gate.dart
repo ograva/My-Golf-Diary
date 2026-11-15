@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/golfer_profile.dart';
+import '../screens/caddy_pairing_gate.dart';
 import '../screens/home_shell.dart';
 import '../screens/onboarding_starter_wizard.dart';
+import '../services/caddy_launch_config.dart';
 import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 
@@ -17,12 +19,18 @@ class OnboardingGate extends StatefulWidget {
 class _OnboardingGateState extends State<OnboardingGate> {
   bool _loading = true;
   bool _showShell = false;
+  String? _caddyRequestToken;
   GolferProfile _profile = const GolferProfile();
   final GolferProfileStore _profileStore = GolferProfileStore();
 
   @override
   void initState() {
     super.initState();
+    _caddyRequestToken = CaddyLaunchConfig.currentPlatformLaunch()?.requestToken;
+    if (_caddyRequestToken != null) {
+      setState(() => _loading = false);
+      return;
+    }
     _refresh();
   }
 
@@ -46,6 +54,10 @@ class _OnboardingGateState extends State<OnboardingGate> {
 
   @override
   Widget build(BuildContext context) {
+    final caddyToken = _caddyRequestToken;
+    if (caddyToken != null) {
+      return CaddyPairingGate(requestToken: caddyToken);
+    }
     if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

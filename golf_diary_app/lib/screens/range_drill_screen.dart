@@ -17,7 +17,7 @@ import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/sync_cloud_button.dart';
+import '../widgets/account_avatar_app_bar_menu.dart';
 import '../range/range_drill_clubs.dart';
 import '../widgets/venue_name_field.dart';
 
@@ -393,7 +393,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
           GolferProfileAppBarMenu(
             onProfileChanged: widget.onProfileSettingsChanged,
           ),
-          const SyncCloudButton(),
+          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: SingleChildScrollView(

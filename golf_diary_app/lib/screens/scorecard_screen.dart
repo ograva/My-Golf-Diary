@@ -13,7 +13,7 @@ import '../widgets/diary_launcher.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
 import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/sync_cloud_button.dart';
+import '../widgets/account_avatar_app_bar_menu.dart';
 import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
@@ -301,7 +301,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
           GolferProfileAppBarMenu(
             onProfileChanged: widget.onProfileSettingsChanged,
           ),
-          const SyncCloudButton(),
+          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: _loading

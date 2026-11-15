@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pwa/pwa_update_client.dart';
+import 'services/account_auth_controller.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/desktop_database.dart';
 import 'theme/app_theme.dart';
@@ -11,6 +12,7 @@ Future<void> main() async {
   await preparePwaSession();
   await initDesktopDatabase();
   await initializeFirebase();
+  AccountAuthController.instance.startListening();
   runApp(const GolfDiaryApp());
 }
 

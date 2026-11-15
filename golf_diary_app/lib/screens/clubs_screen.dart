@@ -8,7 +8,7 @@ import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/sync_cloud_button.dart';
+import '../widgets/account_avatar_app_bar_menu.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key, this.onProfileSettingsChanged});
@@ -177,7 +177,7 @@ class ClubsScreenState extends State<ClubsScreen> {
           GolferProfileAppBarMenu(
             onProfileChanged: widget.onProfileSettingsChanged,
           ),
-          const SyncCloudButton(),
+          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: Column(

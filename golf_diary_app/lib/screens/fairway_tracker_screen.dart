@@ -13,7 +13,7 @@ import '../services/pin_distance.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/caddy_invite_sheet.dart';
 import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/sync_cloud_button.dart';
+import '../widgets/account_avatar_app_bar_menu.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
@@ -432,7 +432,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           GolferProfileAppBarMenu(
             onProfileChanged: widget.onProfileSettingsChanged,
           ),
-          const SyncCloudButton(),
+          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: SingleChildScrollView(

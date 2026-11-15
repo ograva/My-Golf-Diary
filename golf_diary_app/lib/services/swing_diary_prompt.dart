@@ -69,6 +69,14 @@ String buildDiarySystemInstruction({
     ..writeln(kCoachMethodologyPrompt.trim())
     ..writeln()
     ..writeln('# Golfer Profile & Established Baseline')
+    ..writeln(
+        'Age: ${profile.age ?? 'Not recorded yet.'}')
+    ..writeln(
+        'Years playing: ${profile.yearsPlaying ?? 'Not recorded yet.'}')
+    ..writeln(
+        'Gender (personalization only): ${_recorded(profile.gender.isEmpty ? '' : GolferGender.label(profile.gender))}')
+    ..writeln(
+        'Skill tier: ${profile.skillTier.isEmpty ? 'Not recorded yet.' : GolferSkillTier.label(profile.skillTier)}')
     ..writeln('Equipment notes: ${_recorded(profile.equipmentNotes)}')
     ..writeln('Swing anchors: ${_recorded(profile.swingAnchors)}')
     ..writeln('Physical constraints: ${_recorded(profile.physicalConstraints)}')

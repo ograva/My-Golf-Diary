@@ -2,6 +2,50 @@ import 'dart:convert';
 
 import 'golf_models.dart';
 
+/// Stored in [GolferProfile.skillTier]; drives copy density (MGDV-203).
+abstract final class GolferSkillTier {
+  static const beginner = 'beginner';
+  static const amateur = 'amateur';
+  static const seasonedPro = 'seasoned_pro';
+
+  static const List<String> values = [beginner, amateur, seasonedPro];
+
+  static String label(String tier) => switch (tier) {
+        beginner => 'Beginner',
+        amateur => 'Amateur',
+        seasonedPro => 'Seasoned pro',
+        _ => tier,
+      };
+
+  static String blurb(String tier) => switch (tier) {
+        beginner =>
+          'New to golf or still building a repeatable swing and bag feel.',
+        amateur =>
+          'Comfortable on the course; you log practice and want sharper feedback.',
+        seasonedPro =>
+          'Experienced player; you want concise, numbers-forward coaching.',
+        _ => '',
+      };
+}
+
+/// Gender buckets for AI personalization only — never for UI string swaps.
+abstract final class GolferGender {
+  static const female = 'female';
+  static const male = 'male';
+  static const nonBinary = 'non_binary';
+  static const preferNotToSay = 'prefer_not_to_say';
+
+  static const List<String> values = [female, male, nonBinary, preferNotToSay];
+
+  static String label(String value) => switch (value) {
+        female => 'Female',
+        male => 'Male',
+        nonBinary => 'Non-binary',
+        preferNotToSay => 'Prefer not to say',
+        _ => value,
+      };
+}
+
 /// Durable coaching baseline for one local golfer. A single SQLite row.
 class GolferProfile {
   const GolferProfile({
@@ -11,6 +55,12 @@ class GolferProfile {
     this.trainingEnvironment = '',
     this.dismissedPrompts = const [],
     this.distilledThroughMs = 0,
+    this.age,
+    this.yearsPlaying,
+    this.gender = '',
+    this.skillTier = '',
+    this.onboardingCompleted = 0,
+    this.bagNickname = '',
     this.isSynced = 0,
     this.updatedAtMs = 0,
   });
@@ -23,8 +73,16 @@ class GolferProfile {
   final String trainingEnvironment;
   final List<String> dismissedPrompts;
   final int distilledThroughMs;
+  final int? age;
+  final int? yearsPlaying;
+  final String gender;
+  final String skillTier;
+  final int onboardingCompleted;
+  final String bagNickname;
   final int isSynced;
   final int updatedAtMs;
+
+  bool get hasCompletedOnboarding => onboardingCompleted == 1;
 
   int get filledCount => [
         equipmentNotes,
@@ -43,6 +101,14 @@ class GolferProfile {
     String? trainingEnvironment,
     List<String>? dismissedPrompts,
     int? distilledThroughMs,
+    int? age,
+    bool clearAge = false,
+    int? yearsPlaying,
+    bool clearYearsPlaying = false,
+    String? gender,
+    String? skillTier,
+    int? onboardingCompleted,
+    String? bagNickname,
     int? isSynced,
     int? updatedAtMs,
   }) {
@@ -53,6 +119,13 @@ class GolferProfile {
       trainingEnvironment: trainingEnvironment ?? this.trainingEnvironment,
       dismissedPrompts: dismissedPrompts ?? this.dismissedPrompts,
       distilledThroughMs: distilledThroughMs ?? this.distilledThroughMs,
+      age: clearAge ? null : (age ?? this.age),
+      yearsPlaying:
+          clearYearsPlaying ? null : (yearsPlaying ?? this.yearsPlaying),
+      gender: gender ?? this.gender,
+      skillTier: skillTier ?? this.skillTier,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      bagNickname: bagNickname ?? this.bagNickname,
       isSynced: isSynced ?? this.isSynced,
       updatedAtMs: updatedAtMs ?? this.updatedAtMs,
     );
@@ -66,6 +139,12 @@ class GolferProfile {
         'training_environment': trainingEnvironment,
         'dismissed_prompts_json': jsonEncode(dismissedPrompts),
         'distilled_through_ms': distilledThroughMs,
+        'age': age,
+        'years_playing': yearsPlaying,
+        'gender': gender,
+        'skill_tier': skillTier,
+        'onboarding_completed': onboardingCompleted,
+        'bag_nickname': bagNickname,
         'is_synced': isSynced,
         'updated_at_ms': updatedAtMs,
         'deleted': 0,
@@ -83,10 +162,46 @@ class GolferProfile {
           ? [for (final item in decoded) item.toString()]
           : const [],
       distilledThroughMs: map['distilled_through_ms'] as int? ?? 0,
+      age: map['age'] as int?,
+      yearsPlaying: map['years_playing'] as int?,
+      gender: map['gender'] as String? ?? '',
+      skillTier: map['skill_tier'] as String? ?? '',
+      onboardingCompleted: map['onboarding_completed'] as int? ?? 0,
+      bagNickname: map['bag_nickname'] as String? ?? '',
       isSynced: map['is_synced'] as int? ?? 0,
       updatedAtMs: map['updated_at_ms'] as int? ?? 0,
     );
   }
+}
+
+/// Validates onboarding age (8–99). Empty input is invalid for Complete.
+String? validateOnboardingAge(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return 'Enter your age';
+  final value = int.tryParse(trimmed);
+  if (value == null) return 'Use a whole number';
+  if (value < 8 || value > 99) return 'Use an age between 8 and 99';
+  return null;
+}
+
+/// Validates years playing (0–80). Empty input is invalid for Complete.
+String? validateOnboardingYears(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return 'Enter years playing';
+  final value = int.tryParse(trimmed);
+  if (value == null) return 'Use a whole number';
+  if (value < 0 || value > 80) return 'Use a value between 0 and 80';
+  return null;
+}
+
+int? parseOnboardingAge(String text) {
+  return validateOnboardingAge(text) == null ? int.parse(text.trim()) : null;
+}
+
+int? parseOnboardingYears(String text) {
+  return validateOnboardingYears(text) == null
+      ? int.parse(text.trim())
+      : null;
 }
 
 /// Optional starter the golfer can drop into a note or the diary composer.

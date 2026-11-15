@@ -44,13 +44,13 @@ Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA.
 
 ### V2 pilot & epics (additive; v1 scope unchanged)
 
-**Pilot club:** **Club Intramuros Golf Course** (`ph-crse-club-intramuros` in [`PH_Golf_Venues.md`](./PH_Golf_Venues.md)) — first validation for cart terminal (MGDV-4), caddy pairing (MGDV-5), and club/tournament flows (MGDV-6). Mapped hole coordinates exist in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md).
+**Pilot club:** **Club Intramuros Golf Course** (`ph-crse-club-intramuros` in [`PH_Golf_Venues.md`](./PH_Golf_Venues.md)) — first validation for Scorecard cart view (MGDV-4), caddy pairing (MGDV-5), and club/tournament flows (MGDV-6). Mapped hole coordinates exist in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md).
 
 | Epic | Summary | PRD touch |
 | :--- | :--- | :--- |
 | **MGDV-2** | Starter wizard (age, years playing, gender); **skill tier** (beginner / amateur / seasoned pro) for UI density; Bag/Range progressive disclosure; optional cross-tab swing diary chat | New stories below; shards MGDV-201–203, MGDV-205 |
 | **MGDV-3** | Putting & approach drills; putter on Range when drill category requires it; distances in **yards** | Extends RNGE-003 seed |
-| **MGDV-4–7** | Cart default, caddy LAN pairing, tournament/attestation, barefoot tab | See Project store V2 roadmap; shards when epic opens |
+| **MGDV-4–7** | Scorecard cart view, caddy QR PWA pairing, tournament/attestation, barefoot tab | See Project store V2 roadmap; shards when epic opens |
 
 **MGDV-2-001 — Onboarding & skill tier**  
 As **any new golfer**, I want a **short wizard** that records my experience and **skill tier** so the app shows **simpler yardages and friendlier copy** by default.  

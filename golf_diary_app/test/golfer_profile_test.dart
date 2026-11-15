@@ -50,6 +50,46 @@ void main() {
     expect(merged.summary, 'Added the driver');
   });
 
+  test('version 8 database gains onboarding columns at version 9', () async {
+    final name = 'golf_diary_profile_v9.db';
+    final path = join(await getDatabasesPath(), name);
+    await deleteDatabase(path);
+    final seeded = await openDatabase(path, version: 8, onCreate: (db, version) async {
+      await db.execute('''
+        CREATE TABLE golfer_profile (
+          id TEXT PRIMARY KEY,
+          equipment_notes TEXT NOT NULL DEFAULT '',
+          swing_anchors TEXT NOT NULL DEFAULT '',
+          physical_constraints TEXT NOT NULL DEFAULT '',
+          training_environment TEXT NOT NULL DEFAULT '',
+          dismissed_prompts_json TEXT NOT NULL DEFAULT '[]',
+          distilled_through_ms INTEGER NOT NULL DEFAULT 0,
+          is_synced INTEGER NOT NULL DEFAULT 0,
+          updated_at_ms INTEGER NOT NULL DEFAULT 0,
+          deleted INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+    });
+    await seeded.insert('golfer_profile', {
+      'id': GolferProfile.rowId,
+      'equipment_notes': 'old shaft',
+      'deleted': 0,
+    });
+    await seeded.close();
+
+    await LocalDatabaseService.debugClose();
+    LocalDatabaseService.debugSetFileName(name);
+    addTearDown(() async {
+      await LocalDatabaseService.debugClose();
+      LocalDatabaseService.debugSetFileName('golf_diary.db');
+    });
+
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
+    expect(profile.equipmentNotes, 'old shaft');
+    expect(profile.onboardingCompleted, 0);
+    expect(profile.age, isNull);
+  });
+
   test('a version 7 database gains golfer_profile and ignores model text', () async {
     final name = 'golf_diary_profile_upgrade.db';
     final path = join(await getDatabasesPath(), name);

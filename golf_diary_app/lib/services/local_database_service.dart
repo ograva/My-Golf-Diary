@@ -49,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -87,7 +87,10 @@ class LocalDatabaseService {
       await _createDiaryTables(db);
     }
     if (oldVersion < 8) {
-      await _createGolferProfileTable(db);
+      await _createGolferProfileTableLegacy(db);
+    }
+    if (oldVersion < 9) {
+      await _upgradeGolferProfileOnboarding(db);
     }
   }
 
@@ -1296,7 +1299,7 @@ class LocalDatabaseService {
     ''');
   }
 
-  Future<void> _createGolferProfileTable(Database db) async {
+  Future<void> _createGolferProfileTableLegacy(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS golfer_profile (
         id TEXT PRIMARY KEY,
@@ -1311,6 +1314,43 @@ class LocalDatabaseService {
         deleted INTEGER NOT NULL DEFAULT 0
       )
     ''');
+  }
+
+  Future<void> _createGolferProfileTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS golfer_profile (
+        id TEXT PRIMARY KEY,
+        equipment_notes TEXT NOT NULL DEFAULT '',
+        swing_anchors TEXT NOT NULL DEFAULT '',
+        physical_constraints TEXT NOT NULL DEFAULT '',
+        training_environment TEXT NOT NULL DEFAULT '',
+        dismissed_prompts_json TEXT NOT NULL DEFAULT '[]',
+        distilled_through_ms INTEGER NOT NULL DEFAULT 0,
+        age INTEGER,
+        years_playing INTEGER,
+        gender TEXT NOT NULL DEFAULT '',
+        skill_tier TEXT NOT NULL DEFAULT '',
+        onboarding_completed INTEGER NOT NULL DEFAULT 0,
+        bag_nickname TEXT NOT NULL DEFAULT '',
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        updated_at_ms INTEGER NOT NULL DEFAULT 0,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> _upgradeGolferProfileOnboarding(Database db) async {
+    await db.execute('ALTER TABLE golfer_profile ADD COLUMN age INTEGER');
+    await db.execute(
+        'ALTER TABLE golfer_profile ADD COLUMN years_playing INTEGER');
+    await db.execute(
+        "ALTER TABLE golfer_profile ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
+    await db.execute(
+        "ALTER TABLE golfer_profile ADD COLUMN skill_tier TEXT NOT NULL DEFAULT ''");
+    await db.execute(
+        'ALTER TABLE golfer_profile ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 0');
+    await db.execute(
+        "ALTER TABLE golfer_profile ADD COLUMN bag_nickname TEXT NOT NULL DEFAULT ''");
   }
 
   Future<GolferProfile> getGolferProfile() async {

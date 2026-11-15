@@ -4,6 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
+| 1.6 | Approved (V2 epics additive) | 2026-11-15 | Jason (PM cohort) |
 | 1.5 | Approved | 2026-11-11 | Jason (PM cohort) |
 
 **Stories:** Embedded in §3 (21 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later.
@@ -37,6 +38,29 @@ My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + s
 | `SCOR` | Scorecard | `scorecard_screen.dart`, `scorecard_hole_editor.dart`, [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) |
 | `RNGE` | Range | `range_drill_screen.dart`, `RangeDrillLog`, [`Range_Drills.md`](./Range_Drills.md) |
 | `SYNC` | Cloud (optional) | `cloud_sync_service.dart`, `initializeFirebase` in `main.dart`, Firebase Storage (future map cache) |
+| `MGDV` | V2 program (planning) | Epics **MGDV-2…7**; shards under `docs/shards/MGDV/`; full requirements land per epic |
+
+### V2 pilot & epics (additive; v1 scope unchanged)
+
+**Pilot club:** **Club Intramuros Golf Course** (`ph-crse-club-intramuros` in [`PH_Golf_Venues.md`](./PH_Golf_Venues.md)) — first validation for cart terminal (MGDV-4), caddy pairing (MGDV-5), and club/tournament flows (MGDV-6). Mapped hole coordinates exist in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md).
+
+| Epic | Summary | PRD touch |
+| :--- | :--- | :--- |
+| **MGDV-2** | Starter wizard (age, years playing, gender); **skill tier** (beginner / amateur / seasoned pro) for UI density; Bag/Range progressive disclosure; optional cross-tab swing diary chat | New stories below; shards MGDV-201–203, MGDV-205 |
+| **MGDV-3** | Putting & approach drills; putter on Range when drill category requires it; distances in **yards** | Extends RNGE-003 seed |
+| **MGDV-4–7** | Cart default, caddy LAN pairing, tournament/attestation, barefoot tab | See Project store V2 roadmap; shards when epic opens |
+
+**MGDV-2-001 — Onboarding & skill tier**  
+As **any new golfer**, I want a **short wizard** that records my experience and **skill tier** so the app shows **simpler yardages and friendlier copy** by default.  
+**AC:** (1) Wizard collects age, years playing, gender (for AI baseline only). (2) Skill tier ∈ {beginner, amateur, seasoned pro} drives UI density; gender does **not** change UI strings. (3) Profile editable in settings; local SQLite only. (4) Wizard skippable with **Finish later** until completed.
+
+**MGDV-2-002 — Progressive disclosure (Bag & Range)**  
+As a **beginner-tier** player, I want **one trusted carry number** and **Balls hit** language so Range and Bag feel coached, not like telemetry.  
+**AC:** (1) Simple vs full yardage follows skill tier unless overridden in settings. (2) AppBar titles match design guide (**Range**, **On Course**). (3) SQLite column semantics unchanged. (4) Keys documented for new toggles.
+
+**MGDV-2-003 — Swing diary as chat area (not a tab)**  
+As **Riley/Rory**, I want **one diary thread** reachable from Range, On Course, and Scorecard so notes and AI evaluation stay continuous.  
+**AC:** (1) No fifth bottom tab. (2) Extends RNGE-004 opt-in and offline rules. (3) Thread persists in existing diary tables. (4) Placeholder copy per UX audit.
 
 ### BAG — My Bag
 
@@ -255,3 +279,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.3 | 2026-11-09 | Add `CRSE-005` (live GPS distance to hole on mapped courses), `CRSE-006` (future On-Course hole map view with Google Maps + Firebase Storage cache), `RNGE-003` (Range header drill picker + custom add/delete + [`Range_Drills.md`](./Range_Drills.md)), and `RNGE-004` (future Google AI daily range assessment & RAG Golf Swing Diary chat) |
 | 1.4 | 2026-11-09 | Align `RNGE-004` with Architecture 1.3: Vertex AI billed to the project under about 1,000 people, raw history until about 250,000 tokens, then a stored progress brief, and a readable log of evaluations and periodic summaries. No embeddings and no player API key in this phase |
 | 1.5 | 2026-11-11 | Add `RNGE-005` (Range session note + **Save and evaluate session** compiled session log bundling multi-club blocks, per-club notes, drill info, and the overall session review) and connect it as the primary input to `RNGE-004` Vertex AI evaluation |
+| 1.6 | 2026-11-15 | Add V2 **MGDV** epic table, **Intramuros Club** pilot note, and MGDV-2-001…003 stories (wizard, progressive disclosure, cross-tab diary); v1 module stories unchanged |

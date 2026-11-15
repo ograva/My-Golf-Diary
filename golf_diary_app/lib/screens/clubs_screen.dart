@@ -7,10 +7,13 @@ import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
 import '../widgets/range_session_log.dart';
+import '../widgets/golfer_profile_app_bar_menu.dart';
 import '../widgets/sync_cloud_button.dart';
 
 class ClubsScreen extends StatefulWidget {
-  const ClubsScreen({super.key});
+  const ClubsScreen({super.key, this.onProfileSettingsChanged});
+
+  final VoidCallback? onProfileSettingsChanged;
 
   @override
   State<ClubsScreen> createState() => ClubsScreenState();
@@ -170,7 +173,12 @@ class ClubsScreenState extends State<ClubsScreen> {
           icon: const Icon(Icons.add),
         ),
         title: const Text('My Bag'),
-        actions: const [SyncCloudButton()],
+        actions: [
+          GolferProfileAppBarMenu(
+            onProfileChanged: widget.onProfileSettingsChanged,
+          ),
+          const SyncCloudButton(),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

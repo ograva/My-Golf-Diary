@@ -12,18 +12,25 @@ import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/caddy_invite_sheet.dart';
+import '../widgets/golfer_profile_app_bar_menu.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
-  const FairwayTrackerScreen({super.key, this.pinDistance, this.diary});
+  const FairwayTrackerScreen({
+    super.key,
+    this.pinDistance,
+    this.diary,
+    this.onProfileSettingsChanged,
+  });
 
   /// When null, the screen uses [GeolocatorPinDistanceClient].
   final PinDistanceClient? pinDistance;
 
   /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
   final DiaryModel? diary;
+  final VoidCallback? onProfileSettingsChanged;
 
   @override
   State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
@@ -421,6 +428,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             entryKey: 'diary-entry-on-course',
             diary: widget.diary,
             entrySource: DiaryContextSource.onCourse,
+          ),
+          GolferProfileAppBarMenu(
+            onProfileChanged: widget.onProfileSettingsChanged,
           ),
           const SyncCloudButton(),
         ],

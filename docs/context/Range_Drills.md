@@ -199,3 +199,107 @@ flowchart LR
   3. **Hole 2 (Par 3):** Switch to your mid-iron or hybrid and hit 1 tee shot to a specific flag; follow with a partial wedge pitch as if scrambling (Balls 3–4).
   4. **Hole 3 (Par 5):** Hit 1 Driver, 1 Fairway Wood/Hybrid layup, and 1 Scoring Wedge approach (Balls 5–7).
   5. Finish the block with 3 stock swings using the primary club you are logging for the session (Balls 8–10) and save its distance aggregates.
+
+---
+
+### 2.7 Putting (practice green)
+
+Distances persist in **yards** (e.g. 3 ft ≈ 1 yd). Makes and ratios belong in Swing Notes when yardage is not meaningful.
+
+#### `rng-drl-putt-gate-startline` — Gate Drill — Start Line (3 ft)
+- **Category:** Putting
+- **Practice area:** Practice green
+- **Recommended Clubs:** Putter
+- **Recommended Balls:** 10 putts
+- **Beginner-friendly:** Yes
+- **Short Description:** Train a square start line on short putts using a narrow gate of tees just in front of the ball.
+- **Step-by-Step Instructions:**
+  1. On a flat practice-green putt about 3 ft (≈1 yd), place two tees barely wider than your putter face roughly 8 inches ahead of the ball.
+  2. Aim the face through the gate and make 10 strokes at smooth tempo — count makes out of 10.
+  3. If you clip a tee, reset the gate and note whether the miss was push or pull in Swing Notes.
+  4. Log makes in your session note (e.g., "8/10 through gate") and optional leave distance in yards on misses.
+  5. Finish with 5 putts with the gate removed while keeping the same start-line feel.
+
+#### `rng-drl-putt-lag-ladder` — Ladder Lag Putts (10–30 ft)
+- **Category:** Putting
+- **Practice area:** Practice green
+- **Recommended Clubs:** Putter
+- **Recommended Balls:** 10 putts
+- **Short Description:** Build speed control by laddering putt lengths and logging leave distance in yards (10 ft ≈ 3.3 yd).
+- **Step-by-Step Instructions:**
+  1. Pick a hole or chalk target and mark three spots: 10 ft (≈3 yd), 20 ft (≈7 yd), and 30 ft (≈10 yd) from the ball.
+  2. Hit 3 balls to the first rung, then 3 to the second, then 4 to the third — 10 total putts.
+  3. After each putt, pace off or estimate leave distance past the hole in yards for min/max/avg fields.
+  4. Record how many finished within a club-length of the hole (gimme zone).
+  5. Note whether uphill or downhill lies changed your usual lag pace.
+
+#### `rng-drl-putt-lead-arm` — One-Hand Lead-Arm Roll
+- **Category:** Putting
+- **Practice area:** Practice green
+- **Recommended Clubs:** Putter
+- **Recommended Balls:** 10 putts
+- **Beginner-friendly:** Yes
+- **Short Description:** Feel a pendulum stroke and stable face by rolling putts with only the lead arm for 10 balls.
+- **Step-by-Step Instructions:**
+  1. Set up to a straight 6–12 ft putt (≈2–4 yd) with only your lead hand on the grip.
+  2. Let the putter hang under your shoulder and rock back and through without wrist flip.
+  3. Hit 5 putts lead-hand only, then 5 with both hands while keeping the same shoulder rhythm.
+  4. Track makes out of 10 in Swing Notes; yardage fields can stay at 0 for feel-only reps.
+  5. End with 3 full routine putts at your ladder distance.
+
+#### `rng-drl-putt-clock` — Around-the-Hole Clock
+- **Category:** Putting
+- **Practice area:** Practice green
+- **Recommended Clubs:** Putter
+- **Recommended Balls:** 10 putts
+- **Short Description:** Hole short putts from 4 compass points around a cup to build confidence under slight angle changes.
+- **Step-by-Step Instructions:**
+  1. Place four balls in a clock pattern roughly 3 ft (≈1 yd) from the cup at 12, 3, 6, and 9 o’clock.
+  2. Make all four in a row; if you miss, restart the clock.
+  3. Repeat until you complete two full clocks (8 makes) or exhaust 10 putts.
+  4. Log makes and note which clock position felt least comfortable.
+  5. Optionally log approach leave in yards if you step back to 6 ft for the last two balls.
+
+---
+
+### 2.8 Approach to green (range bay)
+
+#### `rng-drl-approach-wedge-nine` — 9-O’clock Wedge Land Zone
+- **Category:** Approach
+- **Practice area:** Range bay
+- **Recommended Clubs:** Pitching Wedge, Gap Wedge, Sand Wedge
+- **Recommended Balls:** 10 balls
+- **Beginner-friendly:** Yes
+- **Short Description:** Land partial wedges on a chosen yardage strip using the 9-o’clock lead-arm length at steady tempo.
+- **Step-by-Step Instructions:**
+  1. Pick a landing-strip target (e.g., 75 yd carry) and a scoring wedge.
+  2. Set 60% weight on your lead foot and swing lead arm to 9-o’clock for 10 balls.
+  3. Watch carry only — ignore total roll when judging distance.
+  4. Record min/max/avg carry in yards for the block.
+  5. Change wedge or adjust grip down one inch if half the balls miss long or short.
+
+#### `rng-drl-approach-circle` — Approach Circle (50–80–100 yd)
+- **Category:** Approach
+- **Practice area:** Range bay
+- **Recommended Clubs:** Sand Wedge, Pitching Wedge, 9-Iron
+- **Recommended Balls:** 10 balls
+- **Short Description:** Hit three approach distances in one visit — dial 50, 80, and 100 yd carries with appropriate clubs.
+- **Step-by-Step Instructions:**
+  1. Ball 1–3: carry 50 yd with your highest-lofted wedge using a controlled 9-o’clock swing.
+  2. Ball 4–6: carry 80 yd — same wedge with a longer motion or switch to gap/pitching wedge.
+  3. Ball 7–10: carry 100 yd with pitching wedge or 9-iron stock swing.
+  4. Log one save per sub-distance (usual carry in yards) in Swing Notes or split across clubs.
+  5. Note which yardage was hardest to land within ±5 yd.
+
+#### `rng-drl-approach-nine-shot-grid` — 9-Shot Approach Grid
+- **Category:** Approach
+- **Practice area:** Range bay
+- **Recommended Clubs:** Gap Wedge, Pitching Wedge, Sand Wedge
+- **Recommended Balls:** 9 balls
+- **Short Description:** Practice three distances × three shot shapes (low/stock/high) to simulate green-entry options.
+- **Step-by-Step Instructions:**
+  1. Choose three carry targets (e.g., 60, 75, 90 yd) downrange.
+  2. At each target hit one low, one stock, and one higher flight — 9 balls total.
+  3. Use ball position and finish height to change flight, not swing speed alone.
+  4. Record usual carry and note which combination stayed closest to the intended landing zone.
+  5. Save the block against the wedge you used most often.

@@ -49,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -97,6 +97,10 @@ class LocalDatabaseService {
     }
     if (oldVersion < 11) {
       await _createDiaryContextNotesTable(db);
+    }
+    if (oldVersion < 12) {
+      await _createPracticeDrillsTable(db);
+      await _seedPracticeDrills(db);
     }
   }
 

@@ -49,7 +49,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -91,6 +91,9 @@ class LocalDatabaseService {
     }
     if (oldVersion < 9) {
       await _upgradeGolferProfileOnboarding(db);
+    }
+    if (oldVersion < 10) {
+      await _upgradeGolferProfileYardageDisplay(db);
     }
   }
 
@@ -1330,6 +1333,7 @@ class LocalDatabaseService {
         years_playing INTEGER,
         gender TEXT NOT NULL DEFAULT '',
         skill_tier TEXT NOT NULL DEFAULT '',
+        yardage_display_mode TEXT NOT NULL DEFAULT 'follow_skill_tier',
         onboarding_completed INTEGER NOT NULL DEFAULT 0,
         bag_nickname TEXT NOT NULL DEFAULT '',
         is_synced INTEGER NOT NULL DEFAULT 0,
@@ -1337,6 +1341,12 @@ class LocalDatabaseService {
         deleted INTEGER NOT NULL DEFAULT 0
       )
     ''');
+  }
+
+  Future<void> _upgradeGolferProfileYardageDisplay(Database db) async {
+    await db.execute(
+      "ALTER TABLE golfer_profile ADD COLUMN yardage_display_mode TEXT NOT NULL DEFAULT 'follow_skill_tier'",
+    );
   }
 
   Future<void> _upgradeGolferProfileOnboarding(Database db) async {

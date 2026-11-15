@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/golf_models.dart';
+import '../models/golfer_profile.dart';
+import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/range_session_log.dart';
@@ -19,6 +21,11 @@ class ClubsScreenState extends State<ClubsScreen> {
   String _selectedCategory = 'wood';
   List<Club> _clubs = [];
   Map<String, List<double>> _trends = {};
+  GolferProfile _profile = const GolferProfile();
+  GolferProfileStore? _profileStore;
+
+  /// For MGDV-203 progressive disclosure.
+  YardageUiDensity get yardageDensity => resolveYardageUiDensity(_profile);
 
   @override
   void initState() {
@@ -26,14 +33,41 @@ class ClubsScreenState extends State<ClubsScreen> {
     reload();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = GolferProfileScope.maybeOf(context);
+    if (identical(next, _profileStore)) return;
+    _profileStore?.removeListener(_onProfileStoreChanged);
+    _profileStore = next;
+    _profileStore?.addListener(_onProfileStoreChanged);
+    if (_profileStore != null && _profileStore!.profile.updatedAtMs > 0) {
+      _profile = _profileStore!.profile;
+    }
+  }
+
+  @override
+  void dispose() {
+    _profileStore?.removeListener(_onProfileStoreChanged);
+    super.dispose();
+  }
+
+  void _onProfileStoreChanged() {
+    final store = _profileStore;
+    if (store == null || !mounted) return;
+    setState(() => _profile = store.profile);
+  }
+
   Future<void> reload() async {
     final clubs = await LocalDatabaseService.instance.getClubsByCategory(_selectedCategory);
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
     final trends = <String, List<double>>{};
     for (final club in clubs) {
       trends[club.id] = await LocalDatabaseService.instance.getClubYardageTrend(club.id);
     }
     if (!mounted) return;
     setState(() {
+      _profile = profile;
       _clubs = clubs;
       _trends = trends;
     });

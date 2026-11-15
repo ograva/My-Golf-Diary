@@ -6,6 +6,7 @@ import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
 import '../models/range_session.dart';
 import '../services/diary_model.dart';
+import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import '../services/vertex_diary_model.dart';
@@ -47,6 +48,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   final FocusNode _sessionNoteFocus = FocusNode();
   GolferProfile _profile = const GolferProfile();
   bool _clubsMissingSpecs = false;
+  GolferProfileStore? _profileStore;
 
   @override
   void initState() {
@@ -56,7 +58,27 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = GolferProfileScope.maybeOf(context);
+    if (identical(next, _profileStore)) return;
+    _profileStore?.removeListener(_onProfileStoreChanged);
+    _profileStore = next;
+    _profileStore?.addListener(_onProfileStoreChanged);
+    if (_profileStore != null && _profileStore!.profile.updatedAtMs > 0) {
+      _profile = _profileStore!.profile;
+    }
+  }
+
+  void _onProfileStoreChanged() {
+    final store = _profileStore;
+    if (store == null || !mounted) return;
+    setState(() => _profile = store.profile);
+  }
+
+  @override
   void dispose() {
+    _profileStore?.removeListener(_onProfileStoreChanged);
     _minController.dispose();
     _maxController.dispose();
     _avgController.dispose();

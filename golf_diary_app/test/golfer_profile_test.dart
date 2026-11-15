@@ -50,6 +50,105 @@ void main() {
     expect(merged.summary, 'Added the driver');
   });
 
+  test('resolveYardageUiDensity honors mode and skill tier', () {
+    const beginner = GolferProfile(
+      skillTier: GolferSkillTier.beginner,
+      yardageDisplayMode: YardageDisplayMode.followSkillTier,
+    );
+    expect(resolveYardageUiDensity(beginner), YardageUiDensity.simple);
+
+    const amateur = GolferProfile(
+      skillTier: GolferSkillTier.amateur,
+      yardageDisplayMode: YardageDisplayMode.followSkillTier,
+    );
+    expect(
+      resolveYardageUiDensity(amateur),
+      YardageUiDensity.simpleWithExpandHints,
+    );
+
+    const proFull = GolferProfile(
+      skillTier: GolferSkillTier.seasonedPro,
+      yardageDisplayMode: YardageDisplayMode.followSkillTier,
+    );
+    expect(resolveYardageUiDensity(proFull), YardageUiDensity.full);
+
+    const overrideSimple = GolferProfile(
+      skillTier: GolferSkillTier.seasonedPro,
+      yardageDisplayMode: YardageDisplayMode.simple,
+    );
+    expect(resolveYardageUiDensity(overrideSimple), YardageUiDensity.simple);
+  });
+
+  test('skill tier and yardage mode persist across getGolferProfile', () async {
+    final name = 'golf_diary_profile_v10.db';
+    final path = join(await getDatabasesPath(), name);
+    await deleteDatabase(path);
+    await LocalDatabaseService.debugClose();
+    LocalDatabaseService.debugSetFileName(name);
+    addTearDown(() async {
+      await LocalDatabaseService.debugClose();
+      LocalDatabaseService.debugSetFileName('golf_diary.db');
+    });
+
+    const saved = GolferProfile(
+      skillTier: GolferSkillTier.amateur,
+      yardageDisplayMode: YardageDisplayMode.full,
+      age: 40,
+      yearsPlaying: 12,
+      onboardingCompleted: 1,
+    );
+    await LocalDatabaseService.instance.saveGolferProfile(saved);
+    final loaded = await LocalDatabaseService.instance.getGolferProfile();
+    expect(loaded.skillTier, GolferSkillTier.amateur);
+    expect(loaded.yardageDisplayMode, YardageDisplayMode.full);
+    expect(loaded.age, 40);
+  });
+
+  test('version 9 database gains yardage_display_mode at version 10', () async {
+    final name = 'golf_diary_profile_v10_upgrade.db';
+    final path = join(await getDatabasesPath(), name);
+    await deleteDatabase(path);
+    final seeded = await openDatabase(path, version: 9, onCreate: (db, version) async {
+      await db.execute('''
+        CREATE TABLE golfer_profile (
+          id TEXT PRIMARY KEY,
+          equipment_notes TEXT NOT NULL DEFAULT '',
+          swing_anchors TEXT NOT NULL DEFAULT '',
+          physical_constraints TEXT NOT NULL DEFAULT '',
+          training_environment TEXT NOT NULL DEFAULT '',
+          dismissed_prompts_json TEXT NOT NULL DEFAULT '[]',
+          distilled_through_ms INTEGER NOT NULL DEFAULT 0,
+          age INTEGER,
+          years_playing INTEGER,
+          gender TEXT NOT NULL DEFAULT '',
+          skill_tier TEXT NOT NULL DEFAULT '',
+          onboarding_completed INTEGER NOT NULL DEFAULT 0,
+          bag_nickname TEXT NOT NULL DEFAULT '',
+          is_synced INTEGER NOT NULL DEFAULT 0,
+          updated_at_ms INTEGER NOT NULL DEFAULT 0,
+          deleted INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+    });
+    await seeded.insert('golfer_profile', {
+      'id': GolferProfile.rowId,
+      'skill_tier': GolferSkillTier.beginner,
+      'deleted': 0,
+    });
+    await seeded.close();
+
+    await LocalDatabaseService.debugClose();
+    LocalDatabaseService.debugSetFileName(name);
+    addTearDown(() async {
+      await LocalDatabaseService.debugClose();
+      LocalDatabaseService.debugSetFileName('golf_diary.db');
+    });
+
+    final profile = await LocalDatabaseService.instance.getGolferProfile();
+    expect(profile.skillTier, GolferSkillTier.beginner);
+    expect(profile.yardageDisplayMode, YardageDisplayMode.followSkillTier);
+  });
+
   test('version 8 database gains onboarding columns at version 9', () async {
     final name = 'golf_diary_profile_v9.db';
     final path = join(await getDatabasesPath(), name);

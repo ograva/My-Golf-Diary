@@ -28,6 +28,54 @@ abstract final class GolferSkillTier {
       };
 }
 
+/// Yardage density preference on Bag and Range (MGDV-202 / MGDV-203).
+abstract final class YardageDisplayMode {
+  static const simple = 'simple';
+  static const full = 'full';
+  static const followSkillTier = 'follow_skill_tier';
+
+  static const List<String> values = [simple, full, followSkillTier];
+
+  static const String defaultMode = followSkillTier;
+
+  static String label(String mode) => switch (mode) {
+        simple => 'Simple',
+        full => 'Full',
+        followSkillTier => 'Match skill tier',
+        _ => mode,
+      };
+
+  static String blurb(String mode) => switch (mode) {
+        simple => 'One hero yardage per club; fewer numbers on Range.',
+        full => 'Min, usual, and max visible up front.',
+        followSkillTier =>
+          'Beginner → simple; amateur → simple with expand; seasoned pro → full.',
+        _ => '',
+      };
+}
+
+/// Resolved UI density after applying [YardageDisplayMode] and skill tier.
+enum YardageUiDensity { simple, simpleWithExpandHints, full }
+
+/// Settings override wins; [follow_skill_tier] maps per MGDV-203.
+YardageUiDensity resolveYardageUiDensity(GolferProfile profile) {
+  final mode = profile.yardageDisplayMode.trim().isEmpty
+      ? YardageDisplayMode.defaultMode
+      : profile.yardageDisplayMode;
+  if (mode == YardageDisplayMode.simple) {
+    return YardageUiDensity.simple;
+  }
+  if (mode == YardageDisplayMode.full) {
+    return YardageUiDensity.full;
+  }
+  return switch (profile.skillTier) {
+    GolferSkillTier.beginner => YardageUiDensity.simple,
+    GolferSkillTier.amateur => YardageUiDensity.simpleWithExpandHints,
+    GolferSkillTier.seasonedPro => YardageUiDensity.full,
+    _ => YardageUiDensity.simple,
+  };
+}
+
 /// Gender buckets for AI personalization only — never for UI string swaps.
 abstract final class GolferGender {
   static const female = 'female';
@@ -59,6 +107,7 @@ class GolferProfile {
     this.yearsPlaying,
     this.gender = '',
     this.skillTier = '',
+    this.yardageDisplayMode = YardageDisplayMode.defaultMode,
     this.onboardingCompleted = 0,
     this.bagNickname = '',
     this.isSynced = 0,
@@ -77,6 +126,7 @@ class GolferProfile {
   final int? yearsPlaying;
   final String gender;
   final String skillTier;
+  final String yardageDisplayMode;
   final int onboardingCompleted;
   final String bagNickname;
   final int isSynced;
@@ -107,6 +157,7 @@ class GolferProfile {
     bool clearYearsPlaying = false,
     String? gender,
     String? skillTier,
+    String? yardageDisplayMode,
     int? onboardingCompleted,
     String? bagNickname,
     int? isSynced,
@@ -124,6 +175,7 @@ class GolferProfile {
           clearYearsPlaying ? null : (yearsPlaying ?? this.yearsPlaying),
       gender: gender ?? this.gender,
       skillTier: skillTier ?? this.skillTier,
+      yardageDisplayMode: yardageDisplayMode ?? this.yardageDisplayMode,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       bagNickname: bagNickname ?? this.bagNickname,
       isSynced: isSynced ?? this.isSynced,
@@ -143,6 +195,7 @@ class GolferProfile {
         'years_playing': yearsPlaying,
         'gender': gender,
         'skill_tier': skillTier,
+        'yardage_display_mode': yardageDisplayMode,
         'onboarding_completed': onboardingCompleted,
         'bag_nickname': bagNickname,
         'is_synced': isSynced,
@@ -166,6 +219,8 @@ class GolferProfile {
       yearsPlaying: map['years_playing'] as int?,
       gender: map['gender'] as String? ?? '',
       skillTier: map['skill_tier'] as String? ?? '',
+      yardageDisplayMode: map['yardage_display_mode'] as String? ??
+          YardageDisplayMode.defaultMode,
       onboardingCompleted: map['onboarding_completed'] as int? ?? 0,
       bagNickname: map['bag_nickname'] as String? ?? '',
       isSynced: map['is_synced'] as int? ?? 0,

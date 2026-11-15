@@ -35,7 +35,13 @@ void main() {
     expect(find.byKey(const ValueKey('shell-tab-oncourse')), findsOneWidget);
     expect(
         find.byKey(const ValueKey('oncourse-record-shot-btn')), findsOneWidget);
-    expect(find.text('On Course'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('On Course'),
+      ),
+      findsOneWidget,
+    );
     final bar = tester
         .widget<NavigationBar>(find.byKey(const ValueKey('shell-nav-bar')));
     expect(

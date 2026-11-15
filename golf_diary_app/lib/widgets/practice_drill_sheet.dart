@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/practice_drill_metadata.dart';
 import '../models/practice_drill.dart';
 import '../services/local_database_service.dart';
 
@@ -183,10 +184,35 @@ class _PracticeDrillSheetState extends State<PracticeDrillSheet> {
                                                 .textTheme
                                                 .titleMedium),
                                       ),
-                                      Text(drill.category,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelMedium),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          Text(drill.category,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelMedium),
+                                          Text(
+                                            practiceAreaLabel(
+                                                practiceAreaForDrill(
+                                                    drill.id)),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall,
+                                          ),
+                                          if (isBeginnerFriendlyDrill(
+                                              drill.id))
+                                            Chip(
+                                              key: ValueKey(
+                                                  'range-drill-beginner-${drill.id}'),
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              label: const Text('Beginner-friendly'),
+                                            ),
+                                        ],
+                                      ),
                                       Text(drill.shortDescription),
                                       if (open) ...[
                                         const SizedBox(height: 8),

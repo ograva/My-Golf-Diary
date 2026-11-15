@@ -7,6 +7,7 @@ class PracticeDrillSeed {
     required this.shortDescription,
     required this.steps,
     required this.recommendedClubs,
+    this.practiceArea = 'range_bay',
   });
 
   final String id;
@@ -15,6 +16,9 @@ class PracticeDrillSeed {
   final String shortDescription;
   final List<String> steps;
   final String recommendedClubs;
+
+  /// `range_bay` or `practice_green` — sheet grouping only (not in SQLite).
+  final String practiceArea;
 }
 
 const kPracticeDrillSeed = <PracticeDrillSeed>[
@@ -196,6 +200,115 @@ const kPracticeDrillSeed = <PracticeDrillSeed>[
       "**Hole 2 (Par 3):** Switch to your mid-iron or hybrid and hit 1 tee shot to a specific flag; follow with a partial wedge pitch as if scrambling (Balls 3–4).",
       "**Hole 3 (Par 5):** Hit 1 Driver, 1 Fairway Wood/Hybrid layup, and 1 Scoring Wedge approach (Balls 5–7).",
       "Finish the block with 3 stock swings using the primary club you are logging for the session (Balls 8–10) and save its distance aggregates.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-putt-gate-startline",
+    title: "Gate Drill — Start Line (3 ft)",
+    category: "Putting",
+    practiceArea: "practice_green",
+    shortDescription:
+        "Train a square start line on short putts using a narrow gate of tees just in front of the ball.",
+    recommendedClubs: "Putter",
+    steps: [
+      "On a flat practice-green putt about 3 ft (≈1 yd), place two tees barely wider than your putter face roughly 8 inches ahead of the ball.",
+      "Aim the face through the gate and make 10 strokes at smooth tempo — count makes out of 10.",
+      "If you clip a tee, reset the gate and note whether the miss was push or pull in Swing Notes.",
+      "Log makes in your session note (e.g., \"8/10 through gate\") and optional leave distance in yards on misses.",
+      "Finish with 5 putts with the gate removed while keeping the same start-line feel.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-putt-lag-ladder",
+    title: "Ladder Lag Putts (10–30 ft)",
+    category: "Putting",
+    practiceArea: "practice_green",
+    shortDescription:
+        "Build speed control by laddering putt lengths and logging leave distance in yards (10 ft ≈ 3.3 yd).",
+    recommendedClubs: "Putter",
+    steps: [
+      "Pick a hole or chalk target and mark three spots: 10 ft (≈3 yd), 20 ft (≈7 yd), and 30 ft (≈10 yd) from the ball.",
+      "Hit 3 balls to the first rung, then 3 to the second, then 4 to the third — 10 total putts.",
+      "After each putt, pace off or estimate leave distance past the hole in yards for min/max/avg fields.",
+      "Record how many finished within a club-length of the hole (gimme zone).",
+      "Note whether uphill or downhill lies changed your usual lag pace.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-putt-lead-arm",
+    title: "One-Hand Lead-Arm Roll",
+    category: "Putting",
+    practiceArea: "practice_green",
+    shortDescription:
+        "Feel a pendulum stroke and stable face by rolling putts with only the lead arm for 10 balls.",
+    recommendedClubs: "Putter",
+    steps: [
+      "Set up to a straight 6–12 ft putt (≈2–4 yd) with only your lead hand on the grip.",
+      "Let the putter hang under your shoulder and rock back and through without wrist flip.",
+      "Hit 5 putts lead-hand only, then 5 with both hands while keeping the same shoulder rhythm.",
+      "Track makes out of 10 in Swing Notes; yardage fields can stay at 0 for feel-only reps.",
+      "End with 3 full routine putts at your ladder distance.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-putt-clock",
+    title: "Around-the-Hole Clock",
+    category: "Putting",
+    practiceArea: "practice_green",
+    shortDescription:
+        "Hole short putts from 4 compass points around a cup to build confidence under slight angle changes.",
+    recommendedClubs: "Putter",
+    steps: [
+      "Place four balls in a clock pattern roughly 3 ft (≈1 yd) from the cup at 12, 3, 6, and 9 o’clock.",
+      "Make all four in a row; if you miss, restart the clock.",
+      "Repeat until you complete two full clocks (8 makes) or exhaust 10 putts.",
+      "Log makes and note which clock position felt least comfortable.",
+      "Optionally log approach leave in yards if you step back to 6 ft for the last two balls.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-approach-wedge-nine",
+    title: "9-O’clock Wedge Land Zone",
+    category: "Approach",
+    shortDescription:
+        "Land partial wedges on a chosen yardage strip using the 9-o’clock lead-arm length at steady tempo.",
+    recommendedClubs: "Pitching Wedge, Gap Wedge, Sand Wedge",
+    steps: [
+      "Pick a landing-strip target (e.g., 75 yd carry) and a scoring wedge.",
+      "Set 60% weight on your lead foot and swing lead arm to 9-o’clock for 10 balls.",
+      "Watch carry only — ignore total roll when judging distance.",
+      "Record min/max/avg carry in yards for the block.",
+      "Change wedge or adjust grip down one inch if half the balls miss long or short.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-approach-circle",
+    title: "Approach Circle (50–80–100 yd)",
+    category: "Approach",
+    shortDescription:
+        "Hit three approach distances in one visit — dial 50, 80, and 100 yd carries with appropriate clubs.",
+    recommendedClubs: "Sand Wedge, Pitching Wedge, 9-Iron",
+    steps: [
+      "Ball 1–3: carry 50 yd with your highest-lofted wedge using a controlled 9-o’clock swing.",
+      "Ball 4–6: carry 80 yd — same wedge with a longer motion or switch to gap/pitching wedge.",
+      "Ball 7–10: carry 100 yd with pitching wedge or 9-iron stock swing.",
+      "Log one save per sub-distance (usual carry in yards) in Swing Notes or split across clubs.",
+      "Note which yardage was hardest to land within ±5 yd.",
+    ],
+  ),
+  PracticeDrillSeed(
+    id: "rng-drl-approach-nine-shot-grid",
+    title: "9-Shot Approach Grid",
+    category: "Approach",
+    shortDescription:
+        "Practice three distances × three shot shapes (low/stock/high) to simulate green-entry options.",
+    recommendedClubs: "Gap Wedge, Pitching Wedge, Sand Wedge",
+    steps: [
+      "Choose three carry targets (e.g., 60, 75, 90 yd) downrange.",
+      "At each target hit one low, one stock, and one higher flight — 9 balls total.",
+      "Use ball position and finish height to change flight, not swing speed alone.",
+      "Record usual carry and note which combination stayed closest to the intended landing zone.",
+      "Save the block against the wedge you used most often.",
     ],
   ),
 ];

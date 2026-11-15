@@ -17,6 +17,7 @@ import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/sync_cloud_button.dart';
+import '../range/range_drill_clubs.dart';
 import '../widgets/venue_name_field.dart';
 
 class RangeDrillScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class RangeDrillScreen extends StatefulWidget {
 }
 
 class RangeDrillScreenState extends State<RangeDrillScreen> {
+  List<Club> _allClubs = [];
   List<Club> _clubs = [];
   List<RangeDrillSummary> _log = [];
   List<RangeSession> _compiled = [];
@@ -112,18 +114,27 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     setState(() {
       _profile = profile;
       _clubsMissingSpecs = clubsMissingEquipmentSpecs(clubs);
-      _clubs = clubs.where((c) => c.category != 'putter').toList();
+      _allClubs = clubs;
+      _applyClubStrip();
       _log = log;
       _compiled = compiled;
       _recentVenues = venues;
-      if (_selectedClub == null && _clubs.isNotEmpty) {
-        _selectedClub = _clubs.first;
-        _notesController.text = _selectedClub!.swingNotes;
-      } else if (_selectedClub != null &&
-          !_clubs.any((c) => c.id == _selectedClub!.id)) {
-        _selectedClub = _clubs.isNotEmpty ? _clubs.first : null;
-      }
     });
+  }
+
+  void _applyClubStrip() {
+    _clubs = clubsForRangeStrip(_allClubs, _selectedDrill);
+    if (_selectedClub == null && _clubs.isNotEmpty) {
+      _selectedClub = defaultClubForRangeStrip(_clubs, _selectedDrill);
+      _notesController.text = _selectedClub?.swingNotes ?? '';
+    } else if (_selectedClub != null &&
+        !_clubs.any((c) => c.id == _selectedClub!.id)) {
+      _selectedClub =
+          _clubs.isNotEmpty ? defaultClubForRangeStrip(_clubs, _selectedDrill) : null;
+      if (_selectedClub != null) {
+        _notesController.text = _selectedClub!.swingNotes;
+      }
+    }
   }
 
   bool get _hasPendingBlock =>
@@ -326,6 +337,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
       if (pick.copyTitleToNote) {
         _notesController.text = pick.drill.title;
       }
+      _applyClubStrip();
     });
   }
 
@@ -389,6 +401,12 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             ),
             if (_selectedDrill != null) ...[
               const SizedBox(height: 8),
+              Text(
+                rangeDrillFocusLabel(_selectedDrill) ?? '',
+                key: const ValueKey('range-drill-focus-strip'),
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
@@ -398,11 +416,23 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => _selectedDrill = null),
+                    onPressed: () => setState(() {
+                      _selectedDrill = null;
+                      _applyClubStrip();
+                    }),
                     child: const Text('Clear'),
                   ),
                 ],
               ),
+              if (rangeDrillShowsPutter(_selectedDrill)) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Log leave distance or putt length in yards (3 ft ≈ 1 yd). '
+                  'Makes and ratios fit Swing Notes.',
+                  key: const ValueKey('range-putting-yardage-hint'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ],
             const SizedBox(height: 16),
             Text('Select club', style: Theme.of(context).textTheme.titleSmall),

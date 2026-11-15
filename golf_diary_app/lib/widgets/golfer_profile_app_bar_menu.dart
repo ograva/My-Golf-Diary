@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../screens/golfer_profile_settings_screen.dart';
 import '../services/golfer_profile_store.dart';
 
-/// Profile settings entry for tab [AppBar] actions (shell has no outer app bar).
+/// Legacy profile menu — superseded by [AccountAvatarAppBarMenu] + [SharedHeaderActions].
+@Deprecated('Use SharedHeaderActions / account settings instead')
 class GolferProfileAppBarMenu extends StatelessWidget {
   const GolferProfileAppBarMenu({super.key, this.onProfileChanged});
 

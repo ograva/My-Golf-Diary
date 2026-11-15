@@ -15,9 +15,8 @@ import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
-import '../widgets/diary_launcher.dart';
-import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/account_avatar_app_bar_menu.dart';
+import '../ui/header_action_policy.dart';
+import '../widgets/shared_header_actions.dart';
 import '../range/range_drill_clubs.dart';
 import '../widgets/venue_name_field.dart';
 
@@ -381,19 +380,13 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
         ),
         title: const Text('Range'),
         actions: [
-          SizedBox(
-            key: const ValueKey('range-swing-diary-btn'),
-            child: DiaryEntryButton(
-              entryKey: 'diary-entry-range',
-              diary: _diary,
-              store: _diaryStore,
-              entrySource: DiaryContextSource.range,
-            ),
+          SharedHeaderActions(
+            tab: HeaderTabContext.range,
+            diary: _diary,
+            diaryStore: _diaryStore,
+            diaryEntryKey: 'diary-entry-range',
+            diarySource: DiaryContextSource.range,
           ),
-          GolferProfileAppBarMenu(
-            onProfileChanged: widget.onProfileSettingsChanged,
-          ),
-          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: SingleChildScrollView(

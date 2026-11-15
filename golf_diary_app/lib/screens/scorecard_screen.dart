@@ -9,11 +9,10 @@ import '../models/round_summary.dart';
 import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/diary_launcher.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
-import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/account_avatar_app_bar_menu.dart';
+import '../ui/header_action_policy.dart';
+import '../widgets/shared_header_actions.dart';
 import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
@@ -293,15 +292,15 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       appBar: AppBar(
         title: const Text('Scorecard'),
         actions: [
-          DiaryEntryButton(
-            entryKey: 'diary-entry-scorecard',
+          SharedHeaderActions(
+            tab: HeaderTabContext.scorecard,
+            roundId: _selectedRoundId,
+            courseName: courseName,
             diary: widget.diary,
-            entrySource: DiaryContextSource.scorecard,
+            diaryEntryKey: 'diary-entry-scorecard',
+            diarySource: DiaryContextSource.scorecard,
+            caddyInviteKey: 'scorecard-invite-caddy',
           ),
-          GolferProfileAppBarMenu(
-            onProfileChanged: widget.onProfileSettingsChanged,
-          ),
-          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: _loading

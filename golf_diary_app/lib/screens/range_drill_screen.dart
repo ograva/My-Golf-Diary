@@ -16,15 +16,21 @@ import '../ui/yardage_display_copy.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../widgets/diary_launcher.dart';
+import '../widgets/golfer_profile_app_bar_menu.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../range/range_drill_clubs.dart';
 import '../widgets/venue_name_field.dart';
 
 class RangeDrillScreen extends StatefulWidget {
-  const RangeDrillScreen({super.key, this.diary});
+  const RangeDrillScreen({
+    super.key,
+    this.diary,
+    this.onProfileSettingsChanged,
+  });
 
   /// When null, calls go through [VertexDiaryModel]. Tests pass a fake.
   final DiaryModel? diary;
+  final VoidCallback? onProfileSettingsChanged;
 
   @override
   State<RangeDrillScreen> createState() => RangeDrillScreenState();
@@ -383,6 +389,9 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
               store: _diaryStore,
               entrySource: DiaryContextSource.range,
             ),
+          ),
+          GolferProfileAppBarMenu(
+            onProfileChanged: widget.onProfileSettingsChanged,
           ),
           const SyncCloudButton(),
         ],

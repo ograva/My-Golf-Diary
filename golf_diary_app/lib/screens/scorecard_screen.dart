@@ -12,15 +12,21 @@ import '../theme/app_theme.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
+import '../widgets/golfer_profile_app_bar_menu.dart';
 import '../widgets/sync_cloud_button.dart';
 import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
-  const ScorecardScreen({super.key, this.diary});
+  const ScorecardScreen({
+    super.key,
+    this.diary,
+    this.onProfileSettingsChanged,
+  });
 
   /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
   final DiaryModel? diary;
+  final VoidCallback? onProfileSettingsChanged;
 
   @override
   State<ScorecardScreen> createState() => ScorecardScreenState();
@@ -291,6 +297,9 @@ class ScorecardScreenState extends State<ScorecardScreen> {
             entryKey: 'diary-entry-scorecard',
             diary: widget.diary,
             entrySource: DiaryContextSource.scorecard,
+          ),
+          GolferProfileAppBarMenu(
+            onProfileChanged: widget.onProfileSettingsChanged,
           ),
           const SyncCloudButton(),
         ],

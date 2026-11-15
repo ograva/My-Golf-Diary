@@ -12,8 +12,8 @@ Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-
 | :--- | :--- | :--- | :--- |
 | **MGDV-2** | Onboarding wizard, skill-tier profile, warmer Bag/Range copy & progressive disclosure | — | Diary chat area = MGDV-205 (optional MGDV-2b) |
 | **MGDV-3** | Putting & approach drills in seed, sheet categories, putter logging (yards in DB) | MGDV-2 | [MGDV-301](../shards/MGDV/MGDV-301-putting-approach-drills.md) |
-| **MGDV-4** | **Cart terminal** as default on-course layout; score-first, large targets | SCOR/CRSE stable | **Intramuros Club** — mapped 18-hole validation |
-| **MGDV-5** | Caddy pairing v1: Wi‑Fi/LAN session, multi-golfer cart scoring, accept workflow | MGDV-4 | **Intramuros Club** — PH caddy norms |
+| **MGDV-4** | **Cart scoring view** on Scorecard (toggle); large targets, hole strip; On Course unchanged | SCOR stable | **Intramuros Club** — sun/readability validation |
+| **MGDV-5** | Caddy v1: **single-use QR** → PWA (On Course + Scorecard); per-stroke sync over **internet**; accept/revoke | CRSE shot→score; round channel + rules | **Intramuros Club** — PH caddy norms |
 | **MGDV-6** | Club & tournament: attestation, events, leaderboard phases (Gscore-class) | MGDV-5 optional; enrolled auth | **Intramuros Club** first rollout |
 | **MGDV-7** | Barefoot / no-glove practice tab | Local stroke **video storage** spike | Blocked until storage architecture decided |
 

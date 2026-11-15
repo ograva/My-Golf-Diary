@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../pwa/pwa_update_host.dart';
+import '../widgets/caddy_golfer_merge_host.dart';
 import '../services/golfer_profile_store.dart';
 import 'clubs_screen.dart';
 import 'fairway_tracker_screen.dart';
@@ -98,9 +99,15 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ],
         ),
-        body: IndexedStack(
-          index: _index,
-          children: _pages,
+        body: CaddyGolferMergeHost(
+          onSessionChanged: () {
+            _courseKey.currentState?.reloadActiveRound();
+            _scorecardKey.currentState?.loadScorecard();
+          },
+          child: IndexedStack(
+            index: _index,
+            children: _pages,
+          ),
         ),
         bottomNavigationBar: NavigationBar(
           key: const ValueKey('shell-nav-bar'),

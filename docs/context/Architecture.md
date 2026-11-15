@@ -4,7 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.7 | Active | 2026-11-11 | Watson (Architect cohort) |
+| 1.13 | Active | 2026-11-15 | Watson / Athena |
 
 **Inputs:** [`PRD.md`](./PRD.md) v1.5 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
 
@@ -328,6 +328,14 @@ Do not add an embedding index in this phase. A question about a specific older d
 
 Club delete is a tombstone (`deleted = 1`), not an immediate local `DELETE`, so the next sync can tell other devices.
 
+### MGDV-5 — Caddy round channel (v1)
+
+Pairing uses a top-level Firestore collection **`caddy_round_channels/{channelId}`** where `channelId` is the opaque single-use token in the PWA QR (`?mode=caddy&request=`). Golfer mints while an active round exists; caddy redeems once (transaction → `status: active`). Stroke/score actions append to **`events`**; the golfer app **`CaddyGolferMergeHost`** listens and applies via **`recordCaddyStroke`** → **`syncStrokeCountFromShots`**. Caddy offline writes queue in SQLite **`caddy_pending_events`** and flush on reconnect.
+
+**v1 limits:** Event writes are authenticated but not yet bound to session principal in rules (see `firestore.rules` comment). **Manual golfer scorecard edits** on the same hole can be overwritten when the next caddy stroke syncs (same precedence as GPS shot sync in §5.2). **Player picker**, hole-segment accept, and hardened rules are follow-up shards.
+
+**PWA entry:** `OnboardingGate` bypasses golfer onboarding when `mode=caddy` is present and loads **`CaddyShell`** (On Course + Scorecard tabs only).
+
 ### Firestore security rules
 
 Rules live in [`firestore.rules`](../../firestore.rules) and [`firebase.json`](../../firebase.json) targets database `my-golf-diary`. Deploy them on that database, not `(default)`:
@@ -366,7 +374,7 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** version 8 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7; `golfer_profile` in v8).
+- **DB:** version 14 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7; `golfer_profile` in v8; scorecard prefs v13; **`caddy_sessions` / `caddy_pending_events` in v14**).
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -418,3 +426,4 @@ Background location **not** required for current flows.
 | 1.11 | 2026-11-13 | Athena | Upgraded swing diary prompt with a structured biomechanics / physio / caddie `systemInstruction` (`Content.system`), live `clubs` bag snapshot, session venue/shot/spread formatting without duplicating compiled drill blocks, and zero-dependency Markdown table & `──►` diagram rendering in `SwingDiarySheet` |
 | 1.12 | 2026-11-13 | Athena | DB v8 `golfer_profile` replaces the hardcoded personal baseline. Lead-in chips sit beside the session note and diary composer. Distillation reads only golfer-written notes after `distilled_through_ms` and never model replies |
 | 1.13 | 2026-11-15 | Athena | MGDV-401 cart scoring on Scorecard tab. DB v13 adds `scorecard_view_mode` and `scorecard_cart_high_contrast` on `golfer_profile`. **`wakelock_plus`** keeps the screen awake during cart scoring on an in-progress round only (optional UX; no GPS change on CRSE). |
+| 1.14 | 2026-11-15 | Athena | MGDV-5 caddy pairing: Firestore `caddy_round_channels`, PWA `mode=caddy`, DB v14 session/queue tables, `recordCaddyStroke`, **`qr_flutter`** for invite QR |

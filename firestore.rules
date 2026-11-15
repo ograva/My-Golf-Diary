@@ -4,5 +4,26 @@ service cloud.firestore {
     match /users/{userId}/{collection}/{docId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // MGDV-5 — session-scoped caddy round channel (opaque channel id in QR).
+  match /caddy_round_channels/{channelId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.golfer_uid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if request.auth != null && (
+        resource.data.golfer_uid == request.auth.uid
+        || (
+          resource.data.status == 'pending'
+          && request.resource.data.status == 'active'
+          && request.resource.data.caddy_uid == request.auth.uid
+        )
+      );
+      match /events/{eventId} {
+        allow read: if request.auth != null;
+        // v1: write guarded by possession of channel id (deploy hardened rules before prod).
+        allow create: if request.auth != null;
+      }
+    }
   }
 }

@@ -91,6 +91,8 @@ class ShotRecord {
   final double? endLat;
   final double? endLon;
   final double distanceYards;
+  final double? simCarryYards;
+  final double? simDistanceToHoleYards;
   final String notes;
   /// `left`, `center`, or `right` when captured on a mapped Course hole.
   final String aimDirection;
@@ -109,6 +111,8 @@ class ShotRecord {
     this.endLat,
     this.endLon,
     this.distanceYards = 0.0,
+    this.simCarryYards,
+    this.simDistanceToHoleYards,
     this.notes = '',
     this.aimDirection = 'center',
     required this.timestamp,
@@ -128,6 +132,8 @@ class ShotRecord {
       'end_lat': endLat,
       'end_lon': endLon,
       'distance_yards': distanceYards,
+      'sim_carry_yards': simCarryYards,
+      'sim_distance_to_hole_yards': simDistanceToHoleYards,
       'notes': notes,
       'aim_direction': aimDirection,
       'timestamp': timestamp,
@@ -150,6 +156,12 @@ class ShotRecord {
       endLon:
           map['end_lon'] != null ? (map['end_lon'] as num).toDouble() : null,
       distanceYards: (map['distance_yards'] as num?)?.toDouble() ?? 0.0,
+      simCarryYards: map['sim_carry_yards'] != null
+          ? (map['sim_carry_yards'] as num).toDouble()
+          : null,
+      simDistanceToHoleYards: map['sim_distance_to_hole_yards'] != null
+          ? (map['sim_distance_to_hole_yards'] as num).toDouble()
+          : null,
       notes: map['notes'] ?? '',
       aimDirection: map['aim_direction'] as String? ?? 'center',
       timestamp: map['timestamp'] as int,

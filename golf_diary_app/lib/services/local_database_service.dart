@@ -110,17 +110,33 @@ class LocalDatabaseService {
       await _createCaddyTables(db);
     }
     if (oldVersion < 15) {
-      final info = await db.rawQuery('PRAGMA table_info(shots)');
-      if (info.isNotEmpty) {
-        final hasAim =
-            info.any((column) => column['name'] == 'aim_direction');
-        if (!hasAim) {
-          await db.execute(
-            "ALTER TABLE shots ADD COLUMN aim_direction TEXT NOT NULL DEFAULT 'center'",
-          );
-        }
-      }
+      await _addColumnIfMissing(
+        db,
+        'shots',
+        'aim_direction',
+        "TEXT NOT NULL DEFAULT 'center'",
+      );
+      await _addColumnIfMissing(db, 'shots', 'sim_carry_yards', 'REAL');
+      await _addColumnIfMissing(
+          db, 'shots', 'sim_distance_to_hole_yards', 'REAL');
     }
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String sqlType,
+  ) async {
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      [table],
+    );
+    if (tables.isEmpty) return;
+    final cols = await db.rawQuery('PRAGMA table_info($table)');
+    final hasCol = cols.any((row) => row['name'] == column);
+    if (hasCol) return;
+    await db.execute('ALTER TABLE $table ADD COLUMN $column $sqlType');
   }
 
   Future<void> _createSyncState(Database db) async {
@@ -183,6 +199,8 @@ class LocalDatabaseService {
         end_lat REAL,
         end_lon REAL,
         distance_yards REAL DEFAULT 0.0,
+        sim_carry_yards REAL,
+        sim_distance_to_hole_yards REAL,
         notes TEXT,
         aim_direction TEXT NOT NULL DEFAULT 'center',
         timestamp INTEGER NOT NULL,
@@ -1156,6 +1174,9 @@ class LocalDatabaseService {
     required double currentLon,
     double? distanceYards,
     String aimDirection = 'center',
+    double? simCarryYards,
+    double? simDistanceToHoleYards,
+    String notes = '',
   }) async {
     final db = await database;
     final simulator = distanceYards != null;
@@ -1207,6 +1228,9 @@ class LocalDatabaseService {
       startLon: simulator ? 0 : currentLon,
       distanceYards: simulator ? distanceYards.roundToDouble() : 0,
       aimDirection: simulator ? 'center' : aimDirection,
+      simCarryYards: simulator ? simCarryYards : null,
+      simDistanceToHoleYards: simulator ? simDistanceToHoleYards : null,
+      notes: simulator ? notes.trim() : '',
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
@@ -1865,7 +1889,10 @@ class LocalDatabaseService {
       'end_lat',
       'end_lon',
       'distance_yards',
+      'sim_carry_yards',
+      'sim_distance_to_hole_yards',
       'notes',
+      'aim_direction',
       'timestamp',
       'is_synced',
       'updated_at_ms',

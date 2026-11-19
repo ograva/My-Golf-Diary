@@ -71,17 +71,17 @@ void main() {
     await tester.tap(find.text('Simulator'));
     await tester.pump();
 
-    expect(find.text('Record shot'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Distance travelled (yds)'),
+    expect(find.text('Record stroke'), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-sim-yards-field')),
         findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Record shot'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Record stroke'));
     await tester.pump();
     expect(find.text('Enter a distance greater than 0'), findsOneWidget);
 
     await tester.enterText(
-        find.widgetWithText(TextField, 'Distance travelled (yds)'), '0');
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Record shot'));
+        find.byKey(const ValueKey('oncourse-sim-yards-field')), '0');
+    await tester.tap(find.widgetWithText(FilledButton, 'Record stroke'));
     await tester.pump();
     expect(find.text('Enter a distance greater than 0'), findsOneWidget);
 
@@ -226,7 +226,7 @@ void main() {
         findsOneWidget);
 
     for (var hole = 1; hole < 3; hole++) {
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Finish Hole'));
+      await tester.tap(find.text('Finish Hole'));
       await tester.pump();
       for (var i = 0; i < 20; i++) {
         await tester.runAsync(
@@ -246,6 +246,40 @@ void main() {
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
     expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+  });
+
+  testWidgets('simulator record saves yards note and shot row key',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+        theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
+    await waitForBag(tester);
+
+    await tester.tap(find.text('Simulator'));
+    await tester.pump();
+
+    await tester.enterText(
+        find.byKey(const ValueKey('oncourse-sim-yards-field')), '142');
+    await tester.tap(find.byKey(const ValueKey('oncourse-sim-add-note-link')));
+    await tester.pump();
+    await tester.enterText(
+        find.byKey(const ValueKey('oncourse-sim-stroke-note-field')),
+        'Chunked it right');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Record stroke'));
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('oncourse-shot-row-1')), findsOneWidget);
+    expect(find.textContaining('142 yds travelled'), findsOneWidget);
+    expect(find.textContaining('Chunked it right'), findsOneWidget);
+    expect(find.byIcon(Icons.notes_outlined), findsOneWidget);
   });
 
   testWidgets('map pane without pack shows vector fallback and snackbar once',

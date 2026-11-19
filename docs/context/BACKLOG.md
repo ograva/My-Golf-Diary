@@ -32,6 +32,11 @@ Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-
 | CRSE-020 | Hole coordinate catalog | CRSE | High | Completed | S | CRSE-005, CRSE-006 | [CRSE-020](../shards/CRSE/CRSE-020-hole-coordinate-catalog.md) |
 | CRSE-021 | Live yards to the pin | CRSE | High | Completed | M | CRSE-005 | [CRSE-021](../shards/CRSE/CRSE-021-live-yards-to-pin.md) |
 | CRSE-022 | Hole map view | CRSE | Low | Not Started | L | CRSE-006 | [CRSE-022](../shards/CRSE/CRSE-022-hole-map-view.md) |
+| CRSE-030 | On Course dual-mode (epic) | CRSE | High | Not Started | XL | CRSE-007–011 | [CRSE-030](../shards/CRSE/CRSE-030-epic-on-course-dual-mode.md) |
+| CRSE-034 | Unmapped tabular HUD & map fallback | CRSE | High | Not Started | M | CRSE-011 | [CRSE-034](../shards/CRSE/CRSE-034-unmapped-tabular-map-fallback.md) |
+| CRSE-031 | Simulator post-shot logging | CRSE | High | Not Started | M | CRSE-007 | [CRSE-031](../shards/CRSE/CRSE-031-simulator-post-shot-logging.md) |
+| CRSE-032 | Course plan, aim & record at ball | CRSE | High | Not Started | L | CRSE-008 | [CRSE-032](../shards/CRSE/CRSE-032-course-plan-aim-record.md) |
+| CRSE-033 | Map / satellite HUD & live markers | CRSE | Medium | Not Started | L | CRSE-009 | [CRSE-033](../shards/CRSE/CRSE-033-map-satellite-hud-markers.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Completed | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |
 | RNGE-025 | Range session store | RNGE | High | Completed | M | RNGE-005 | [RNGE-025](../shards/RNGE/RNGE-025-range-session-store.md) |
@@ -58,8 +63,8 @@ RNGE-022, RNGE-023, and RNGE-024 are done. The Range header opens an opt-in swin
 
 Next to build (v1):
 
-- CRSE-022: the hole map (`CRSE-006`).
-- **CRSE-030 (epic, shard TBD — Poe):** On Course **dual-mode enhancement** — `CRSE-007` simulator post-shot fields + notes, `CRSE-008` plan/aim/bearing + stroke segments, `CRSE-009` map/satellite markers (blocked on **MGDV-18** map provider), `CRSE-011` unmapped tabular HUD; refinements to `CRSE-001`/`CRSE-002`/`CRSE-004` per PRD v1.8.
+- **CRSE-030 epic** (dual-mode): ship child shards **CRSE-034** → **CRSE-031** / **CRSE-032** (parallel OK) → **CRSE-033** (with **CRSE-022** map pack; Architecture §5.5 / **MGDV-18** provider).
+- CRSE-022: hole map pack infrastructure (`CRSE-006`); overlaps **CRSE-033**.
 
 Next to build (V2 — MGDV-2):
 

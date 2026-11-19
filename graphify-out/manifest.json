@@ -92,9 +92,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/fairway_tracker_screen.dart": {
-    "mtime": 1795097153.3413026,
-    "seen": 1795097465.2281039,
-    "ast_hash": "7d0f7b4509815b2307a19d944f191a87",
+    "mtime": 1795098130.494995,
+    "seen": 1795098648.606351,
+    "ast_hash": "61227c13cd8b42774f4b5f757be94d8a",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/range_drill_screen.dart": {
@@ -1917,9 +1917,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/fwy_overlays.dart": {
-    "mtime": 1795096900.0505247,
-    "seen": 1795097465.228146,
-    "ast_hash": "75f1892dfac49635a037bb2f3b6213e0",
+    "mtime": 1795097870.3358192,
+    "seen": 1795098648.6064012,
+    "ast_hash": "af31cf63a8f0ba8b3634b6fafcb2af78",
     "semantic_hash": ""
   },
   "golf_diary_app/test/on_course_crse_036_test.dart": {
@@ -1929,9 +1929,9 @@
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-036-fwy-map-background-shell.md": {
-    "mtime": 1795097267.1343772,
-    "seen": 1795097465.228265,
-    "ast_hash": "135c0eec6f9d47be0cd00658c736c405",
+    "mtime": 1795098644.1483383,
+    "seen": 1795098648.6065326,
+    "ast_hash": "ce7b215dad7da1ac4f4a1830deddec07",
     "semantic_hash": ""
   }
 }

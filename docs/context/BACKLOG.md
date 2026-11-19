@@ -38,6 +38,7 @@ Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-
 | CRSE-032 | Course plan, aim & record at ball | CRSE | High | Completed | L | CRSE-008 | [CRSE-032](../shards/CRSE/CRSE-032-course-plan-aim-record.md) |
 | CRSE-033 | Map / satellite HUD & live markers | CRSE | Medium | Completed | L | CRSE-009 | [CRSE-033](../shards/CRSE/CRSE-033-map-satellite-hud-markers.md) |
 | CRSE-035 | Compact On Course layout (Simulator stack + sheets) | CRSE | High | Ready for Review | L | CRSE-007, CRSE-008 | [CRSE-035](../shards/CRSE/CRSE-035-compact-on-course-layout.md) |
+| CRSE-036 | FWY map-background shell (rail, overlays, aim ring, Manual GPS, stand-in) | CRSE | High | Ready for Review | L | CRSE-035, CRSE-041 | [CRSE-036](../shards/CRSE/CRSE-036-fwy-map-background-shell.md) |
 | CRSE-041 | Map pack pipeline (OSM → stylised hole maps) | CRSE | Medium | In Progress | M | CRSE-006, CRSE-009 | [CRSE-041](../shards/CRSE/CRSE-041-map-pack-pipeline.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Completed | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |

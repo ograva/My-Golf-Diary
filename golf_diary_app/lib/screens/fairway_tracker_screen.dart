@@ -1752,11 +1752,19 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                   key: const ValueKey('oncourse-par-summary'),
                   tooltip: 'Change par',
                   visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   label: Text('Par $_par'),
                   onPressed: _openParSheet,
                 ),
-                const Spacer(),
-                if (yards != null) Flexible(child: yards),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: yards == null
+                        ? const SizedBox.shrink()
+                        : FittedBox(fit: BoxFit.scaleDown, child: yards),
+                  ),
+                ),
               ],
             ),
             if (_packLoading)
@@ -1958,11 +1966,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             actions: [
               TextButton(
                 key: const ValueKey('oncourse-double-par-keep'),
+                style: _bannerButton,
                 onPressed: () => setState(() => _doubleParDismissed = true),
                 child: const Text('Keep putting'),
               ),
               FilledButton(
                 key: const ValueKey('oncourse-double-par-finish'),
+                style: _bannerButton,
                 onPressed: _finishHole,
                 child: const Text('Finish hole'),
               ),
@@ -1977,10 +1987,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               if (g.projection != null)
                 TextButton(
                   key: const ValueKey('oncourse-location-switch-manual'),
+                  style: _bannerButton,
                   onPressed: () => _setGpsMode(GpsMode.manual),
                   child: const Text('Use Manual'),
                 ),
               TextButton(
+                style: _bannerButton,
                 onPressed: Geolocator.openAppSettings,
                 child: const Text('Settings'),
               ),
@@ -2172,32 +2184,42 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       decoration: fwySurface(context),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.spaceBetween,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 18),
                 const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
+                Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(text,
                         style: Theme.of(context).textTheme.bodyMedium),
                   ),
                 ),
+                if (actions.length == 1) actions.single,
               ],
             ),
-            if (actions.isNotEmpty)
-              Row(mainAxisSize: MainAxisSize.min, children: actions),
+            if (actions.length > 1)
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 4,
+                children: actions,
+              ),
           ],
         ),
       ),
     );
   }
+
+  static final _bannerButton = ButtonStyle(
+    minimumSize: WidgetStateProperty.all(const Size(0, 40)),
+    padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(horizontal: 12)),
+    visualDensity: VisualDensity.compact,
+  );
 
   @override
   Widget build(BuildContext context) {

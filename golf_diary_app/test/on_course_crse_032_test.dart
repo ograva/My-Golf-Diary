@@ -30,110 +30,77 @@ void main() {
     fail('On Course did not load the bag');
   }
 
-  testWidgets('mapped course shows aim wedge; unmapped and simulator hide it',
+  testWidgets('Aim mode snaps a tap to the ring and saves the derived side',
       (tester) async {
-    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    var fixIndex = 0;
-    final fixes = [
-      Position(
-        latitude: 14.508,
-        longitude: 121.0,
-        timestamp: DateTime.utc(2026),
-        accuracy: 1,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-        altitudeAccuracy: 0,
-        headingAccuracy: 0,
-      ),
-      Position(
-        latitude: 14.5095,
-        longitude: 121.0,
-        timestamp: DateTime.utc(2026),
-        accuracy: 1,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-        altitudeAccuracy: 0,
-        headingAccuracy: 0,
-      ),
-    ];
+    const course = 'Villamor Golf Club';
+    final tee = holeCoordinates(course, 1)!;
+    Position fixAt(double lat, double lon) => Position(
+          latitude: lat,
+          longitude: lon,
+          timestamp: DateTime.utc(2026),
+          accuracy: 1,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
 
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),
       home: FairwayTrackerScreen(
-        positionForShot: () async => fixes[fixIndex++],
+        positionForShot: () async => fixAt(tee.teeLat, tee.teeLon),
       ),
     ));
     await waitForBag(tester);
-
-    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
-
-    const course = 'Villamor Golf Club';
     await submitCourseName(tester, course);
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find
-          .byKey(const ValueKey('oncourse-aim-summary'))
-          .evaluate()
-          .isNotEmpty) {
-        break;
-      }
-    }
+    await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsOneWidget);
-    expect(find.text('Record shot at ball'), findsOneWidget);
+    final aim = find.byKey(const ValueKey('oncourse-aim-summary'));
+    expect(aim, findsOneWidget);
+    expect(find.descendant(of: aim, matching: find.text('Pin')), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('oncourse-aim-summary')));
-    await settleSheet(tester);
-    expect(find.byKey(const ValueKey('oncourse-aim-sheet')), findsOneWidget);
-    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('oncourse-aim-right')));
-    await settleSheet(tester);
-    expect(find.byKey(const ValueKey('oncourse-aim-sheet')), findsNothing);
-    expect(
-        find.descendant(
-            of: find.byKey(const ValueKey('oncourse-aim-summary')),
-            matching: find.text('R ▶')),
+    await tester.tap(aim);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('oncourse-aim-mode-banner')),
         findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-aim-target')), findsNothing);
+
+    await tester.tapAt(const Offset(60, 330));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('oncourse-aim-target')), findsOneWidget);
+    expect(
+        find.descendant(of: aim, matching: find.text('Custom')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('oncourse-record-shot-btn')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump();
+    }
+    expect(find.byKey(const ValueKey('oncourse-aim-target')), findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-aim-mode-banner')), findsNothing);
+    expect(find.descendant(of: aim, matching: find.text('Pin')), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('oncourse-record-shot-btn')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
-
-    await expandShotList(tester);
-    expect(find.byKey(const ValueKey('oncourse-shot-row-2')), findsOneWidget);
-    expect(find.textContaining('Aim right'), findsWidgets);
-    expect(find.textContaining('yds'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('oncourse-shots-peek')));
+    await settleSheet(tester);
+    expect(find.byKey(const ValueKey('oncourse-shot-row-1')), findsOneWidget);
+    expect(find.textContaining('Aim left'), findsOneWidget);
+    Navigator.of(tester.element(find.byKey(const ValueKey('oncourse-shot-row-1'))))
+        .pop();
+    await settleSheet(tester);
 
     await selectSimulator(tester);
-    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
-
+    expect(aim, findsNothing);
     await selectFairway(tester);
     await tester.pump();
-    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsOneWidget);
-
-    await submitCourseName(tester, 'My Backyard');
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find
-          .byKey(const ValueKey('oncourse-aim-summary'))
-          .evaluate()
-          .isEmpty) {
-        break;
-      }
-    }
-    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
+    expect(aim, findsOneWidget);
   });
 
   test('recordFairwayHit stores aim on mapped outdoor shots', () async {

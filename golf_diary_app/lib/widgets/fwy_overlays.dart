@@ -71,19 +71,22 @@ class FwyRailTile extends StatelessWidget {
             decoration: fwySurface(context, selected: selected),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(label,
-                      maxLines: 1,
-                      style: TextStyle(
-                          fontSize: 10, color: fg, fontWeight: FontWeight.w500)),
-                  if (icon != null)
-                    Icon(icon, size: 18, color: fg)
-                  else if (value != null)
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (label.isNotEmpty)
+                      Text(label,
+                          maxLines: 1,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: fg,
+                              fontWeight: FontWeight.w500)),
+                    if (icon != null)
+                      Icon(icon, size: 20, color: fg)
+                    else if (value != null)
+                      Text(
                         value!,
                         key: valueKey,
                         maxLines: 1,
@@ -92,8 +95,8 @@ class FwyRailTile extends StatelessWidget {
                             color: fg,
                             fontWeight: FontWeight.w700),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

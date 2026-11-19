@@ -63,7 +63,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
     expect(find.byType(OncourseSatelliteHoleMap), findsOneWidget);
   });
 

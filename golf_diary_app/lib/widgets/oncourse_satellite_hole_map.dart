@@ -78,7 +78,7 @@ class OncourseSatelliteHoleMap extends StatelessWidget {
                   left: 8,
                   bottom: 6,
                   child: Text(
-                    'Google',
+                    '© OpenStreetMap contributors',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.85),
                           shadows: const [

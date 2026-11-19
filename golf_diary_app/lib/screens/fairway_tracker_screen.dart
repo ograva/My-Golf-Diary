@@ -1047,7 +1047,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                       : Text(
                           _simulator
                               ? 'Record stroke'
-                              : 'Record Shot at Ball',
+                              : 'Record shot at ball',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

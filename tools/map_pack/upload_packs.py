@@ -1,7 +1,7 @@
 """Upload validated packs from out/ to Firebase Storage per the CRSE-041 contract.
 
-    python upload_packs.py --bucket my-golf-diary ph-crse-villamor ph-crse-cebu-cc
-    python upload_packs.py --bucket my-golf-diary --all --dry-run
+    python upload_packs.py ph-crse-villamor ph-crse-cebu-cc
+    python upload_packs.py --all --dry-run
 
 Credentials: a service account with Storage Object Admin on the bucket, either as a key
 file in GOOGLE_APPLICATION_CREDENTIALS or as the key JSON in FIREBASE_SERVICE_ACCOUNT_JSON.
@@ -22,6 +22,7 @@ from validate_pack import validate
 OUT_DIR = Path(__file__).resolve().parent / "out"
 PREFIX = "course_maps"
 CACHE_CONTROL = "public, max-age=300"
+DEFAULT_BUCKET = "novusinc-8df79.appspot.com"
 
 
 def _client():
@@ -61,7 +62,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("course_ids", nargs="*")
     ap.add_argument("--all", action="store_true", help="every pack under out/")
-    ap.add_argument("--bucket", required=True, help="bucket name without gs://")
+    ap.add_argument("--bucket", default=DEFAULT_BUCKET, help="bucket name (default: the app's default bucket)")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 

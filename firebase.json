@@ -5,10 +5,7 @@
       "rules": "firestore.rules"
     }
   ],
-  "storage": [
-    {
-      "bucket": "my-golf-diary",
-      "rules": "storage.rules"
-    }
-  ]
+  "storage": {
+    "rules": "storage.rules"
+  }
 }

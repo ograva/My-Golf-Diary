@@ -28,13 +28,14 @@ python build_pack.py ph-crse-villamor ph-crse-cebu-cc --version 2
 ```bash
 pip install -r requirements-upload.txt
 python validate_pack.py ph-crse-villamor              # exit 1 on contract errors
-python upload_packs.py --bucket my-golf-diary --all --dry-run
-python upload_packs.py --bucket my-golf-diary --all
+python upload_packs.py --all --dry-run
+python upload_packs.py --all
+python verify_read.py                                # signed-in read OK, anonymous read refused
 ```
 
-`upload_packs.py` validates every pack, uploads images, then each `manifest.json`, then `course_maps/index.json` last (merged with the versions already in the bucket). It needs a service account with Storage Object Admin on the bucket, as a key file in `GOOGLE_APPLICATION_CREDENTIALS` or as the key JSON in `FIREBASE_SERVICE_ACCOUNT_JSON`.
+`upload_packs.py` validates every pack, uploads images, then each `manifest.json`, then `course_maps/index.json` last (merged with the versions already in the bucket). The target is the app's default bucket `novusinc-8df79.appspot.com` (the one `FirebaseStorage.instance` reads). It needs a service account with Storage Object Admin on the bucket, as a key file in `GOOGLE_APPLICATION_CREDENTIALS` or as the key JSON in `FIREBASE_SERVICE_ACCOUNT_JSON`.
 
-Bucket access lives at the repo root: `storage.rules` (authenticated read of `course_maps/**`, no client writes) is deployed with `firebase deploy --only storage --project novusinc-8df79`, and `storage.cors.json` (GET only, PWA origins) is applied with `gcloud storage buckets update gs://my-golf-diary --cors-file=storage.cors.json`. GCS matches CORS origins exactly, so run Flutter web locally with `--web-port 8080`.
+Bucket access lives at the repo root: `storage.rules` (authenticated read of `course_maps/**`, no client writes) is deployed with `firebase deploy --only storage --project novusinc-8df79`, and `storage.cors.json` (GET only, PWA origins) is applied with `gcloud storage buckets update gs://novusinc-8df79.appspot.com --cors-file=storage.cors.json`. GCS matches CORS origins exactly, so run Flutter web locally with `--web-port 8080`.
 
 ## Pipeline
 

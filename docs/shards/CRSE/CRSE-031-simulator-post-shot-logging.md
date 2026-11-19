@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-007 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Ready for Review |
 | **Complexity** | M |
 | **Depends On** | None |
 
@@ -16,16 +16,16 @@ In **Simulator** mode, the HUD follows a post-shot rhythm: club and lie are set,
 
 ## Acceptance Criteria
 
-- [ ] With `oncourse-mode-simulator` selected, optional `oncourse-sim-carry-field` and `oncourse-sim-distance-to-hole-field` appear per wireframe (skill-tier may collapse behind `oncourse-sim-add-distance-link`); required `oncourse-sim-yards-field` must be valid (>0) before save; optional fields may be blank.
-- [ ] `oncourse-sim-stroke-note-field` (or PRD alias `oncourse-stroke-note-field` mapped consistently in one key) persists text on the `ShotRecord` row for the stroke and reloads on hole change within the round.
-- [ ] **Record stroke** (`oncourse-record-shot-btn`) saves typed yards without fabricated lat/lon; stroke list shows club and yards; no location banner or GPS call in Simulator mode.
-- [ ] Switching to `oncourse-mode-course` hides simulator-only fields and restores **Record shot at ball** GPS rules from `CRSE-002`; switching back restores simulator layout without losing in-progress typed values on the form until saved.
+- [x] With `oncourse-mode-simulator` selected, optional `oncourse-sim-carry-field` and `oncourse-sim-distance-to-hole-field` appear per wireframe (skill-tier may collapse behind `oncourse-sim-add-distance-link`); required `oncourse-sim-yards-field` must be valid (>0) before save; optional fields may be blank.
+- [x] `oncourse-sim-stroke-note-field` (or PRD alias `oncourse-stroke-note-field` mapped consistently in one key) persists text on the `ShotRecord` row for the stroke and reloads on hole change within the round.
+- [x] **Record stroke** (`oncourse-record-shot-btn`) saves typed yards without fabricated lat/lon; stroke list shows club and yards; no location banner or GPS call in Simulator mode.
+- [x] Switching to `oncourse-mode-course` hides simulator-only fields and restores **Record shot at ball** GPS rules from `CRSE-002`; switching back restores simulator layout without losing in-progress typed values on the form until saved.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Widget test: Simulator mode, enter travelled yards, optional carry/note, tap record — row appears with `oncourse-shot-row-{n}`. Invalid zero yards shows validation copy and does not insert row.
-- [ ] **Integration (if needed):** Toggle Course ↔ Simulator mid-round; confirm no Geolocator call in Simulator (mock).
-- [ ] **Keys:** `oncourse-mode-simulator`, `oncourse-sim-yards-field`, `oncourse-sim-carry-field`, `oncourse-sim-distance-to-hole-field`, `oncourse-sim-stroke-note-field`, `oncourse-sim-add-distance-link`, `oncourse-sim-add-note-link`, `oncourse-record-shot-btn` from [`Wireframe_OnCourse-Simulator.md`](../../context/designs/Wireframe_OnCourse-Simulator.md) §7.
+- [x] **Unit/widget:** Widget test: Simulator mode, enter travelled yards, optional carry/note, tap record — row appears with `oncourse-shot-row-{n}`. Invalid zero yards shows validation copy and does not insert row.
+- [x] **Integration (if needed):** Toggle Course ↔ Simulator mid-round; confirm no Geolocator call in Simulator (mock).
+- [x] **Keys:** `oncourse-mode-simulator`, `oncourse-sim-yards-field`, `oncourse-sim-carry-field`, `oncourse-sim-distance-to-hole-field`, `oncourse-sim-stroke-note-field`, `oncourse-sim-add-distance-link`, `oncourse-sim-add-note-link`, `oncourse-record-shot-btn` from [`Wireframe_OnCourse-Simulator.md`](../../context/designs/Wireframe_OnCourse-Simulator.md) §7.
 
 ## Dev notes
 

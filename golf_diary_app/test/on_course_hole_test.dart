@@ -134,9 +134,9 @@ void main() {
     await tester.tap(find.text('Simulator'));
     await tester.pump();
     await tester.enterText(
-        find.widgetWithText(TextField, 'Distance travelled (yds)'), '150');
+        find.byKey(const ValueKey('oncourse-sim-yards-field')), '150');
     await finishAction(
-        tester, find.widgetWithText(ElevatedButton, 'Record shot'));
+        tester, find.widgetWithText(FilledButton, 'Record stroke'));
 
     expect(find.textContaining('Stroke 1'), findsOneWidget);
     await tester.tap(find.textContaining('Stroke 1'));

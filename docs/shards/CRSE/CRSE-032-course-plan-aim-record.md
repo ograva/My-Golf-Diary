@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-008 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Ready for Review |
 | **Complexity** | L |
 | **Depends On** | CRSE-020 |
 
@@ -16,16 +16,16 @@ In **Course** mode, club and lie chips plan the next stroke. On mapped holes, an
 
 ## Acceptance Criteria
 
-- [ ] **Course** mode only: aim wedge visible when `hasHoleCoordinates(course, hole)` is true; selection persists on save and reloads when editing a stroke; hidden on unmapped holes and in Simulator mode.
-- [ ] `oncourse-record-shot-btn` label reads **Record shot at ball** in Course mode; one `getCurrentPosition` (or existing `_readGps` pattern) per tap; denied permission shows snackbar + optional `oncourse-location-banner` without crash.
-- [ ] When stroke *n* and *n−1* on the active hole both have coordinates, `oncourse-shot-row-{n}` displays segment yards (rounded whole yards); otherwise shows **Distance pending** or omits segment per wireframe.
-- [ ] Stroke count increments from shot rows; applying penalty/mulligan/concede updates `RoundScore` totals consistently with manual shot count (no duplicate stroke inflation).
+- [x] **Course** mode only: aim wedge visible when `hasHoleCoordinates(course, hole)` is true; selection persists on save and reloads when editing a stroke; hidden on unmapped holes and in Simulator mode.
+- [x] `oncourse-record-shot-btn` label reads **Record shot at ball** in Course mode; one `getCurrentPosition` (or existing `_readGps` pattern) per tap; denied permission shows snackbar + optional `oncourse-location-banner` without crash.
+- [x] When stroke *n* and *n−1* on the active hole both have coordinates, `oncourse-shot-row-{n}` displays segment yards (rounded whole yards); otherwise shows **Distance pending** or omits segment per wireframe.
+- [x] Stroke count increments from shot rows; applying penalty/mulligan/concede updates `RoundScore` totals consistently with manual shot count (no duplicate stroke inflation).
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Fake GPS positions two taps apart; assert segment yards on second row. Aim chips fire save with expected stored value. Unmapped hole hides aim wedge.
+- [x] **Unit/widget:** Fake GPS positions two taps apart; assert segment yards on second row. Aim chips fire save with expected stored value. Unmapped hole hides aim wedge.
 - [ ] **Integration (if needed):** Optional golden path on one mapped catalog hole with permission granted (device/manual).
-- [ ] **Keys:** `oncourse-aim-left`, `oncourse-aim-center`, `oncourse-aim-right`, `oncourse-record-shot-btn`, `oncourse-shot-row-{strokeNumber}`, `oncourse-club-chip-{id}`, `oncourse-lie-chip-{lie}` from [`Wireframe_OnCourse.md`](../../context/designs/Wireframe_OnCourse.md) §7; flow refs in [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md).
+- [x] **Keys:** `oncourse-aim-left`, `oncourse-aim-center`, `oncourse-aim-right`, `oncourse-record-shot-btn`, `oncourse-shot-row-{strokeNumber}`, `oncourse-club-chip-{id}`, `oncourse-lie-chip-{lie}` from [`Wireframe_OnCourse.md`](../../context/designs/Wireframe_OnCourse.md) §7; flow refs in [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md).
 
 ## Dev notes
 

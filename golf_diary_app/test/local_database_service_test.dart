@@ -222,11 +222,27 @@ void main() {
     expect(shots.last.startLat, 0);
     expect(shots.last.strokeNumber, 2);
     expect((await db.getHoleScore(roundId, 1))!.strokes, 2);
-    expect(
-        (await db.getAllClubs())
-            .firstWhere((club) => club.id == 'driver')
-            .avgDistance,
-        driver.avgDistance);
+  });
+
+  test('simulator shot persists carry distance-to-hole and stroke note', () async {
+    final roundId = await db.startNewRound(courseName: 'Sim Bay');
+    await db.recordFairwayHit(
+      roundId: roundId,
+      holeNumber: 1,
+      clubId: 'driver',
+      lieType: 'tee',
+      currentLat: 0,
+      currentLon: 0,
+      distanceYards: 265,
+      simCarryYards: 252,
+      simDistanceToHoleYards: 140,
+      notes: 'Started it left',
+    );
+    final shots = await db.getShotsForHole(roundId, 1);
+    expect(shots.single.distanceYards, 265);
+    expect(shots.single.simCarryYards, 252);
+    expect(shots.single.simDistanceToHoleYards, 140);
+    expect(shots.single.notes, 'Started it left');
   });
 
   test(

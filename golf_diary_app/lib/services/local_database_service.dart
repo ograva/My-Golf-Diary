@@ -50,7 +50,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -109,6 +109,34 @@ class LocalDatabaseService {
     if (oldVersion < 14) {
       await _createCaddyTables(db);
     }
+    if (oldVersion < 15) {
+      await _addColumnIfMissing(
+        db,
+        'shots',
+        'aim_direction',
+        "TEXT NOT NULL DEFAULT 'center'",
+      );
+      await _addColumnIfMissing(db, 'shots', 'sim_carry_yards', 'REAL');
+      await _addColumnIfMissing(
+          db, 'shots', 'sim_distance_to_hole_yards', 'REAL');
+    }
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String sqlType,
+  ) async {
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      [table],
+    );
+    if (tables.isEmpty) return;
+    final cols = await db.rawQuery('PRAGMA table_info($table)');
+    final hasCol = cols.any((row) => row['name'] == column);
+    if (hasCol) return;
+    await db.execute('ALTER TABLE $table ADD COLUMN $column $sqlType');
   }
 
   Future<void> _createSyncState(Database db) async {
@@ -171,7 +199,10 @@ class LocalDatabaseService {
         end_lat REAL,
         end_lon REAL,
         distance_yards REAL DEFAULT 0.0,
+        sim_carry_yards REAL,
+        sim_distance_to_hole_yards REAL,
         notes TEXT,
+        aim_direction TEXT NOT NULL DEFAULT 'center',
         timestamp INTEGER NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
@@ -930,11 +961,20 @@ class LocalDatabaseService {
     required String shotId,
     required String clubId,
     required String lieType,
+    String? aimDirection,
   }) async {
     final db = await database;
+    final fields = <String, Object?>{
+      'club_id': clubId,
+      'lie_type': lieType,
+      'is_synced': 0,
+    };
+    if (aimDirection != null) {
+      fields['aim_direction'] = aimDirection;
+    }
     await db.update(
       'shots',
-      {'club_id': clubId, 'lie_type': lieType, 'is_synced': 0},
+      fields,
       where: 'id = ?',
       whereArgs: [shotId],
     );
@@ -1133,6 +1173,10 @@ class LocalDatabaseService {
     required double currentLat,
     required double currentLon,
     double? distanceYards,
+    String aimDirection = 'center',
+    double? simCarryYards,
+    double? simDistanceToHoleYards,
+    String notes = '',
   }) async {
     final db = await database;
     final simulator = distanceYards != null;
@@ -1183,6 +1227,10 @@ class LocalDatabaseService {
       startLat: simulator ? 0 : currentLat,
       startLon: simulator ? 0 : currentLon,
       distanceYards: simulator ? distanceYards.roundToDouble() : 0,
+      aimDirection: simulator ? 'center' : aimDirection,
+      simCarryYards: simulator ? simCarryYards : null,
+      simDistanceToHoleYards: simulator ? simDistanceToHoleYards : null,
+      notes: simulator ? notes.trim() : '',
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
@@ -1841,7 +1889,10 @@ class LocalDatabaseService {
       'end_lat',
       'end_lon',
       'distance_yards',
+      'sim_carry_yards',
+      'sim_distance_to_hole_yards',
       'notes',
+      'aim_direction',
       'timestamp',
       'is_synced',
       'updated_at_ms',

@@ -6,8 +6,15 @@ import 'package:geolocator/geolocator.dart';
 import '../data/ph_golf_catalog.dart';
 import '../data/ph_golf_hole_coords.dart';
 import '../models/diary_context_note.dart';
+import '../on_course/on_course_aim.dart';
+import '../on_course/on_course_hud_gating.dart';
+import '../on_course/on_course_shot_segment.dart';
+import '../services/course_map_pack_local.dart';
+import '../widgets/oncourse_vector_hole_map.dart';
+import '../models/golfer_profile.dart';
 import '../models/golf_models.dart';
 import '../services/diary_model.dart';
+import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
 import '../ui/header_action_policy.dart';
@@ -21,6 +28,7 @@ class FairwayTrackerScreen extends StatefulWidget {
     this.pinDistance,
     this.diary,
     this.onProfileSettingsChanged,
+    this.positionForShot,
   });
 
   /// When null, the screen uses [GeolocatorPinDistanceClient].
@@ -29,6 +37,10 @@ class FairwayTrackerScreen extends StatefulWidget {
   /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
   final DiaryModel? diary;
   final VoidCallback? onProfileSettingsChanged;
+
+  /// When set, Course-mode **Record shot at ball** uses this instead of
+  /// [Geolocator.getCurrentPosition] (widget tests only).
+  final Future<Position?> Function()? positionForShot;
 
   @override
   State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
@@ -47,6 +59,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
   final _courseController = TextEditingController(text: 'Local Course');
   final _yardsController = TextEditingController();
+  final _carryController = TextEditingController();
+  final _distanceToHoleController = TextEditingController();
+  final _strokeNoteController = TextEditingController();
   final _courseFocus = FocusNode();
 
   List<Club> _clubs = [];
@@ -72,9 +87,31 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   int _pinToken = 0;
   String? _watchedKey;
   StreamSubscription<PinFix>? _pinSub;
+  bool _showMapPane = false;
+  bool _offlineVectorSnackShown = false;
+  String _aimDirection = kOnCourseAimCenter;
+  bool _locationPermissionBlocked = false;
+  bool _simOptionalFieldsExpanded = false;
+  bool _simNoteExpanded = false;
+  GolferProfile _profile = const GolferProfile();
+  GolferProfileStore? _profileStore;
+
+  YardageUiDensity get _yardageDensity => resolveYardageUiDensity(_profile);
 
   PinDistanceClient get _pinDistance =>
       widget.pinDistance ?? GeolocatorPinDistanceClient();
+
+  bool get _mappedHoleFeatures => onCourseMappedHoleFeatures(
+        simulator: _simulator,
+        courseName: _appliedCourseName,
+        holeNumber: _holeNumber,
+      );
+
+  HoleCoordinates? get _activeCoords => activeHoleCoordinates(
+        simulator: _simulator,
+        courseName: _appliedCourseName,
+        holeNumber: _holeNumber,
+      );
 
   @override
   void initState() {
@@ -84,9 +121,23 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _bootstrap();
   }
 
+  void _onProfileStoreChanged() {
+    if (!mounted || _profileStore == null) return;
+    setState(() => _profile = _profileStore!.profile);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final next = GolferProfileScope.maybeOf(context);
+    if (!identical(next, _profileStore)) {
+      _profileStore?.removeListener(_onProfileStoreChanged);
+      _profileStore = next;
+      _profileStore?.addListener(_onProfileStoreChanged);
+      if (_profileStore != null && _profileStore!.profile.updatedAtMs > 0) {
+        _profile = _profileStore!.profile;
+      }
+    }
     final visible = TickerMode.valuesOf(context).enabled;
     if (visible == _screenVisible) return;
     _screenVisible = visible;
@@ -106,12 +157,16 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _profileStore?.removeListener(_onProfileStoreChanged);
     _stopPinWatch();
     _courseFocus.removeListener(_onCourseFocus);
     _persistCourseName();
     _courseFocus.dispose();
     _courseController.dispose();
     _yardsController.dispose();
+    _carryController.dispose();
+    _distanceToHoleController.dispose();
+    _strokeNoteController.dispose();
     super.dispose();
   }
 
@@ -124,10 +179,30 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _readingLocation = false;
   }
 
+  void _clampMapPane() {
+    if (!_mappedHoleFeatures && _showMapPane) {
+      _showMapPane = false;
+    }
+  }
+
+  Future<void> _maybeShowVectorFallbackSnack() async {
+    if (!_showMapPane || !_mappedHoleFeatures) return;
+    if (_offlineVectorSnackShown) return;
+    final hasPack =
+        await CourseMapPackLocal.instance.hasPackForCourse(_appliedCourseName);
+    if (hasPack || !mounted) return;
+    _offlineVectorSnackShown = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Showing the hole line without the course photo.'),
+      ),
+    );
+  }
+
   void _syncPinWatch() {
-    final coords = _screenVisible && !_simulator
-        ? holeCoordinates(_appliedCourseName, _holeNumber)
-        : null;
+    _clampMapPane();
+    final coords =
+        _screenVisible ? _activeCoords : null;
     if (coords == null) {
       final hadLine = _yardsToPin != null ||
           _readingLocation ||
@@ -270,8 +345,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   Future<void> _editShot(ShotRecord shot) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) =>
-          ShotEditDialog(shot: shot, clubs: _clubs, lies: _lies),
+      builder: (context) => ShotEditDialog(
+        shot: shot,
+        clubs: _clubs,
+        lies: _lies,
+        showAim: _mappedHoleFeatures && !_simulator,
+      ),
     );
     if (saved == true) await _refreshHoleState();
   }
@@ -298,6 +377,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   }
 
   Future<Position?> _readGps() async {
+    final inject = widget.positionForShot;
+    if (inject != null) {
+      return inject();
+    }
+
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -305,18 +389,27 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (mounted) {
+        setState(() => _locationPermissionBlocked = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text('Location permission is required for shot tracking')),
+            content: Text('Location permission is required for shot tracking'),
+          ),
         );
       }
       return null;
     }
+    if (mounted && _locationPermissionBlocked) {
+      setState(() => _locationPermissionBlocked = false);
+    }
 
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   double? _typedYards() {
@@ -327,6 +420,22 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     }
     setState(() => _yardsError = null);
     return parsed.roundToDouble();
+  }
+
+  double? _optionalSimYards(TextEditingController controller) {
+    final trimmed = controller.text.trim();
+    if (trimmed.isEmpty) return null;
+    final parsed = double.tryParse(trimmed);
+    if (parsed == null || parsed <= 0) return null;
+    return parsed.roundToDouble();
+  }
+
+  void _clearSimulatorDraft() {
+    _yardsController.clear();
+    _carryController.clear();
+    _distanceToHoleController.clear();
+    _strokeNoteController.clear();
+    _yardsError = null;
   }
 
   Future<void> _recordShot() async {
@@ -346,11 +455,23 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           currentLat: 0,
           currentLon: 0,
           distanceYards: typedYards,
+          simCarryYards: _optionalSimYards(_carryController),
+          simDistanceToHoleYards: _optionalSimYards(_distanceToHoleController),
+          notes: _strokeNoteController.text,
         );
-        _yardsController.clear();
+        _clearSimulatorDraft();
       } else {
         final position = await _readGps();
-        if (position == null) return;
+        if (position == null) {
+          if (mounted && !_locationPermissionBlocked) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Couldn't read location. Shot not saved."),
+              ),
+            );
+          }
+          return;
+        }
 
         await LocalDatabaseService.instance.recordFairwayHit(
           roundId: _roundId!,
@@ -359,6 +480,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           lieType: _lieType,
           currentLat: position.latitude,
           currentLon: position.longitude,
+          aimDirection: _mappedHoleFeatures
+              ? normalizeOnCourseAim(_aimDirection)
+              : kOnCourseAimCenter,
         );
       }
       await _refreshHoleState();
@@ -398,6 +522,106 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _syncPinWatch();
   }
 
+  String _shotSubtitle(ShotRecord shot) {
+    final parts = <String>[];
+    if (shot.distanceYards > 0) {
+      parts.add('${shot.distanceYards.round()} yds travelled');
+    } else {
+      parts.add('Distance pending');
+    }
+    if (shot.simCarryYards != null && shot.simCarryYards! > 0) {
+      parts.add('carry ${shot.simCarryYards!.round()}');
+    }
+    if (shot.simDistanceToHoleYards != null &&
+        shot.simDistanceToHoleYards! > 0) {
+      parts.add('${shot.simDistanceToHoleYards!.round()} to hole');
+    }
+    if (shot.notes.trim().isNotEmpty) {
+      parts.add(shot.notes.trim());
+    }
+    return parts.join(' · ');
+  }
+
+  List<Widget> _simulatorFieldWidgets() {
+    final density = _yardageDensity;
+    final optionalInline = density != YardageUiDensity.simple;
+    final noteInline = density != YardageUiDensity.simple;
+  final showOptionalFields = optionalInline || _simOptionalFieldsExpanded;
+    final showNoteField = noteInline || _simNoteExpanded;
+
+    return [
+      TextField(
+        key: const ValueKey('oncourse-sim-yards-field'),
+        controller: _yardsController,
+        keyboardType:
+            const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'Distance travelled (yds)',
+          errorText: _yardsError,
+        ),
+        onChanged: (_) {
+          if (_yardsError != null) {
+            setState(() => _yardsError = null);
+          }
+        },
+      ),
+      if (!optionalInline && !_simOptionalFieldsExpanded) ...[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const ValueKey('oncourse-sim-add-distance-link'),
+            onPressed: () =>
+                setState(() => _simOptionalFieldsExpanded = true),
+            child: const Text('Add distance'),
+          ),
+        ),
+      ],
+      if (showOptionalFields) ...[
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('oncourse-sim-carry-field'),
+          controller: _carryController,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Carry (yds, optional)',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('oncourse-sim-distance-to-hole-field'),
+          controller: _distanceToHoleController,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Distance to hole (yds, optional)',
+          ),
+        ),
+      ],
+      if (!noteInline && !_simNoteExpanded) ...[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const ValueKey('oncourse-sim-add-note-link'),
+            onPressed: () => setState(() => _simNoteExpanded = true),
+            child: const Text('Add note'),
+          ),
+        ),
+      ],
+      if (showNoteField) ...[
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('oncourse-sim-stroke-note-field'),
+          controller: _strokeNoteController,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Stroke note (optional)',
+          ),
+        ),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final strokes = _holeScore?.strokes ?? _shots.length;
@@ -419,12 +643,16 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             VenueNameField(
+              key: const ValueKey('oncourse-course-name-field'),
               controller: _courseController,
               focusNode: _courseFocus,
               labelText: 'Course name',
@@ -435,168 +663,267 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               onSubmitted: (_) => _persistCourseName(),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Course'),
-                  selected: !_simulator,
-                  onSelected: (_) {
-                    setState(() {
-                      _simulator = false;
-                      _yardsError = null;
-                    });
-                    _syncPinWatch();
-                  },
-                ),
-                ChoiceChip(
-                  label: const Text('Simulator'),
-                  selected: _simulator,
-                  onSelected: (_) {
-                    setState(() => _simulator = true);
-                    _syncPinWatch();
-                  },
-                ),
-              ],
-            ),
-            if (_yardsToPin != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  '$_yardsToPin yds to pin',
-                  key: const ValueKey('on-course-distance-to-hole'),
-                  semanticsLabel: 'Yards to the pin',
-                  style: GolfTextStyles.tabularNum(context, fontSize: 22),
-                ),
-              )
-            else if (_readingLocation)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'Reading location…',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            if (_simulator) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _yardsController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Distance travelled (yds)',
-                  errorText: _yardsError,
-                ),
-                onChanged: (_) {
-                  if (_yardsError != null) setState(() => _yardsError = null);
+            if (_mappedHoleFeatures) ...[
+              SegmentedButton<bool>(
+                key: const ValueKey('on-course-map-toggle'),
+                emptySelectionAllowed: false,
+                segments: const [
+                  ButtonSegment<bool>(value: false, label: Text('HUD')),
+                  ButtonSegment<bool>(value: true, label: Text('Map')),
+                ],
+                selected: {_showMapPane},
+                onSelectionChanged: (selection) {
+                  setState(() => _showMapPane = selection.first);
+                  _maybeShowVectorFallbackSnack();
                 },
               ),
+              const SizedBox(height: 12),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton(
-                  key: const Key('on-course-hole-previous'),
-                  tooltip: 'Previous hole',
-                  onPressed: _holeNumber > 1 ? () => _stepHole(-1) : null,
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Text('Hole $_holeNumber',
-                    key: const Key('on-course-hole-label'),
-                    style: Theme.of(context).textTheme.headlineSmall),
-                IconButton(
-                  key: const Key('on-course-hole-next'),
-                  tooltip: 'Next hole',
-                  onPressed: _holeNumber < _maxHole ? () => _stepHole(1) : null,
-                  icon: const Icon(Icons.chevron_right),
-                ),
-                const Spacer(),
-                Text('Round total: $_roundTotal',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-                'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [3, 4, 5].map((p) {
-                return ChoiceChip(
-                  label: Text('Par $p'),
-                  selected: _par == p,
-                  onSelected: (_) async {
-                    setState(() => _par = p);
-                    if (_roundId != null && _holeScore != null) {
-                      await LocalDatabaseService.instance.upsertHoleScore(
-                        _holeScore!.copyWith(par: p, isSynced: 0),
-                      );
-                    }
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            const Text('Club', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: _clubs.map((club) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(club.name),
-                      selected: _selectedClub?.id == club.id,
-                      onSelected: (_) => setState(() => _selectedClub = club),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Lie', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: _lies.map((lie) {
-                  final label = lie[0].toUpperCase() + lie.substring(1);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: _lieType == lie,
-                      onSelected: (_) => setState(() => _lieType = lie),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 80,
-              child: ElevatedButton(
-                key: const ValueKey('oncourse-record-shot-btn'),
-                onPressed: _busy ? null : _recordShot,
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: AppColors.green),
-                child: _busy
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        _simulator ? 'Record shot' : 'Record Shot at Ball',
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
+            if (_showMapPane && _activeCoords != null)
+              FutureBuilder<bool>(
+                future: CourseMapPackLocal.instance
+                    .hasPackForCourse(_appliedCourseName),
+                builder: (context, snapshot) {
+                  final hasPack = snapshot.data == true;
+                  if (hasPack) {
+                    return Semantics(
+                      label: 'Hole map',
+                      child: AspectRatio(
+                        aspectRatio: 4 / 3,
+                        child: DecoratedBox(
+                          key: const ValueKey('oncourse-hole-map'),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text('Course map pack ready'),
+                          ),
+                        ),
                       ),
+                    );
+                  }
+                  return OncourseVectorHoleMap(
+                    coords: _activeCoords!,
+                    shots: _shots,
+                  );
+                },
+              ),
+            Card(
+              key: const ValueKey('oncourse-hud-tabular'),
+              margin: EdgeInsets.zero,
+              child: Semantics(
+                label: 'On course scoring summary',
+                container: true,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            key: const ValueKey('oncourse-mode-course'),
+                            label: const Text('Course'),
+                            selected: !_simulator,
+                            onSelected: (_) {
+                              setState(() {
+                                _simulator = false;
+                                _yardsError = null;
+                              });
+                              _syncPinWatch();
+                            },
+                          ),
+                          ChoiceChip(
+                            key: const ValueKey('oncourse-mode-simulator'),
+                            label: const Text('Simulator'),
+                            selected: _simulator,
+                            onSelected: (_) {
+                              setState(() => _simulator = true);
+                              _syncPinWatch();
+                            },
+                          ),
+                        ],
+                      ),
+                      if (_mappedHoleFeatures && _yardsToPin != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            '$_yardsToPin yds to pin',
+                            key: const ValueKey('on-course-distance-to-hole'),
+                            semanticsLabel: 'Yards to the pin',
+                            style: GolfTextStyles.tabularNum(context,
+                                fontSize: 22),
+                          ),
+                        )
+                      else if (_mappedHoleFeatures && _readingLocation)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Reading location…',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      if (_simulator) ...[
+                        const SizedBox(height: 12),
+                        ..._simulatorFieldWidgets(),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          IconButton(
+                            key: const Key('on-course-hole-previous'),
+                            tooltip: 'Previous hole',
+                            onPressed:
+                                _holeNumber > 1 ? () => _stepHole(-1) : null,
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Text('Hole $_holeNumber',
+                              key: const Key('on-course-hole-label'),
+                              style: Theme.of(context).textTheme.headlineSmall),
+                          IconButton(
+                            key: const Key('on-course-hole-next'),
+                            tooltip: 'Next hole',
+                            onPressed: _holeNumber < _maxHole
+                                ? () => _stepHole(1)
+                                : null,
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                          const Spacer(),
+                          Text('Round total: $_roundTotal',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                          'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [3, 4, 5].map((p) {
+                          return ChoiceChip(
+                            key: ValueKey('oncourse-par-chip-$p'),
+                            label: Text('Par $p'),
+                            selected: _par == p,
+                            onSelected: (_) async {
+                              setState(() => _par = p);
+                              if (_roundId != null && _holeScore != null) {
+                                await LocalDatabaseService.instance
+                                    .upsertHoleScore(
+                                  _holeScore!.copyWith(par: p, isSynced: 0),
+                                );
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Club',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _clubs.map((club) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                key: ValueKey('oncourse-club-chip-${club.id}'),
+                                label: Text(club.name),
+                                selected: _selectedClub?.id == club.id,
+                                onSelected: (_) =>
+                                    setState(() => _selectedClub = club),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Lie',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _lies.map((lie) {
+                            final label =
+                                lie[0].toUpperCase() + lie.substring(1);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                key: ValueKey('oncourse-lie-chip-$lie'),
+                                label: Text(label),
+                                selected: _lieType == lie,
+                                onSelected: (_) =>
+                                    setState(() => _lieType = lie),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      if (_mappedHoleFeatures && !_simulator) ...[
+                        const SizedBox(height: 16),
+                        const Text('Aim',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-left'),
+                              label: const Text('◀ L'),
+                              selected: _aimDirection == kOnCourseAimLeft,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimLeft),
+                            ),
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-center'),
+                              label: const Text('●'),
+                              selected: _aimDirection == kOnCourseAimCenter,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimCenter),
+                            ),
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-right'),
+                              label: const Text('R ▶'),
+                              selected: _aimDirection == kOnCourseAimRight,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimRight),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
+            if (_locationPermissionBlocked && !_simulator) ...[
+              const SizedBox(height: 12),
+              MaterialBanner(
+                key: const ValueKey('oncourse-location-banner'),
+                content:
+                    const Text('Location is off for shot tracking.'),
+                actions: [
+                  TextButton(
+                    onPressed: Geolocator.openAppSettings,
+                    child: const Text('Open settings'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
+                    key: const ValueKey('oncourse-penalty-1-btn'),
                     onPressed: _roundId == null
                         ? null
                         : () => LocalDatabaseService.instance
@@ -608,6 +935,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
+                    key: const ValueKey('oncourse-penalty-2-btn'),
                     onPressed: _roundId == null
                         ? null
                         : () => LocalDatabaseService.instance
@@ -623,6 +951,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               children: [
                 Expanded(
                   child: OutlinedButton(
+                    key: const ValueKey('oncourse-mulligan-btn'),
                     onPressed: _roundId == null
                         ? null
                         : () => LocalDatabaseService.instance
@@ -634,6 +963,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
+                    key: const ValueKey('oncourse-concede-btn'),
                     onPressed: _roundId == null
                         ? null
                         : () => LocalDatabaseService.instance
@@ -646,16 +976,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 72,
-              child: ElevatedButton(
+              height: 48,
+              child: OutlinedButton(
+                key: const ValueKey('oncourse-finish-hole-btn'),
                 onPressed: _finishHole,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.amber,
-                    foregroundColor: Colors.black87),
                 child: Text(
                   _holeNumber >= _holeCount ? 'Finish Round' : 'Finish Hole',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -665,23 +991,73 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ..._shots.map(
-                (s) => ListTile(
-                  key: ValueKey('on-course-shot-${s.id}'),
-                  dense: true,
-                  onTap: () => _editShot(s),
-                  title: Text(
-                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}'),
-                  subtitle: Text(
-                    s.distanceYards > 0
-                        ? '${s.distanceYards.round()} yds'
-                        : 'Distance pending',
-                  ),
-                  trailing: const Icon(Icons.edit_outlined),
-                ),
+                (s) {
+                  final aimNote = !_simulator &&
+                          s.aimDirection != kOnCourseAimCenter
+                      ? ' · Aim ${s.aimDirection}'
+                      : '';
+                  final subtitle = _simulator
+                      ? _shotSubtitle(s)
+                      : shotDistanceLabel(
+                          shots: _shots,
+                          shot: s,
+                          simulator: _simulator,
+                        );
+                  return ListTile(
+                    key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
+                    dense: true,
+                    onTap: () => _editShot(s),
+                    title: Text(
+                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}$aimNote',
+                    ),
+                    subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                    trailing: s.notes.trim().isNotEmpty
+                        ? const Icon(Icons.notes_outlined)
+                        : const Icon(Icons.edit_outlined),
+                  );
+                },
               ),
             ],
-          ],
-        ),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: SizedBox(
+                height: 64,
+                width: double.infinity,
+                child: FilledButton(
+                  key: const ValueKey('oncourse-record-shot-btn'),
+                  onPressed: _busy ? null : _recordShot,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          _simulator
+                              ? 'Record stroke'
+                              : 'Record shot at ball',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -689,12 +1065,18 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
 @visibleForTesting
 class ShotEditDialog extends StatefulWidget {
-  const ShotEditDialog(
-      {super.key, required this.shot, required this.clubs, required this.lies});
+  const ShotEditDialog({
+    super.key,
+    required this.shot,
+    required this.clubs,
+    required this.lies,
+    this.showAim = false,
+  });
 
   final ShotRecord shot;
   final List<Club> clubs;
   final List<String> lies;
+  final bool showAim;
 
   @override
   State<ShotEditDialog> createState() => _ShotEditDialogState();
@@ -703,12 +1085,14 @@ class ShotEditDialog extends StatefulWidget {
 class _ShotEditDialogState extends State<ShotEditDialog> {
   late String _lie = widget.shot.lieType;
   late String _clubId = widget.shot.clubId;
+  late String _aim = normalizeOnCourseAim(widget.shot.aimDirection);
 
   Future<void> _save() async {
     await LocalDatabaseService.instance.updateShotDetails(
       shotId: widget.shot.id,
       clubId: _clubId,
       lieType: _lie,
+      aimDirection: widget.showAim ? _aim : null,
     );
     if (mounted) Navigator.pop(context, true);
   }
@@ -756,6 +1140,27 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
                 );
               }).toList(),
             ),
+            if (widget.showAim) ...[
+              const SizedBox(height: 16),
+              const Text('Aim'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: kOnCourseAimChoices.map((aim) {
+                  final label = switch (aim) {
+                    kOnCourseAimLeft => '◀ L',
+                    kOnCourseAimRight => 'R ▶',
+                    _ => '●',
+                  };
+                  return ChoiceChip(
+                    key: ValueKey('oncourse-aim-$aim'),
+                    label: Text(label),
+                    selected: _aim == aim,
+                    onSelected: (_) => setState(() => _aim = aim),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),

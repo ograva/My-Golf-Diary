@@ -6,6 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import '../data/ph_golf_catalog.dart';
 import '../data/ph_golf_hole_coords.dart';
 import '../models/diary_context_note.dart';
+import '../on_course/on_course_hud_gating.dart';
+import '../services/course_map_pack_local.dart';
+import '../widgets/oncourse_vector_hole_map.dart';
 import '../models/golf_models.dart';
 import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
@@ -72,9 +75,23 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   int _pinToken = 0;
   String? _watchedKey;
   StreamSubscription<PinFix>? _pinSub;
+  bool _showMapPane = false;
+  bool _offlineVectorSnackShown = false;
 
   PinDistanceClient get _pinDistance =>
       widget.pinDistance ?? GeolocatorPinDistanceClient();
+
+  bool get _mappedHoleFeatures => onCourseMappedHoleFeatures(
+        simulator: _simulator,
+        courseName: _appliedCourseName,
+        holeNumber: _holeNumber,
+      );
+
+  HoleCoordinates? get _activeCoords => activeHoleCoordinates(
+        simulator: _simulator,
+        courseName: _appliedCourseName,
+        holeNumber: _holeNumber,
+      );
 
   @override
   void initState() {
@@ -124,10 +141,30 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _readingLocation = false;
   }
 
+  void _clampMapPane() {
+    if (!_mappedHoleFeatures && _showMapPane) {
+      _showMapPane = false;
+    }
+  }
+
+  Future<void> _maybeShowVectorFallbackSnack() async {
+    if (!_showMapPane || !_mappedHoleFeatures) return;
+    if (_offlineVectorSnackShown) return;
+    final hasPack =
+        await CourseMapPackLocal.instance.hasPackForCourse(_appliedCourseName);
+    if (hasPack || !mounted) return;
+    _offlineVectorSnackShown = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Showing the hole line without the course photo.'),
+      ),
+    );
+  }
+
   void _syncPinWatch() {
-    final coords = _screenVisible && !_simulator
-        ? holeCoordinates(_appliedCourseName, _holeNumber)
-        : null;
+    _clampMapPane();
+    final coords =
+        _screenVisible ? _activeCoords : null;
     if (coords == null) {
       final hadLine = _yardsToPin != null ||
           _readingLocation ||
@@ -435,144 +472,223 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               onSubmitted: (_) => _persistCourseName(),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Course'),
-                  selected: !_simulator,
-                  onSelected: (_) {
-                    setState(() {
-                      _simulator = false;
-                      _yardsError = null;
-                    });
-                    _syncPinWatch();
-                  },
-                ),
-                ChoiceChip(
-                  label: const Text('Simulator'),
-                  selected: _simulator,
-                  onSelected: (_) {
-                    setState(() => _simulator = true);
-                    _syncPinWatch();
-                  },
-                ),
-              ],
-            ),
-            if (_yardsToPin != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  '$_yardsToPin yds to pin',
-                  key: const ValueKey('on-course-distance-to-hole'),
-                  semanticsLabel: 'Yards to the pin',
-                  style: GolfTextStyles.tabularNum(context, fontSize: 22),
-                ),
-              )
-            else if (_readingLocation)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'Reading location…',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            if (_simulator) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _yardsController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Distance travelled (yds)',
-                  errorText: _yardsError,
-                ),
-                onChanged: (_) {
-                  if (_yardsError != null) setState(() => _yardsError = null);
+            if (_mappedHoleFeatures) ...[
+              SegmentedButton<bool>(
+                key: const ValueKey('on-course-map-toggle'),
+                emptySelectionAllowed: false,
+                segments: const [
+                  ButtonSegment<bool>(value: false, label: Text('HUD')),
+                  ButtonSegment<bool>(value: true, label: Text('Map')),
+                ],
+                selected: {_showMapPane},
+                onSelectionChanged: (selection) {
+                  setState(() => _showMapPane = selection.first);
+                  _maybeShowVectorFallbackSnack();
                 },
               ),
+              const SizedBox(height: 12),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton(
-                  key: const Key('on-course-hole-previous'),
-                  tooltip: 'Previous hole',
-                  onPressed: _holeNumber > 1 ? () => _stepHole(-1) : null,
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Text('Hole $_holeNumber',
-                    key: const Key('on-course-hole-label'),
-                    style: Theme.of(context).textTheme.headlineSmall),
-                IconButton(
-                  key: const Key('on-course-hole-next'),
-                  tooltip: 'Next hole',
-                  onPressed: _holeNumber < _maxHole ? () => _stepHole(1) : null,
-                  icon: const Icon(Icons.chevron_right),
-                ),
-                const Spacer(),
-                Text('Round total: $_roundTotal',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-                'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [3, 4, 5].map((p) {
-                return ChoiceChip(
-                  label: Text('Par $p'),
-                  selected: _par == p,
-                  onSelected: (_) async {
-                    setState(() => _par = p);
-                    if (_roundId != null && _holeScore != null) {
-                      await LocalDatabaseService.instance.upsertHoleScore(
-                        _holeScore!.copyWith(par: p, isSynced: 0),
-                      );
-                    }
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            const Text('Club', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: _clubs.map((club) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(club.name),
-                      selected: _selectedClub?.id == club.id,
-                      onSelected: (_) => setState(() => _selectedClub = club),
-                    ),
+            if (_showMapPane && _activeCoords != null)
+              FutureBuilder<bool>(
+                future: CourseMapPackLocal.instance
+                    .hasPackForCourse(_appliedCourseName),
+                builder: (context, snapshot) {
+                  final hasPack = snapshot.data == true;
+                  if (hasPack) {
+                    return Semantics(
+                      label: 'Hole map',
+                      child: AspectRatio(
+                        aspectRatio: 4 / 3,
+                        child: DecoratedBox(
+                          key: const ValueKey('oncourse-hole-map'),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text('Course map pack ready'),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return OncourseVectorHoleMap(
+                    coords: _activeCoords!,
+                    shots: _shots,
                   );
-                }).toList(),
+                },
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Lie', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: _lies.map((lie) {
-                  final label = lie[0].toUpperCase() + lie.substring(1);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: _lieType == lie,
-                      onSelected: (_) => setState(() => _lieType = lie),
-                    ),
-                  );
-                }).toList(),
+            Card(
+              key: const ValueKey('oncourse-hud-tabular'),
+              margin: EdgeInsets.zero,
+              child: Semantics(
+                label: 'On course scoring summary',
+                container: true,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            key: const ValueKey('oncourse-mode-course'),
+                            label: const Text('Course'),
+                            selected: !_simulator,
+                            onSelected: (_) {
+                              setState(() {
+                                _simulator = false;
+                                _yardsError = null;
+                              });
+                              _syncPinWatch();
+                            },
+                          ),
+                          ChoiceChip(
+                            key: const ValueKey('oncourse-mode-simulator'),
+                            label: const Text('Simulator'),
+                            selected: _simulator,
+                            onSelected: (_) {
+                              setState(() => _simulator = true);
+                              _syncPinWatch();
+                            },
+                          ),
+                        ],
+                      ),
+                      if (_mappedHoleFeatures && _yardsToPin != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            '$_yardsToPin yds to pin',
+                            key: const ValueKey('on-course-distance-to-hole'),
+                            semanticsLabel: 'Yards to the pin',
+                            style: GolfTextStyles.tabularNum(context,
+                                fontSize: 22),
+                          ),
+                        )
+                      else if (_mappedHoleFeatures && _readingLocation)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Reading location…',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      if (_simulator) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _yardsController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Distance travelled (yds)',
+                            errorText: _yardsError,
+                          ),
+                          onChanged: (_) {
+                            if (_yardsError != null) {
+                              setState(() => _yardsError = null);
+                            }
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          IconButton(
+                            key: const Key('on-course-hole-previous'),
+                            tooltip: 'Previous hole',
+                            onPressed:
+                                _holeNumber > 1 ? () => _stepHole(-1) : null,
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Text('Hole $_holeNumber',
+                              key: const Key('on-course-hole-label'),
+                              style: Theme.of(context).textTheme.headlineSmall),
+                          IconButton(
+                            key: const Key('on-course-hole-next'),
+                            tooltip: 'Next hole',
+                            onPressed: _holeNumber < _maxHole
+                                ? () => _stepHole(1)
+                                : null,
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                          const Spacer(),
+                          Text('Round total: $_roundTotal',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                          'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [3, 4, 5].map((p) {
+                          return ChoiceChip(
+                            label: Text('Par $p'),
+                            selected: _par == p,
+                            onSelected: (_) async {
+                              setState(() => _par = p);
+                              if (_roundId != null && _holeScore != null) {
+                                await LocalDatabaseService.instance
+                                    .upsertHoleScore(
+                                  _holeScore!.copyWith(par: p, isSynced: 0),
+                                );
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Club',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _clubs.map((club) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(club.name),
+                                selected: _selectedClub?.id == club.id,
+                                onSelected: (_) =>
+                                    setState(() => _selectedClub = club),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Lie',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _lies.map((lie) {
+                            final label =
+                                lie[0].toUpperCase() + lie.substring(1);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(label),
+                                selected: _lieType == lie,
+                                onSelected: (_) =>
+                                    setState(() => _lieType = lie),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

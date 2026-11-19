@@ -166,5 +166,130 @@ void main() {
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
     expect(find.textContaining('yds to pin'), findsNothing);
+    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+  });
+
+  testWidgets('unknown course shows tabular HUD without pin or map toggle',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+        theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
+    await waitForBag(tester);
+
+    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
+    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
+  });
+
+  testWidgets('Sherwood mapped hole gains toggle and unmapped hole hides it',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const course = 'Sherwood Hills Golf Club';
+    final mappedHole = holeCoordinates(course, 1)!;
+    final client = _FakePinDistance(
+        PinFix(latitude: mappedHole.teeLat, longitude: mappedHole.teeLon));
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: FairwayTrackerScreen(pinDistance: client),
+    ));
+    await waitForBag(tester);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Course name'), course);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    FocusManager.instance.primaryFocus?.unfocus();
+    for (var i = 0; i < 24; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (find
+          .byKey(const ValueKey('on-course-map-toggle'))
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+
+    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsOneWidget);
+    expect(find.byKey(const ValueKey('on-course-distance-to-hole')),
+        findsOneWidget);
+
+    for (var hole = 1; hole < 3; hole++) {
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Finish Hole'));
+      await tester.pump();
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        if (find
+            .text('Hole ${hole + 1}')
+            .evaluate()
+            .isNotEmpty) {
+          break;
+        }
+      }
+    }
+
+    expect(find.text('Hole 3'), findsOneWidget);
+    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+  });
+
+  testWidgets('map pane without pack shows vector fallback and snackbar once',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const course = 'Villamor Golf Club';
+    final mappedHole = holeCoordinates(course, 1)!;
+    final client = _FakePinDistance(
+        PinFix(latitude: mappedHole.teeLat, longitude: mappedHole.teeLon));
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: FairwayTrackerScreen(pinDistance: client),
+    ));
+    await waitForBag(tester);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Course name'), course);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    FocusManager.instance.primaryFocus?.unfocus();
+    for (var i = 0; i < 24; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (find
+          .byKey(const ValueKey('on-course-map-toggle'))
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+
+    await tester.tap(find.text('Map'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.byKey(const ValueKey('oncourse-map-vector')), findsOneWidget);
+    expect(
+      find.text('Showing the hole line without the course photo.'),
+      findsOneWidget,
+    );
   });
 }

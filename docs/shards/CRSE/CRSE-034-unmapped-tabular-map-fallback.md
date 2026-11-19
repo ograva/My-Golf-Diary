@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-011 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Ready for Review |
 | **Complexity** | M |
 | **Depends On** | CRSE-020, CRSE-021 |
 
@@ -16,16 +16,16 @@ When the venue is custom or the active hole lacks surveyed tee/green coordinates
 
 ## Acceptance Criteria
 
-- [ ] Custom course name or `hasHoleCoordinates == false` for active hole: primary card uses `ValueKey('oncourse-hud-tabular')`; no `on-course-distance-to-hole`, no `on-course-map-toggle`, no “maps unavailable” error panel.
-- [ ] Partial course (e.g. Hallow Ridge): changing hole from unmapped → mapped shows pin line and map toggle; mapped → unmapped hides them without cancelling the round.
-- [ ] **Record shot at ball** remains available in Course mode with GPS when permitted; switching to Simulator still allows typed yards per `CRSE-031`.
-- [ ] Offline with no local map pack: one non-blocking snackbar (or inline hint on `oncourse-map-download`) and vector/tabular fallback; recording strokes continues.
+- [x] Custom course name or `hasHoleCoordinates == false` for active hole: primary card uses `ValueKey('oncourse-hud-tabular')`; no `on-course-distance-to-hole`, no `on-course-map-toggle`, no “maps unavailable” error panel.
+- [x] Partial course (e.g. Hallow Ridge): changing hole from unmapped → mapped shows pin line and map toggle; mapped → unmapped hides them without cancelling the round.
+- [x] **Record shot at ball** remains available in Course mode with GPS when permitted; switching to Simulator still allows typed yards per `CRSE-031`.
+- [x] Offline with no local map pack: one non-blocking snackbar (or inline hint on `oncourse-map-download`) and vector/tabular fallback; recording strokes continues.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Unknown course — assert `oncourse-hud-tabular` present and distance/map keys absent. Catalog mapped hole — distance key present. Hole step change toggles gating.
-- [ ] **Integration (if needed):** Optional: partial-course hole walk in widget test using real catalog names from `ph_golf_hole_coords.dart`.
-- [ ] **Keys:** `oncourse-hud-tabular`, `on-course-distance-to-hole`, `on-course-map-toggle`, `oncourse-map-vector` from wireframes; semantics label on tabular card for a11y.
+- [x] **Unit/widget:** Unknown course — assert `oncourse-hud-tabular` present and distance/map keys absent. Catalog mapped hole — distance key present. Hole step change toggles gating.
+- [x] **Integration (if needed):** Optional: partial-course hole walk in widget test using real catalog names from `ph_golf_hole_coords.dart`.
+- [x] **Keys:** `oncourse-hud-tabular`, `on-course-distance-to-hole`, `on-course-map-toggle`, `oncourse-map-vector` from wireframes; semantics label on tabular card for a11y.
 
 ## Dev notes
 

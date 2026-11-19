@@ -5,6 +5,8 @@
 
 Credentials: a service account with Storage Object Admin on the bucket, either as a key
 file in GOOGLE_APPLICATION_CREDENTIALS or as the key JSON in FIREBASE_SERVICE_ACCOUNT_JSON.
+FIREBASE_SERVICE_ACCOUNT_JSON may instead hold a `firebase login:ci` refresh token (starts
+with 1//); the signed-in user then needs write access to the bucket.
 Images go first, then each manifest, then index.json last, so clients never see a version
 whose files are missing.
 """
@@ -23,13 +25,28 @@ OUT_DIR = Path(__file__).resolve().parent / "out"
 PREFIX = "course_maps"
 CACHE_CONTROL = "public, max-age=300"
 DEFAULT_BUCKET = "novusinc-8df79.appspot.com"
+PROJECT_ID = "novusinc-8df79"
+FIREBASE_CLI_CLIENT_ID = "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com"
+FIREBASE_CLI_CLIENT_SECRET = "j9iVZfS8kkCEFUPaAeJV0sAi"
 
 
 def _client():
     from google.cloud import storage
     from google.oauth2 import service_account
 
-    raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+    if raw.startswith("1//"):
+        from google.oauth2.credentials import Credentials
+
+        # A `firebase login:ci` refresh token; it is bound to the Firebase CLI's public OAuth client.
+        creds = Credentials(
+            None,
+            refresh_token=raw,
+            client_id=FIREBASE_CLI_CLIENT_ID,
+            client_secret=FIREBASE_CLI_CLIENT_SECRET,
+            token_uri="https://oauth2.googleapis.com/token",
+        )
+        return storage.Client(project=PROJECT_ID, credentials=creds)
     if raw:
         info = json.loads(raw)
         creds = service_account.Credentials.from_service_account_info(info)

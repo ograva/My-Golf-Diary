@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+
+import 'support/on_course_test_helpers.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -50,32 +52,23 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await pumpCourse(tester);
-    ChoiceChip parChip(String label) =>
-        tester.widget(find.widgetWithText(ChoiceChip, label));
-    expect(parChip('Par 4').selected, isTrue);
+    expect(parSummaryLabel(tester), 'Par 4');
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), 'Intramuros');
-    await tester.pump();
-    await tester.tap(find.text('Club Intramuros Golf Course'));
+    await pickCourse(tester, 'Intramuros', 'Club Intramuros Golf Course');
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pump();
 
-    expect(find.widgetWithText(TextField, 'Course name'), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-course-sheet')), findsNothing);
     expect(
-        tester
-            .widget<TextField>(find.widgetWithText(TextField, 'Course name'))
-            .controller
-            ?.text,
-        'Club Intramuros Golf Course');
-    expect(parChip('Par 3').selected, isTrue);
+        find.descendant(
+            of: find.byKey(const ValueKey('oncourse-course-summary')),
+            matching: find.text('Club Intramuros Golf Course')),
+        findsOneWidget);
+    expect(parSummaryLabel(tester), 'Par 3');
     expect(find.text('18 holes · par 66'), findsOneWidget);
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), 'Camp Aguinaldo');
-    await tester.pump();
-    await tester.tap(find.text('Camp Aguinaldo Golf Club'));
+    await pickCourse(tester, 'Camp Aguinaldo', 'Camp Aguinaldo Golf Club');
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pump();
@@ -83,16 +76,22 @@ void main() {
 
     await finishAction(tester, find.text('Finish Hole'));
     expect(find.text('Hole 2'), findsOneWidget);
-    expect(parChip('Par 3').selected, isTrue);
+    expect(parSummaryLabel(tester), 'Par 3');
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), 'My Backyard');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.tap(find.byKey(const ValueKey('oncourse-par-summary')));
+    await settleSheet(tester);
+    expect(find.byKey(const ValueKey('oncourse-par-sheet')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('oncourse-par-chip-5')));
+    await settleSheet(tester);
+    expect(find.byKey(const ValueKey('oncourse-par-sheet')), findsNothing);
+    expect(parSummaryLabel(tester), 'Par 5');
+
+    await submitCourseName(tester, 'My Backyard');
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pump();
 
-    expect(parChip('Par 4').selected, isTrue);
+    expect(parSummaryLabel(tester), 'Par 4');
     expect(find.text('18 holes · par 66'), findsNothing);
   });
 
@@ -131,13 +130,13 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await pumpCourse(tester);
-    await tester.tap(find.text('Simulator'));
-    await tester.pump();
+    await selectSimulator(tester);
     await tester.enterText(
         find.byKey(const ValueKey('oncourse-sim-yards-field')), '150');
     await finishAction(
         tester, find.widgetWithText(FilledButton, 'Record stroke'));
 
+    await expandShotList(tester);
     expect(find.textContaining('Stroke 1'), findsOneWidget);
     await tester.tap(find.textContaining('Stroke 1'));
     await tester.pump();

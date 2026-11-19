@@ -8,6 +8,8 @@ import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/services/pin_distance.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
 
+import 'support/on_course_test_helpers.dart';
+
 class _FakePinDistance implements PinDistanceClient {
   _FakePinDistance(this.fix);
 
@@ -68,12 +70,11 @@ void main() {
     expect(find.text('Record shot at ball'), findsOneWidget);
     expect(find.text('Distance travelled (yds)'), findsNothing);
 
-    await tester.tap(find.text('Simulator'));
-    await tester.pump();
+    await selectSimulator(tester);
 
     expect(find.text('Record stroke'), findsOneWidget);
-    expect(find.byKey(const ValueKey('oncourse-sim-yards-field')),
-        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('oncourse-sim-yards-field')), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Record stroke'));
     await tester.pump();
@@ -85,7 +86,7 @@ void main() {
     await tester.pump();
     expect(find.text('Enter a distance greater than 0'), findsOneWidget);
 
-    await tester.tap(find.text('Course'));
+    await tester.tap(find.byKey(const ValueKey('oncourse-mode-course')));
     await tester.pump();
     expect(find.text('Record shot at ball'), findsOneWidget);
     expect(find.text('Distance travelled (yds)'), findsNothing);
@@ -112,10 +113,7 @@ void main() {
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), course);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, course);
     for (var i = 0; i < 20; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
@@ -133,13 +131,12 @@ void main() {
     expect(find.text('$yards yds to pin'), findsOneWidget);
     expect(client.live, 1);
 
-    await tester.tap(find.text('Simulator'));
-    await tester.pump();
+    await selectSimulator(tester);
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
     expect(client.live, 0);
 
-    await tester.tap(find.text('Course'));
+    await tester.tap(find.byKey(const ValueKey('oncourse-mode-course')));
     for (var i = 0; i < 20; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
@@ -148,10 +145,7 @@ void main() {
     }
     expect(find.text('$yards yds to pin'), findsOneWidget);
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), 'My Backyard');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, 'My Backyard');
     for (var i = 0; i < 20; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
@@ -205,10 +199,7 @@ void main() {
     ));
     await waitForBag(tester);
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), course);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, course);
     for (var i = 0; i < 24; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
@@ -232,10 +223,7 @@ void main() {
         await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 50)));
         await tester.pump();
-        if (find
-            .text('Hole ${hole + 1}')
-            .evaluate()
-            .isNotEmpty) {
+        if (find.text('Hole ${hole + 1}').evaluate().isNotEmpty) {
           break;
         }
       }
@@ -259,12 +247,11 @@ void main() {
         theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
     await waitForBag(tester);
 
-    await tester.tap(find.text('Simulator'));
-    await tester.pump();
+    await selectSimulator(tester);
 
     await tester.enterText(
         find.byKey(const ValueKey('oncourse-sim-yards-field')), '142');
-    await tester.tap(find.byKey(const ValueKey('oncourse-sim-add-note-link')));
+    await tester.tap(find.byKey(const ValueKey('oncourse-sim-notes-chip')));
     await tester.pump();
     await tester.enterText(
         find.byKey(const ValueKey('oncourse-sim-stroke-note-field')),
@@ -276,6 +263,10 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump();
 
+    expect(find.byKey(const ValueKey('oncourse-sim-stroke-note-field')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-shot-row-1')), findsNothing);
+    await expandShotList(tester);
     expect(find.byKey(const ValueKey('oncourse-shot-row-1')), findsOneWidget);
     expect(find.textContaining('142 yds travelled'), findsOneWidget);
     expect(find.textContaining('Chunked it right'), findsOneWidget);
@@ -300,10 +291,7 @@ void main() {
     ));
     await waitForBag(tester);
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'), course);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, course);
     for (var i = 0; i < 24; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));

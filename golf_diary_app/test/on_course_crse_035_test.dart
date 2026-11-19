@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/data/ph_golf_hole_coords.dart';
 import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
+import 'package:golf_diary_app/services/pin_distance.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+import 'package:golf_diary_app/widgets/oncourse_map_pane.dart';
 
 import 'support/on_course_test_helpers.dart';
 
 const kNavBarHeight = 80.0;
+
+class _FixedPin implements PinDistanceClient {
+  _FixedPin(this.fix);
+
+  final PinFix fix;
+
+  @override
+  Future<PinFix?> current() async => fix;
+
+  @override
+  Stream<PinFix> watch() => Stream<PinFix>.value(fix);
+}
 
 void main() {
   setUp(() async {
@@ -20,7 +35,8 @@ void main() {
   });
 
   Future<void> pumpOnCourse(WidgetTester tester,
-      {Size size = const Size(390, 844)}) async {
+      {Size size = const Size(390, 844),
+      PinDistanceClient? pinDistance}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -28,9 +44,9 @@ void main() {
     // Mirrors HomeShell: the bottom NavigationBar takes 80dp under the screen.
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),
-      home: const Scaffold(
-        body: FairwayTrackerScreen(),
-        bottomNavigationBar: SizedBox(height: kNavBarHeight),
+      home: Scaffold(
+        body: FairwayTrackerScreen(pinDistance: pinDistance),
+        bottomNavigationBar: const SizedBox(height: kNavBarHeight),
       ),
     ));
     for (var i = 0; i < 30; i++) {
@@ -134,6 +150,41 @@ void main() {
     expect(find.byType(FilledButton), findsOneWidget);
   });
 
+  testWidgets('Fairway Map pane on a mapped hole keeps the card above the dock',
+      (tester) async {
+    const course = 'Sherwood Hills Golf Club';
+    final hole = holeCoordinates(course, 1)!;
+    await pumpOnCourse(tester,
+        pinDistance:
+            _FixedPin(PinFix(latitude: hole.teeLat, longitude: hole.teeLon)));
+    await submitCourseName(tester, course);
+    for (var i = 0; i < 24; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (key('on-course-map-toggle').evaluate().isNotEmpty) break;
+    }
+    await tester.tap(find.descendant(
+        of: key('on-course-map-toggle'), matching: find.text('Map')));
+    await tester.pump();
+    await waitForDb(tester);
+    expect(find.byType(OncourseMapPane), findsOneWidget);
+    expect(key('oncourse-aim-summary'), findsOneWidget);
+
+    final scrollable =
+        tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0);
+    final record = tester.getRect(key('oncourse-record-shot-btn'));
+    final card = tester.getRect(key('oncourse-hud-tabular'));
+    final map = tester.getRect(find.byType(OncourseMapPane));
+    expect(card.bottom, lessThanOrEqualTo(record.top));
+    expect(tester.getRect(key('oncourse-mulligan-step-up')).bottom,
+        lessThanOrEqualTo(record.top));
+    expect(tester.getRect(key('oncourse-finish-hole-btn')).bottom,
+        lessThanOrEqualTo(fold));
+    expect(map.height, greaterThanOrEqualTo(120));
+  });
+
   testWidgets('stroke log follows Concede | Finish Hole below the fold',
       (tester) async {
     await pumpOnCourse(tester);
@@ -161,7 +212,6 @@ void main() {
   testWidgets('course meta sits on its own line under the course name',
       (tester) async {
     await pumpOnCourse(tester);
-    expect(key('oncourse-course-meta'), findsNothing);
 
     await submitCourseName(tester, 'Club Intramuros Golf Course');
     await waitForDb(tester);

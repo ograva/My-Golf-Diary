@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../data/ph_golf_catalog.dart';
@@ -1250,9 +1251,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         title: const Text('On Course'),
         actions: const [AccountAvatarAppBarMenu()],
       ),
-      body: _withDiaryEdgeSwipe(LayoutBuilder(
-        builder: (context, constraints) {
-          final mapHeight = (constraints.maxHeight - 430).clamp(200.0, 520.0);
+      body: _withDiaryEdgeSwipe(Builder(
+        builder: (context) {
+          final showMap = !_simulator && _showMapPane && _activeCoords != null;
           return CustomScrollView(
             slivers: [
               SliverFillRemaining(
@@ -1261,30 +1262,36 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _courseSummary(context),
-                          const SizedBox(height: 8),
-                          if (!_simulator &&
-                              _showMapPane &&
-                              _activeCoords != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: SizedBox(
-                                height: mapHeight,
-                                child: Center(
-                                  child: OncourseMapPane(
-                                    courseName: _appliedCourseName,
-                                    holeNumber: _holeNumber,
-                                    coords: _activeCoords!,
-                                    shots: _shots,
-                                    player: _playerFix,
-                                  ),
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                      child: _courseSummary(context),
+                    ),
+                    if (showMap)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                          child: _MinIntrinsicHeight(
+                            height: _kMinMapHeight,
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                    maxHeight: _kMaxMapHeight),
+                                child: OncourseMapPane(
+                                  courseName: _appliedCourseName,
+                                  holeNumber: _holeNumber,
+                                  coords: _activeCoords!,
+                                  shots: _shots,
+                                  player: _playerFix,
                                 ),
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                           Card(
                             key: const ValueKey('oncourse-hud-tabular'),
                             margin: EdgeInsets.zero,
@@ -1411,7 +1418,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                         ],
                       ),
                     ),
-                    const Spacer(),
+                    if (!showMap) const Spacer(),
                     SafeArea(
                       top: false,
                       child: Padding(
@@ -1634,4 +1641,43 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
       ],
     );
   }
+}
+
+const double _kMinMapHeight = 160;
+const double _kMaxMapHeight = 520;
+
+/// Lets the map pane fill whatever height the form and dock leave free while
+/// reporting only its minimum to [SliverFillRemaining], which sizes the page
+/// from intrinsic heights; the page scrolls only below that minimum.
+class _MinIntrinsicHeight extends SingleChildRenderObjectWidget {
+  const _MinIntrinsicHeight({required this.height, super.child});
+
+  final double height;
+
+  @override
+  _RenderMinIntrinsicHeight createRenderObject(BuildContext context) =>
+      _RenderMinIntrinsicHeight(height);
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _RenderMinIntrinsicHeight renderObject) {
+    renderObject.height = height;
+  }
+}
+
+class _RenderMinIntrinsicHeight extends RenderProxyBox {
+  _RenderMinIntrinsicHeight(this._height);
+
+  double _height;
+  set height(double value) {
+    if (value == _height) return;
+    _height = value;
+    markNeedsLayout();
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _height;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _height;
 }

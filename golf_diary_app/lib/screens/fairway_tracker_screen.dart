@@ -429,7 +429,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     try {
       return await Geolocator.getCurrentPosition(
         locationSettings:
-            const LocationSettings(accuracy: LocationAccuracy.high),
+            const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
     } catch (_) {
       return null;
@@ -505,8 +508,16 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           lat = pin.latitude;
           lon = pin.longitude;
         } else {
-          final position = await _readGps();
-          if (position == null) {
+          final streamFix = widget.positionForShot == null && _pinSub != null
+              ? _playerFix
+              : null;
+          final position = streamFix == null ? await _readGps() : null;
+          final liveFix = streamFix ??
+              (_locationPermissionBlocked ? null : _playerFix);
+          if (position == null && liveFix != null) {
+            lat = liveFix.latitude;
+            lon = liveFix.longitude;
+          } else if (position == null) {
             if (mounted && !_locationPermissionBlocked) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -515,9 +526,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               );
             }
             return;
+          } else {
+            lat = position.latitude;
+            lon = position.longitude;
           }
-          lat = position.latitude;
-          lon = position.longitude;
         }
         final ball = geometry.projection == null
             ? _fwyBall(geometry)
@@ -1613,8 +1625,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           '$value yds',
           key: const ValueKey('on-course-distance-to-hole'),
           semanticsLabel: 'Yards to the pin',
-          style: GolfTextStyles.tabularNum(context, fontSize: 20)
-              .copyWith(color: Colors.white, shadows: kFwyOverlayShadow),
+          style: text.copyWith(
+            fontSize: 20,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         );
       } else if (_readingLocation && !manual) {
         yards = Text('Reading location…', style: text);
@@ -2023,7 +2037,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               scene: scene,
               pack: _pack,
               clearInsets: EdgeInsets.fromLTRB(
-                  freeLeft, _kRailTop, freeRight, _kDockHeight),
+                  freeLeft,
+                  _kRailTop + (badges.isEmpty ? 0 : _kBadgeReserve),
+                  freeRight,
+                  _kDockHeight),
               onTapLocal: (local, ppm) => _onMapTap(g, local, ppm),
             ),
           ),
@@ -2464,6 +2481,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 }
 
 const double _kRailTop = 136;
+const double _kBadgeReserve = 40;
 const double _kRailInset = 20;
 const double _kRailGap = 4;
 const double _kRailToggleHeight = 36;

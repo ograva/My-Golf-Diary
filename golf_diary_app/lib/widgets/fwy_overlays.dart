@@ -130,7 +130,8 @@ class FwyMapBadge extends StatelessWidget {
             ],
             Flexible(
               child: Text(text,
-                  style: Theme.of(context).textTheme.labelMedium,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ),
           ],
@@ -153,7 +154,10 @@ Future<void> showFwyCounterPopover({
       Overlay.of(anchor).context.findRenderObject() as RenderBox?;
   if (box == null || overlay == null) return;
   final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
-  final rect = topLeft & box.size;
+  final onRight = topLeft.dx + box.size.width / 2 > overlay.size.width / 2;
+  final edgeX =
+      onRight ? topLeft.dx - 8 : topLeft.dx + box.size.width + 8;
+  final rect = Rect.fromLTWH(edgeX, topLeft.dy, 0, box.size.height);
   await showMenu<void>(
     context: anchor,
     position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),

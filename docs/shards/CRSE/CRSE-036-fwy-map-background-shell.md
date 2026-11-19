@@ -59,3 +59,4 @@ This shard also lands the shell parts of CRSE-037 (tee-bottom projection and inv
 - `lib/services/on_course_settings.dart` — per-device rail side and GPS mode (`oncourse_device_settings` table, created on first use).
 - `lib/models/course_map_manifest.dart` — additive `frame`, `markers`, `coverage`, `generated`, `lengthYds`, `attribution`.
 - `PlayHeaderOverflowButton.extraActions` adds screen-specific overflow entries.
+- Live Record uses the running position stream's latest fix when there is one (a one-shot `getCurrentPosition` can stall on web while `watchPosition` is active); otherwise a one-shot read with a 10 s limit.

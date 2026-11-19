@@ -4,5 +4,11 @@
       "database": "my-golf-diary",
       "rules": "firestore.rules"
     }
+  ],
+  "storage": [
+    {
+      "bucket": "my-golf-diary",
+      "rules": "storage.rules"
+    }
   ]
 }

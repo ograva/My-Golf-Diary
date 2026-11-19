@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // CRSE-041 map packs: uploaded with admin credentials only (tools/map_pack/upload_packs.py).
+    match /course_maps/{path=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

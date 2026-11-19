@@ -23,6 +23,19 @@ python build_pack.py ph-crse-villamor ph-crse-cebu-cc --version 2
 
 `build_pack.py` writes `out/<courseId>/manifest.json`, `out/<courseId>/hole_<n>.png`, and `out/index.json`. With `--preview-dir`, it also writes annotated review images (one per hole, plus a contact sheet). The previews are for review only and are not part of the pack.
 
+## Upload (owner, admin credentials)
+
+```bash
+pip install -r requirements-upload.txt
+python validate_pack.py ph-crse-villamor              # exit 1 on contract errors
+python upload_packs.py --bucket my-golf-diary --all --dry-run
+python upload_packs.py --bucket my-golf-diary --all
+```
+
+`upload_packs.py` validates every pack, uploads images, then each `manifest.json`, then `course_maps/index.json` last (merged with the versions already in the bucket). It needs a service account with Storage Object Admin on the bucket, as a key file in `GOOGLE_APPLICATION_CREDENTIALS` or as the key JSON in `FIREBASE_SERVICE_ACCOUNT_JSON`.
+
+Bucket access lives at the repo root: `storage.rules` (authenticated read of `course_maps/**`, no client writes) is deployed with `firebase deploy --only storage --project novusinc-8df79`, and `storage.cors.json` (GET only, PWA origins) is applied with `gcloud storage buckets update gs://my-golf-diary --cors-file=storage.cors.json`. GCS matches CORS origins exactly, so run Flutter web locally with `--web-port 8080`.
+
 ## Pipeline
 
 1. **Fetch:** one Overpass query per course bbox (surveyed holes padded by 250 m) for `golf=*`, `natural=water`, `natural=wood`, `landuse=forest`, and `leisure=golf_course`. Responses are cached in `.cache/`, and the client falls back across public mirrors with backoff.

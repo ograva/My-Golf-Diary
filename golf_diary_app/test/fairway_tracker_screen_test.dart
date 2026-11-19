@@ -65,7 +65,7 @@ void main() {
         theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
     await waitForBag(tester);
 
-    expect(find.text('Record Shot at Ball'), findsOneWidget);
+    expect(find.text('Record shot at ball'), findsOneWidget);
     expect(find.text('Distance travelled (yds)'), findsNothing);
 
     await tester.tap(find.text('Simulator'));
@@ -87,7 +87,7 @@ void main() {
 
     await tester.tap(find.text('Course'));
     await tester.pump();
-    expect(find.text('Record Shot at Ball'), findsOneWidget);
+    expect(find.text('Record shot at ball'), findsOneWidget);
     expect(find.text('Distance travelled (yds)'), findsNothing);
   });
 

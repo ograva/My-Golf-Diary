@@ -33,7 +33,7 @@ Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-
 | CRSE-021 | Live yards to the pin | CRSE | High | Completed | M | CRSE-005 | [CRSE-021](../shards/CRSE/CRSE-021-live-yards-to-pin.md) |
 | CRSE-022 | Hole map view | CRSE | Low | Not Started | L | CRSE-006 | [CRSE-022](../shards/CRSE/CRSE-022-hole-map-view.md) |
 | CRSE-030 | On Course dual-mode (epic) | CRSE | High | Not Started | XL | CRSE-007–011 | [CRSE-030](../shards/CRSE/CRSE-030-epic-on-course-dual-mode.md) |
-| CRSE-034 | Unmapped tabular HUD & map fallback | CRSE | High | Not Started | M | CRSE-011 | [CRSE-034](../shards/CRSE/CRSE-034-unmapped-tabular-map-fallback.md) |
+| CRSE-034 | Unmapped tabular HUD & map fallback | CRSE | High | Ready for Review | M | CRSE-011 | [CRSE-034](../shards/CRSE/CRSE-034-unmapped-tabular-map-fallback.md) |
 | CRSE-031 | Simulator post-shot logging | CRSE | High | Not Started | M | CRSE-007 | [CRSE-031](../shards/CRSE/CRSE-031-simulator-post-shot-logging.md) |
 | CRSE-032 | Course plan, aim & record at ball | CRSE | High | Not Started | L | CRSE-008 | [CRSE-032](../shards/CRSE/CRSE-032-course-plan-aim-record.md) |
 | CRSE-033 | Map / satellite HUD & live markers | CRSE | Medium | Not Started | L | CRSE-009 | [CRSE-033](../shards/CRSE/CRSE-033-map-satellite-hud-markers.md) |

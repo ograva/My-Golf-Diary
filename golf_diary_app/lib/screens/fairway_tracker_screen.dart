@@ -1175,254 +1175,275 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final mapHeight =
-                    (constraints.maxHeight - 300).clamp(200.0, 520.0);
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _courseSummary(context),
-                      const SizedBox(height: 8),
-                      if (!_simulator && _showMapPane && _activeCoords != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: SizedBox(
-                            height: mapHeight,
-                            child: Center(
-                              child: OncourseMapPane(
-                                courseName: _appliedCourseName,
-                                holeNumber: _holeNumber,
-                                coords: _activeCoords!,
-                                shots: _shots,
-                                player: _playerFix,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final mapHeight = (constraints.maxHeight - 430).clamp(200.0, 520.0);
+          return CustomScrollView(
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _courseSummary(context),
+                          const SizedBox(height: 8),
+                          if (!_simulator &&
+                              _showMapPane &&
+                              _activeCoords != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: SizedBox(
+                                height: mapHeight,
+                                child: Center(
+                                  child: OncourseMapPane(
+                                    courseName: _appliedCourseName,
+                                    holeNumber: _holeNumber,
+                                    coords: _activeCoords!,
+                                    shots: _shots,
+                                    player: _playerFix,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Card(
+                            key: const ValueKey('oncourse-hud-tabular'),
+                            margin: EdgeInsets.zero,
+                            child: Semantics(
+                              label: 'On course scoring summary',
+                              container: true,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 4, 8, 8),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _contextRow(
+                                        context, strokes, penalties, holeScore),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.fromLTRB(8, 0, 0, 4),
+                                      child: Text(
+                                        'Strokes $strokes · Penalties $penalties · '
+                                        'Score $holeScore · Round total $_roundTotal',
+                                        key: const ValueKey(
+                                            'oncourse-hole-stats-row'),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    ),
+                                    if (microLine != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 8),
+                                        child: microLine,
+                                      ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Wrap(
+                                            spacing: 8,
+                                            children: [
+                                              _summaryPill(
+                                                key: 'oncourse-club-summary',
+                                                label: _selectedClub?.name ??
+                                                    'Club',
+                                                tooltip: 'Choose club',
+                                                onPressed: _openClubSheet,
+                                              ),
+                                              _summaryPill(
+                                                key: 'oncourse-lie-summary',
+                                                label: _lieLabel(_lieType),
+                                                tooltip: 'Choose lie',
+                                                onPressed: _openLieSheet,
+                                              ),
+                                              if (showAim)
+                                                _summaryPill(
+                                                  key: 'oncourse-aim-summary',
+                                                  label:
+                                                      'Aim ${_aimLabel(_aimDirection)}',
+                                                  tooltip: 'Choose aim',
+                                                  onPressed: _openAimSheet,
+                                                ),
+                                            ],
+                                          ),
+                                          if (_simulator)
+                                            ..._simulatorFieldWidgets(),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: _stepper(
+                                                    label: 'Penalty',
+                                                    keyPrefix:
+                                                        'oncourse-penalty',
+                                                    count: penalties,
+                                                    onStep: (delta) =>
+                                                        LocalDatabaseService
+                                                            .instance
+                                                            .incrementPenalties(
+                                                                _roundId!,
+                                                                _holeNumber,
+                                                                delta),
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment:
+                                                      Alignment.centerRight,
+                                                  child: _stepper(
+                                                    label: 'Mulligan',
+                                                    keyPrefix:
+                                                        'oncourse-mulligan',
+                                                    count: mulligans,
+                                                    onStep: (delta) =>
+                                                        LocalDatabaseService
+                                                            .instance
+                                                            .incrementMulligans(
+                                                                _roundId!,
+                                                                _holeNumber,
+                                                                delta),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      Card(
-                        key: const ValueKey('oncourse-hud-tabular'),
-                        margin: EdgeInsets.zero,
-                        child: Semantics(
-                          label: 'On course scoring summary',
-                          container: true,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 4, 8, 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _contextRow(
-                                    context, strokes, penalties, holeScore),
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(8, 0, 0, 4),
-                                  child: Text(
-                                    'Strokes $strokes · Penalties $penalties · '
-                                    'Score $holeScore · Round total $_roundTotal',
-                                    key: const ValueKey(
-                                        'oncourse-hole-stats-row'),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ),
-                                if (microLine != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: microLine,
-                                  ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Wrap(
-                                        spacing: 8,
-                                        children: [
-                                          _summaryPill(
-                                            key: 'oncourse-club-summary',
-                                            label:
-                                                _selectedClub?.name ?? 'Club',
-                                            tooltip: 'Choose club',
-                                            onPressed: _openClubSheet,
-                                          ),
-                                          _summaryPill(
-                                            key: 'oncourse-lie-summary',
-                                            label: _lieLabel(_lieType),
-                                            tooltip: 'Choose lie',
-                                            onPressed: _openLieSheet,
-                                          ),
-                                          if (showAim)
-                                            _summaryPill(
-                                              key: 'oncourse-aim-summary',
-                                              label:
-                                                  'Aim ${_aimLabel(_aimDirection)}',
-                                              tooltip: 'Choose aim',
-                                              onPressed: _openAimSheet,
-                                            ),
-                                        ],
-                                      ),
-                                      if (_simulator)
-                                        ..._simulatorFieldWidgets(),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              alignment: Alignment.centerLeft,
-                                              child: _stepper(
-                                                label: 'Penalty',
-                                                keyPrefix: 'oncourse-penalty',
-                                                count: penalties,
-                                                onStep: (delta) =>
-                                                    LocalDatabaseService
-                                                        .instance
-                                                        .incrementPenalties(
-                                                            _roundId!,
-                                                            _holeNumber,
-                                                            delta),
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              alignment: Alignment.centerRight,
-                                              child: _stepper(
-                                                label: 'Mulligan',
-                                                keyPrefix: 'oncourse-mulligan',
-                                                count: mulligans,
-                                                onStep: (delta) =>
-                                                    LocalDatabaseService
-                                                        .instance
-                                                        .incrementMulligans(
-                                                            _roundId!,
-                                                            _holeNumber,
-                                                            delta),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                          if (_locationPermissionBlocked && !_simulator) ...[
+                            const SizedBox(height: 8),
+                            MaterialBanner(
+                              key: const ValueKey('oncourse-location-banner'),
+                              content: const Text(
+                                  'Location is off for shot tracking.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: Geolocator.openAppSettings,
+                                  child: const Text('Open settings'),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
+                          ],
+                        ],
                       ),
-                      if (_locationPermissionBlocked && !_simulator) ...[
-                        const SizedBox(height: 8),
-                        MaterialBanner(
-                          key: const ValueKey('oncourse-location-banner'),
-                          content:
-                              const Text('Location is off for shot tracking.'),
-                          actions: [
-                            TextButton(
-                              onPressed: Geolocator.openAppSettings,
-                              child: const Text('Open settings'),
+                    ),
+                    const Spacer(),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: 64,
+                              width: double.infinity,
+                              child: FilledButton(
+                                key: const ValueKey('oncourse-record-shot-btn'),
+                                onPressed: _busy ? null : _recordShot,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.green,
+                                ),
+                                child: _busy
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        _simulator
+                                            ? 'Record stroke'
+                                            : 'Record shot at ball',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 48,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      key: const ValueKey(
+                                          'oncourse-concede-btn'),
+                                      onPressed: _roundId == null
+                                          ? null
+                                          : () => LocalDatabaseService.instance
+                                              .concedeHole(
+                                                  _roundId!, _holeNumber)
+                                              .then((_) => _refreshHoleState()),
+                                      child: const Text('Concede'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      key: const ValueKey(
+                                          'oncourse-finish-hole-btn'),
+                                      onPressed: _finishHole,
+                                      child: Text(
+                                        _holeNumber >= _holeCount
+                                            ? 'Finish Round'
+                                            : 'Finish Hole',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                      if (_shots.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        ExpansionTile(
-                          key: const ValueKey('oncourse-shots-list-expander'),
-                          tilePadding: EdgeInsets.zero,
-                          shape: const Border(),
-                          collapsedShape: const Border(),
-                          title: Text('Shots this hole (${_shots.length})'),
-                          children: _shots.map(_shotTile).toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: 64,
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: const ValueKey('oncourse-record-shot-btn'),
-                      onPressed: _busy ? null : _recordShot,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.green,
                       ),
-                      child: _busy
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              _simulator
-                                  ? 'Record stroke'
-                                  : 'Record shot at ball',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 48,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            key: const ValueKey('oncourse-concede-btn'),
-                            onPressed: _roundId == null
-                                ? null
-                                : () => LocalDatabaseService.instance
-                                    .concedeHole(_roundId!, _holeNumber)
-                                    .then((_) => _refreshHoleState()),
-                            child: const Text('Concede'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            key: const ValueKey('oncourse-finish-hole-btn'),
-                            onPressed: _finishHole,
-                            child: Text(
-                              _holeNumber >= _holeCount
-                                  ? 'Finish Round'
-                                  : 'Finish Hole',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
+              if (_shots.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  sliver: SliverToBoxAdapter(
+                    child: ExpansionTile(
+                      key: const ValueKey('oncourse-shots-list-expander'),
+                      initiallyExpanded: true,
+                      tilePadding: EdgeInsets.zero,
+                      shape: const Border(),
+                      collapsedShape: const Border(),
+                      title: Text('Shots this hole (${_shots.length})'),
+                      children: _shots.map(_shotTile).toList(),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -115,7 +115,7 @@ void main() {
     await selectSimulator(tester);
     expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('oncourse-mode-course')));
+    await selectFairway(tester);
     await tester.pump();
     expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsOneWidget);
 

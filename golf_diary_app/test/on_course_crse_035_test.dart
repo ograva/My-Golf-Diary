@@ -107,6 +107,30 @@ void main() {
     expect(find.byType(FilledButton), findsOneWidget);
   });
 
+  testWidgets('stroke log follows Concede | Finish Hole below the fold',
+      (tester) async {
+    await pumpOnCourse(tester);
+    await selectSimulator(tester);
+    await tester.enterText(key('oncourse-sim-yards-field'), '150');
+    await tester.tap(key('oncourse-record-shot-btn'));
+    await waitForDb(tester);
+
+    final scrollable =
+        tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0);
+    expect(tester.getRect(key('oncourse-record-shot-btn')).bottom,
+        lessThanOrEqualTo(844));
+    expect(tester.getRect(key('oncourse-finish-hole-btn')).bottom,
+        lessThanOrEqualTo(844));
+
+    await expandShotList(tester);
+    final finish = tester.getRect(key('oncourse-finish-hole-btn'));
+    final log = tester.getRect(key('oncourse-shots-list-expander'));
+    expect(log.top, greaterThanOrEqualTo(finish.bottom));
+    expect(log.top - finish.bottom, lessThanOrEqualTo(16));
+    expect(key('oncourse-shot-row-1'), findsOneWidget);
+  });
+
   testWidgets('optional chips reveal fields and hide clears them',
       (tester) async {
     await pumpOnCourse(tester);

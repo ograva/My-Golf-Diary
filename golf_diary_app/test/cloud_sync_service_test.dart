@@ -23,18 +23,15 @@ void main() {
 
   test('newer remote wins and an older remote stays local', () {
     expect(
-      decideMerge(
-          localExists: false, localUpdatedAtMs: 0, remoteUpdatedAtMs: 5),
+      decideMerge(localExists: false, localUpdatedAtMs: 0, remoteUpdatedAtMs: 5),
       MergeAction.applyRemote,
     );
     expect(
-      decideMerge(
-          localExists: true, localUpdatedAtMs: 10, remoteUpdatedAtMs: 11),
+      decideMerge(localExists: true, localUpdatedAtMs: 10, remoteUpdatedAtMs: 11),
       MergeAction.applyRemote,
     );
     expect(
-      decideMerge(
-          localExists: true, localUpdatedAtMs: 11, remoteUpdatedAtMs: 11),
+      decideMerge(localExists: true, localUpdatedAtMs: 11, remoteUpdatedAtMs: 11),
       MergeAction.keepLocal,
     );
   });
@@ -76,8 +73,7 @@ void main() {
       'deleted': false,
     });
     expect(await sync.pullAll(), greaterThan(0));
-    final pulled =
-        (await db.getAllClubs()).firstWhere((club) => club.id == 'driver');
+    final pulled = (await db.getAllClubs()).firstWhere((club) => club.id == 'driver');
     expect(pulled.name, 'Driver X');
     expect(pulled.avgDistance, 240);
 
@@ -87,12 +83,10 @@ void main() {
       'deleted': true,
     });
     await sync.pullAll();
-    expect(
-        (await db.getAllClubs()).any((club) => club.id == 'driver'), isFalse);
+    expect((await db.getAllClubs()).any((club) => club.id == 'driver'), isFalse);
   });
 
-  test('deleting a club pushes a tombstone and then drops the local row',
-      () async {
+  test('deleting a club pushes a tombstone and then drops the local row', () async {
     final remote = MemoryDiaryRemote();
     final sync = CloudSyncService(userId: 'uid', database: db, remote: remote);
     await db.insertClub(Club(id: 'gap', name: 'Gap', category: 'wedge'));

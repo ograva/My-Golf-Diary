@@ -15,8 +15,7 @@ void main() {
   Future<void> useFreshDatabase() async {
     await LocalDatabaseService.debugClose();
     LocalDatabaseService.debugSetFileName('golf_diary_range_log.db');
-    await deleteDatabase(
-        join(await getDatabasesPath(), 'golf_diary_range_log.db'));
+    await deleteDatabase(join(await getDatabasesPath(), 'golf_diary_range_log.db'));
   }
 
   Future<void> restoreDatabase() async {
@@ -24,8 +23,7 @@ void main() {
     LocalDatabaseService.debugSetFileName('golf_diary.db');
   }
 
-  testWidgets('range log starts on the selected club and can show every club',
-      (tester) async {
+  testWidgets('range log starts on the selected club and can show every club', (tester) async {
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
 
@@ -60,18 +58,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(
-        MaterialApp(theme: buildGolfTheme(), home: const RangeDrillScreen()));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pumpWidget(MaterialApp(theme: buildGolfTheme(), home: const RangeDrillScreen()));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
     expect(find.byKey(const Key('range-log-this-club')), findsOneWidget);
     expect(find.text('Session log · Driver'), findsOneWidget);
-    expect(find.byKey(const ValueKey('range-session-drill_driver')),
-        findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('range-session-drill_iron')), findsNothing);
+    expect(find.byKey(const ValueKey('range-session-drill_driver')), findsOneWidget);
+    expect(find.byKey(const ValueKey('range-session-drill_iron')), findsNothing);
 
     await tester.tap(find.byKey(const Key('range-log-all')));
     await tester.pump();
@@ -86,14 +80,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Session log · 7 Iron'), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('range-session-drill_iron')), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('range-session-drill_driver')), findsNothing);
+    expect(find.byKey(const ValueKey('range-session-drill_iron')), findsOneWidget);
+    expect(find.byKey(const ValueKey('range-session-drill_driver')), findsNothing);
   });
 
-  testWidgets('my bag opens past range sessions for the tapped club',
-      (tester) async {
+  testWidgets('my bag opens past range sessions for the tapped club', (tester) async {
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
     await tester.runAsync(() async {
@@ -125,16 +116,13 @@ void main() {
       ));
     });
 
-    await tester.pumpWidget(
-        MaterialApp(theme: buildGolfTheme(), home: const ClubsScreen()));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pumpWidget(MaterialApp(theme: buildGolfTheme(), home: const ClubsScreen()));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
     expect(find.text('Range logs (1)'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('bag-range-logs-driver')));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
     expect(find.text('Past range sessions'), findsOneWidget);
@@ -142,8 +130,7 @@ void main() {
     expect(find.text('Home sim'), findsNothing);
   });
 
-  testWidgets('bag range log sheet lists one club and an empty club',
-      (tester) async {
+  testWidgets('bag range log sheet lists one club and an empty club', (tester) async {
     final club = Club(id: '7iron', name: '7 Iron', category: 'iron');
     final sessions = [
       RangeDrillSummary(

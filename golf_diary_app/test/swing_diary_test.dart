@@ -501,8 +501,7 @@ void main() {
     expect(find.text('Sternum centered, turf brush'), findsOneWidget);
   });
 
-  testWidgets(
-      'a lead-in chip fills the composer and a saved baseline reaches the model',
+  testWidgets('a lead-in chip fills the composer and a saved baseline reaches the model',
       (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -527,8 +526,7 @@ void main() {
       contains('Body / physio watchout: '),
     );
 
-    await tester
-        .ensureVisible(find.byKey(const ValueKey('diary-baseline-btn')));
+    await tester.ensureVisible(find.byKey(const ValueKey('diary-baseline-btn')));
     await tester.tap(find.byKey(const ValueKey('diary-baseline-btn')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -550,8 +548,7 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
     expect(model.lastSystemInstruction, contains('Heel pain on hard turf'));
-    expect(
-        model.lastSystemInstruction, isNot(contains('physical constraints')));
+    expect(model.lastSystemInstruction, isNot(contains('physical constraints')));
   });
 
   testWidgets('a saved evaluation distills new golfer notes into the baseline',
@@ -576,8 +573,7 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
-    expect(
-        find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
     expect(find.text('Kept the tempo cue'), findsOneWidget);
     final profile = await tester
         .runAsync(() => LocalDatabaseService.instance.getGolferProfile());
@@ -644,8 +640,7 @@ void main() {
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
-    await tester
-        .ensureVisible(find.byKey(const ValueKey('diary-opt-in-dismiss')));
+    await tester.ensureVisible(find.byKey(const ValueKey('diary-opt-in-dismiss')));
     await tester.tap(find.byKey(const ValueKey('diary-opt-in-dismiss')));
     await tester.pump();
     expect(model.calls, 0);

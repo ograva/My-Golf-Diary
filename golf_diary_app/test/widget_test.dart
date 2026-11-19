@@ -10,8 +10,7 @@ void main() {
   setUp(() async {
     await LocalDatabaseService.debugClose();
     LocalDatabaseService.debugSetFileName('golf_diary_widget.db');
-    await deleteDatabase(
-        join(await getDatabasesPath(), 'golf_diary_widget.db'));
+    await deleteDatabase(join(await getDatabasesPath(), 'golf_diary_widget.db'));
     await LocalDatabaseService.instance.saveGolferProfile(
       const GolferProfile(onboardingCompleted: 1),
     );

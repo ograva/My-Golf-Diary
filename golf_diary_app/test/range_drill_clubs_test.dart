@@ -20,7 +20,11 @@ void main() {
   final bag = [
     Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
     Club(id: '7iron', name: '7 Iron', category: 'iron', avgDistance: 145),
-    Club(id: 'pw', name: 'Pitching Wedge', category: 'wedge', avgDistance: 110),
+    Club(
+        id: 'pw',
+        name: 'Pitching Wedge',
+        category: 'wedge',
+        avgDistance: 110),
     Club(id: 'putter', name: 'Putter', category: 'putter', avgDistance: 0),
   ];
 

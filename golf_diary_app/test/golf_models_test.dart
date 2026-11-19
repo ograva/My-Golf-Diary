@@ -42,9 +42,7 @@ void main() {
     expect(restored.model, 'T200');
   });
 
-  test(
-      'sortClubs orders driver first, woods and hybrids incrementally, irons 2-9, wedges P/G/S, putter last',
-      () {
+  test('sortClubs orders driver first, woods and hybrids incrementally, irons 2-9, wedges P/G/S, putter last', () {
     final unsorted = [
       Club(id: 'putter', name: 'Putter', category: 'putter', avgDistance: 300),
       Club(id: 'sw', name: 'Sand Wedge', category: 'wedge', avgDistance: 90),
@@ -53,11 +51,7 @@ void main() {
       Club(id: 'gw', name: 'Gap Wedge', category: 'wedge', avgDistance: 100),
       Club(id: '4h', name: '4 Hybrid', category: 'hybrid', avgDistance: 185),
       Club(id: '2i', name: '2 Iron', category: 'iron', avgDistance: 200),
-      Club(
-          id: 'pw',
-          name: 'Pitching Wedge',
-          category: 'wedge',
-          avgDistance: 115),
+      Club(id: 'pw', name: 'Pitching Wedge', category: 'wedge', avgDistance: 115),
       Club(id: '3w', name: '3 Wood', category: 'wood', avgDistance: 235),
       Club(id: '3h', name: '3 Hybrid', category: 'hybrid', avgDistance: 195),
       Club(id: '7i', name: '7 Iron', category: 'iron', avgDistance: 155),
@@ -93,16 +87,7 @@ void main() {
     ];
     expect(
       sortClubs(irons).map((c) => c.name).toList(),
-      [
-        '2 Iron',
-        '3 Iron',
-        '4 Iron',
-        '5 Iron',
-        '6 Iron',
-        '7 Iron',
-        '8 Iron',
-        '9 Iron'
-      ],
+      ['2 Iron', '3 Iron', '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron'],
     );
 
     final wedges = [

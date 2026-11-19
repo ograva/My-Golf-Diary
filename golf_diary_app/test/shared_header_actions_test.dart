@@ -22,17 +22,18 @@ void main() {
             appBar: AppBar(
               actions: [
                 SharedHeaderActions(
-                  tab: tab,
-                  roundId: roundId,
-                  courseName: 'Test Course',
-                  diaryEntryKey:
-                      tab == HeaderTabContext.bag ? null : 'diary-entry-test',
-                  diarySource: tab == HeaderTabContext.bag
-                      ? null
-                      : DiaryContextSource.range,
-                  caddyInviteKey: tab == HeaderTabContext.scorecard
-                      ? 'scorecard-invite-caddy'
-                      : 'on-course-invite-caddy',
+                tab: tab,
+                roundId: roundId,
+                courseName: 'Test Course',
+                diaryEntryKey: tab == HeaderTabContext.bag
+                    ? null
+                    : 'diary-entry-test',
+                diarySource: tab == HeaderTabContext.bag
+                    ? null
+                    : DiaryContextSource.range,
+                caddyInviteKey: tab == HeaderTabContext.scorecard
+                    ? 'scorecard-invite-caddy'
+                    : 'on-course-invite-caddy',
                 ),
               ],
             ),
@@ -65,11 +66,11 @@ void main() {
     expect(find.byKey(const Key('shell-header-overflow-btn')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shell-header-overflow-btn')));
     await tester.pumpAndSettle();
-    expect(
-        find.byKey(const ValueKey('on-course-invite-caddy')), findsOneWidget);
+    expect(find.byKey(const ValueKey('on-course-invite-caddy')), findsOneWidget);
   });
 
-  testWidgets('pro scorecard with round shows pinned invite', (tester) async {
+  testWidgets('pro scorecard with round shows pinned invite',
+      (tester) async {
     await pumpHeader(
       tester,
       tab: HeaderTabContext.scorecard,

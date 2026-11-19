@@ -35,8 +35,8 @@ void main() {
 
   test('stroke 1 course row omits distance line', () {
     final shots = [_shot(stroke: 1)];
-    expect(
-        shotDistanceLabel(shots: shots, shot: shots[0], simulator: false), '');
+    expect(shotDistanceLabel(shots: shots, shot: shots[0], simulator: false),
+        '');
   });
 
   test('simulator uses typed carry on each row', () {

@@ -35,8 +35,7 @@ void main() {
     );
   }
 
-  test('coach method stays universal and a saved profile fills the baseline',
-      () {
+  test('coach method stays universal and a saved profile fills the baseline', () {
     expect(kCoachMethodologyPrompt, contains('Golf Biomechanics Coach'));
     expect(kCoachMethodologyPrompt, contains('Performance Physiotherapist'));
     expect(kCoachMethodologyPrompt, contains('Diary Anchor'));
@@ -79,9 +78,7 @@ void main() {
     expect(known, isNot(contains('Caddie Check-In')));
   });
 
-  test(
-      'a prompt under the ceiling keeps raw history, bag context, and deduplicates compiled blocks',
-      () {
+  test('a prompt under the ceiling keeps raw history, bag context, and deduplicates compiled blocks', () {
     final now = DateTime(2026, 11, 11, 18);
     final plan = planDiaryPrompt(DiaryPromptInput(
       now: now,
@@ -158,22 +155,13 @@ void main() {
 
     expect(plan.summary, isNull);
     expect(plan.systemInstruction, contains('Golf Biomechanics Coach'));
-    expect(plan.prompt.indexOf('System:'),
-        lessThan(plan.prompt.indexOf('Current bag (SQLite):')));
-    expect(plan.prompt.indexOf('Current bag (SQLite):'),
-        lessThan(plan.prompt.indexOf('Per-club tally:')));
-    expect(plan.prompt.indexOf('Per-club tally:'),
-        lessThan(plan.prompt.indexOf('Earlier history:')));
-    expect(plan.prompt.indexOf('Earlier history:'),
-        lessThan(plan.prompt.indexOf('Named day:')));
-    expect(plan.prompt.indexOf('Named day:'),
-        lessThan(plan.prompt.indexOf('Today (2026-11-11):')));
-    expect(plan.prompt.indexOf('Today (2026-11-11):'),
-        lessThan(plan.prompt.indexOf('Latest turns:')));
-    expect(
-        plan.prompt,
-        contains(
-            'Driver (Sword Katana) [wood]: min 195 / avg 215 / max 230 yd | cue: Hover head, tilted spine'));
+    expect(plan.prompt.indexOf('System:'), lessThan(plan.prompt.indexOf('Current bag (SQLite):')));
+    expect(plan.prompt.indexOf('Current bag (SQLite):'), lessThan(plan.prompt.indexOf('Per-club tally:')));
+    expect(plan.prompt.indexOf('Per-club tally:'), lessThan(plan.prompt.indexOf('Earlier history:')));
+    expect(plan.prompt.indexOf('Earlier history:'), lessThan(plan.prompt.indexOf('Named day:')));
+    expect(plan.prompt.indexOf('Named day:'), lessThan(plan.prompt.indexOf('Today (2026-11-11):')));
+    expect(plan.prompt.indexOf('Today (2026-11-11):'), lessThan(plan.prompt.indexOf('Latest turns:')));
+    expect(plan.prompt, contains('Driver (Sword Katana) [wood]: min 195 / avg 215 / max 230 yd | cue: Hover head, tilted spine'));
     expect(plan.prompt, contains('YESTERDAY CUE'));
     expect(plan.prompt, contains('Villamor Driving Range'));
     expect(plan.prompt, contains('TODAY CUE'));
@@ -223,11 +211,7 @@ void main() {
           cue: ancientCue,
           avg: 140,
         ),
-        drill(
-            id: 'today',
-            timestamp: now.millisecondsSinceEpoch,
-            cue: 'TODAY CUE',
-            avg: 160),
+        drill(id: 'today', timestamp: now.millisecondsSinceEpoch, cue: 'TODAY CUE', avg: 160),
       ],
       sessions: const [],
       turns: const [],
@@ -245,8 +229,7 @@ void main() {
     expect(plan.summary, isNotNull);
     expect(plan.summary, contains('Previous brief fact: held the face'));
     expect(plan.summary, isNot(contains('ANCIENT CUE')));
-    expect(
-        plan.coveredThroughMs, DateTime(2020, 1, 2, 9).millisecondsSinceEpoch);
+    expect(plan.coveredThroughMs, DateTime(2020, 1, 2, 9).millisecondsSinceEpoch);
     expect(plan.prompt, isNot(contains('ANCIENT CUE')));
     expect(plan.prompt, contains('Previous brief fact: held the face'));
     expect(plan.prompt, contains('TODAY CUE'));
@@ -258,11 +241,7 @@ void main() {
       tokenCeiling: 200,
       progressBrief: plan.summary,
       drills: [
-        drill(
-            id: 'today',
-            timestamp: now.millisecondsSinceEpoch,
-            cue: 'TODAY CUE',
-            avg: 160),
+        drill(id: 'today', timestamp: now.millisecondsSinceEpoch, cue: 'TODAY CUE', avg: 160),
       ],
       sessions: const [],
       turns: const [],
@@ -295,8 +274,7 @@ void main() {
           source: DiaryContextSource.scorecard,
           content: 'Putting felt calmer on the back nine.',
           contextDate: '2026-11-10',
-          timestamp:
-              now.subtract(const Duration(days: 1)).millisecondsSinceEpoch,
+          timestamp: now.subtract(const Duration(days: 1)).millisecondsSinceEpoch,
         ),
       ],
       question: 'How did I feel?',
@@ -306,7 +284,6 @@ void main() {
       plan.prompt,
       contains('[Scorecard]: Putting felt calmer on the back nine.'),
     );
-    expect(plan.prompt,
-        contains('Diary notes (on-course, scorecard, and other tabs):'));
+    expect(plan.prompt, contains('Diary notes (on-course, scorecard, and other tabs):'));
   });
 }

@@ -35,9 +35,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-      'Add club button is a plus icon on the left side of the header without label text',
-      (tester) async {
+  testWidgets('Add club button is a plus icon on the left side of the header without label text', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: ClubsScreen()));
     await tester.pump();
 
@@ -63,8 +61,7 @@ void main() {
     expect(find.widgetWithText(AlertDialog, 'Add club'), findsOneWidget);
   });
 
-  testWidgets('Edit club dialog saves name, brand, model, and category',
-      (tester) async {
+  testWidgets('Edit club dialog saves name, brand, model, and category', (tester) async {
     ClubEditResult? result;
     await tester.pumpWidget(
       MaterialApp(
@@ -87,14 +84,10 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Club name'), 'Big Driver');
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Brand (optional)'), 'TaylorMade');
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Model (optional)'), 'Qi10');
-    await tester
-        .tap(find.widgetWithText(DropdownButtonFormField<String>, 'Category'));
+    await tester.enterText(find.widgetWithText(TextField, 'Club name'), 'Big Driver');
+    await tester.enterText(find.widgetWithText(TextField, 'Brand (optional)'), 'TaylorMade');
+    await tester.enterText(find.widgetWithText(TextField, 'Model (optional)'), 'Qi10');
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Category'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Irons').last);
     await tester.pumpAndSettle();
@@ -110,8 +103,7 @@ void main() {
     expect(result!.club!.avgDistance, 220);
   });
 
-  testWidgets('Delete asks for confirmation before removing the club',
-      (tester) async {
+  testWidgets('Delete asks for confirmation before removing the club', (tester) async {
     ClubEditResult? result;
     await tester.pumpWidget(
       MaterialApp(
@@ -135,8 +127,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
-    expect(find.text('Delete Driver from your bag? This cannot be undone.'),
-        findsOneWidget);
+    expect(find.text('Delete Driver from your bag? This cannot be undone.'), findsOneWidget);
     expect(result, isNull);
 
     await tester.tap(find.widgetWithText(TextButton, 'Cancel').last);
@@ -178,8 +169,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Swing notes'), 'Smooth tempo');
+    await tester.enterText(find.widgetWithText(TextField, 'Swing notes'), 'Smooth tempo');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Save notes'));
     await tester.pumpAndSettle();
     expect(saved, 'Smooth tempo');

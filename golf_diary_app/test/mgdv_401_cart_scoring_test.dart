@@ -22,7 +22,8 @@ void main() {
   }
 
   test('catalogTeeToGreenYards returns yards for Club Intramuros hole 1', () {
-    final yards = catalogTeeToGreenYards('Club Intramuros Golf Course', 1);
+    final yards =
+        catalogTeeToGreenYards('Club Intramuros Golf Course', 1);
     expect(yards, isNotNull);
     expect(yards, greaterThan(50));
   });
@@ -71,19 +72,15 @@ void main() {
         home: const ScorecardScreen(),
       ),
     );
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 500)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('scorecard-cart-stroke-plus')),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey('scorecard-cart-stroke-count')),
-        findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-cart-stroke-plus')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-cart-stroke-count')), findsOneWidget);
     expect(find.text('—'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('scorecard-cart-stroke-plus')));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pumpAndSettle();
 
     expect(find.text('1'), findsWidgets);

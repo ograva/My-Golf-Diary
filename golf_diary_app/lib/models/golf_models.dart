@@ -92,6 +92,8 @@ class ShotRecord {
   final double? endLon;
   final double distanceYards;
   final String notes;
+  /// `left`, `center`, or `right` when captured on a mapped Course hole.
+  final String aimDirection;
   final int timestamp;
   final int isSynced;
 
@@ -108,6 +110,7 @@ class ShotRecord {
     this.endLon,
     this.distanceYards = 0.0,
     this.notes = '',
+    this.aimDirection = 'center',
     required this.timestamp,
     this.isSynced = 0,
   });
@@ -126,6 +129,7 @@ class ShotRecord {
       'end_lon': endLon,
       'distance_yards': distanceYards,
       'notes': notes,
+      'aim_direction': aimDirection,
       'timestamp': timestamp,
       'is_synced': isSynced,
     };
@@ -147,6 +151,7 @@ class ShotRecord {
           map['end_lon'] != null ? (map['end_lon'] as num).toDouble() : null,
       distanceYards: (map['distance_yards'] as num?)?.toDouble() ?? 0.0,
       notes: map['notes'] ?? '',
+      aimDirection: map['aim_direction'] as String? ?? 'center',
       timestamp: map['timestamp'] as int,
       isSynced: map['is_synced'] as int? ?? 0,
     );

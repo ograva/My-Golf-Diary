@@ -50,7 +50,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -108,6 +108,18 @@ class LocalDatabaseService {
     }
     if (oldVersion < 14) {
       await _createCaddyTables(db);
+    }
+    if (oldVersion < 15) {
+      final info = await db.rawQuery('PRAGMA table_info(shots)');
+      if (info.isNotEmpty) {
+        final hasAim =
+            info.any((column) => column['name'] == 'aim_direction');
+        if (!hasAim) {
+          await db.execute(
+            "ALTER TABLE shots ADD COLUMN aim_direction TEXT NOT NULL DEFAULT 'center'",
+          );
+        }
+      }
     }
   }
 
@@ -172,6 +184,7 @@ class LocalDatabaseService {
         end_lon REAL,
         distance_yards REAL DEFAULT 0.0,
         notes TEXT,
+        aim_direction TEXT NOT NULL DEFAULT 'center',
         timestamp INTEGER NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
@@ -930,11 +943,20 @@ class LocalDatabaseService {
     required String shotId,
     required String clubId,
     required String lieType,
+    String? aimDirection,
   }) async {
     final db = await database;
+    final fields = <String, Object?>{
+      'club_id': clubId,
+      'lie_type': lieType,
+      'is_synced': 0,
+    };
+    if (aimDirection != null) {
+      fields['aim_direction'] = aimDirection;
+    }
     await db.update(
       'shots',
-      {'club_id': clubId, 'lie_type': lieType, 'is_synced': 0},
+      fields,
       where: 'id = ?',
       whereArgs: [shotId],
     );
@@ -1133,6 +1155,7 @@ class LocalDatabaseService {
     required double currentLat,
     required double currentLon,
     double? distanceYards,
+    String aimDirection = 'center',
   }) async {
     final db = await database;
     final simulator = distanceYards != null;
@@ -1183,6 +1206,7 @@ class LocalDatabaseService {
       startLat: simulator ? 0 : currentLat,
       startLon: simulator ? 0 : currentLon,
       distanceYards: simulator ? distanceYards.roundToDouble() : 0,
+      aimDirection: simulator ? 'center' : aimDirection,
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 

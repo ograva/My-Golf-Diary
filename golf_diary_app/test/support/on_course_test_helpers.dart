@@ -31,16 +31,26 @@ Future<void> pickCourse(
   await settleSheet(tester);
 }
 
-Future<void> selectSimulator(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('oncourse-mode-simulator')));
+Future<void> _selectMode(WidgetTester tester, String key) async {
+  final segment = find.byKey(ValueKey(key));
+  await tester.ensureVisible(segment);
+  await tester.pump();
+  await tester.tap(segment);
   await tester.pump();
 }
 
+Future<void> selectSimulator(WidgetTester tester) =>
+    _selectMode(tester, 'oncourse-mode-simulator');
+
+Future<void> selectFairway(WidgetTester tester) =>
+    _selectMode(tester, 'oncourse-mode-course');
+
+/// Scrolls the stroke log (below the Concede | Finish Hole row) into view.
 Future<void> expandShotList(WidgetTester tester) async {
   final expander = find.byKey(const ValueKey('oncourse-shots-list-expander'));
+  await tester.scrollUntilVisible(expander, 200,
+      scrollable: find.byType(Scrollable).first);
   await tester.ensureVisible(expander);
-  await tester.pump();
-  await tester.tap(find.textContaining('Shots this hole'));
   await settleSheet(tester);
 }
 

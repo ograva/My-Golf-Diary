@@ -317,10 +317,29 @@ void main() {
     }
 
     await tester.tap(find.text('Map'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    for (var i = 0; i < 20; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (find
+          .byKey(const ValueKey('oncourse-map-vector'))
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
 
     expect(find.byKey(const ValueKey('oncourse-map-vector')), findsOneWidget);
+    await tester.pump();
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      if (find
+          .text('Showing the hole line without the course photo.')
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
     expect(
       find.text('Showing the hole line without the course photo.'),
       findsOneWidget,

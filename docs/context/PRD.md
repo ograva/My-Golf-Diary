@@ -4,10 +4,11 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
+| 1.8 | Approved (On Course dual-mode) | 2026-11-19 | Jason (PM cohort) |
 | 1.7 | Approved | 2026-11-15 | Jason (PM cohort) |
 | 1.6 | Approved (V2 epics additive) | 2026-11-15 | Jason (PM cohort) |
 
-**Stories:** Embedded in §3 (30 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later. No file-per-story set for this version.
+**Stories:** Embedded in §3 (34 total across v1 and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later. No file-per-story set for this version.
 
 **Inputs:** [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · Code: `golf_diary_app/lib/` (Flutter).
 
@@ -15,7 +16,7 @@
 
 ## 1. Executive Summary
 
-My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **Range** (structured practice drills selector, multi-club block drill min/max/avg, per-club cues, an overall session note, a compiled session log, and a future Vertex AI Golf Swing Diary), **On Course** (GPS fairway HUD, live distance-to-hole metric on mapped courses, future cached course map view, penalties, mulligans, concede, optional upload), and **Scorecard** (18 holes + editor). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Cloud backup today is anonymous and per install. A future account menu in the sync slot (`SYNC-005`–`SYNC-010`) adds Google and email/password sign-in so the same diary, including compiled range session logs, can be saved to Firestore and opened on another phone or the PWA. V2 epics **MGDV-2…7** are additive planning on that same local-first core. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
+My Golf Diary is a **local-first** Flutter companion: **My Bag** (club stats + swing notes), **Range** (structured practice drills selector, multi-club block drill min/max/avg, per-club cues, an overall session note, a compiled session log, and a future Vertex AI Golf Swing Diary), **On Course** (**Course** vs **Simulator** dual-mode fairway HUD—catalog hole/par, GPS or typed carry, optional map/satellite HUD on mapped holes, penalties, mulligans, concede, optional upload), and **Scorecard** (18 holes + editor). The product goal is **one trusted bag** and **traceable rounds** with **mode-based tabs** (bottom nav), not deep menus. Cloud backup today is anonymous and per install. A future account menu in the sync slot (`SYNC-005`–`SYNC-010`) adds Google and email/password sign-in so the same diary, including compiled range session logs, can be saved to Firestore and opened on another phone or the PWA. V2 epics **MGDV-2…7** are additive planning on that same local-first core. Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
 
 ---
 
@@ -82,23 +83,31 @@ As **Riley**, I want **per-club notes** so **cues travel to the round**.
 
 ### CRSE — On Course
 
-**Overview:** Fairway HUD: course lookup & hole par, live distance-to-hole GPS metric (when hole coordinates exist), future cached hole map view with stroke plotting, lie, club, **GPS shot**, penalties, mulligans, concede, finish hole/round, **sync** action.
+**Overview:** One **On Course** screen with **Course** vs **Simulator** mode chips (`ValueKey('oncourse-mode-course')`, `ValueKey('oncourse-mode-simulator')` per [`designs/Wireframe_OnCourse.md`](./designs/Wireframe_OnCourse.md)). Shared: active round, venue autocomplete, hole picker (`on-course-hole-previous` / `on-course-hole-label` / `on-course-hole-next`), par chips, club/lie, penalties, mulligans, concede, finish hole/round, sync. **Course mode:** catalog course → auto hole count and per-hole par; live yards-to-pin on mapped holes (`CRSE-005`); optional map/satellite HUD with tee/green/stroke markers (`CRSE-006`/`CRSE-009`); plan club/lie/aim bearing then **Record shot at ball** with sparse GPS and stroke-to-stroke yardage; unmapped courses stay on the **tabular HUD** (`CRSE-011`). **Simulator mode:** indoor bay or table play—post-shot logging after the ball lands; manual hole+par when no course card; club/lie; optional simulator **carry** and **distance-to-hole** fields; optional per-stroke notes; hole advance without GPS (`CRSE-007`).
 
-**CRSE-001 — Active round & course lookup**  
-As **Rory**, I want **an active round + course name autocomplete** so **data is grouped and hole pars match my course**.  
-**AC:** (1) Bootstrap ensures/creates active round. (2) Course field suggests recent courses and catalog entries from [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) while allowing custom names. (3) Selecting a course with a published card applies hole par to unplayed holes and sets hole count (9 or 18). (4) HUD shows **round total** updates and bootstrap errors are non-crashing.
+| Concern | Course mode | Simulator mode |
+| :--- | :--- | :--- |
+| Venue | Catalog or custom name; par from card when known | Any label (sim shop, home bay); par chips always editable |
+| Hole navigation | Picker + Finish Hole advances; catalog par on next hole | Same picker; par from card when venue matches catalog |
+| Primary capture | GPS at ball when permission granted (`oncourse-record-shot-btn` label **Record shot at ball**) | Typed yards after the shot (`oncourse-sim-yards-field`) + **Record shot** |
+| Distance readouts | Live yards to pin when mapped (`on-course-distance-to-hole`); segment yards between GPS fixes or stored coords | Optional carry + distance-to-hole fields (`CRSE-007`); no pin stream |
+| Visual HUD | Map/satellite when hole has tee+green coords; else tabular HUD only | Tabular HUD only (map toggle hidden, same gating as `CRSE-005`) |
 
-**CRSE-002 — GPS shot + pre-shot context**  
-As **Rory**, I want **par, lie, club, then GPS capture** so **metadata matches each stroke**.  
-**AC:** (1) Par chips persist to hole row when applicable. (2) Lie ∈ {tee, fairway, rough, bunker, green, penalty}. (3) Club chip selects id used on save. (4) On permission grant, record creates shot with hole, stroke, club, lie, lat/lon, time; denied → snackbar; busy blocks double-tap; list refreshes with distance or pending.
+**CRSE-001 — Active round, course lookup & hole context**  
+As **Rory**, I want **an active round, course autocomplete, and a hole picker** so **pars and hole count match where I play in either mode**.  
+**AC:** (1) Bootstrap ensures/creates active round; errors are non-crashing. (2) `VenueNameField` (`oncourse-course-name-field`) suggests recent courses and catalog entries from [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) while allowing custom names. (3) Selecting a catalog course with a published card applies hole par to unplayed holes and sets hole count (9 or 18); **Course** mode uses catalog par on hole change; **Simulator** mode keeps par chips editable when the venue is custom or a sim bay. (4) Hole stepper shows current hole, respects course hole count, and updates round total; switching holes loads that hole’s saved par/strokes when a row exists.
+
+**CRSE-002 — Shot capture & pre-shot context (dual-mode)**  
+As **Rory**, I want **club and lie locked before each stroke**, with **GPS on the course** and **typed distance in the simulator**, so **each shot row matches how I played it**.  
+**AC:** (1) Par and lie ∈ {tee, fairway, rough, bunker, green, penalty}; par chips persist to the hole row when applicable. (2) Club chip (`oncourse-club-chip-{clubId}`) selects the club id saved on the shot. (3) **Course mode:** primary action **Record shot at ball** (`oncourse-record-shot-btn`); on permission grant, creates `ShotRecord` with hole, stroke, club, lie, lat/lon, timestamp; denied → snackbar + optional location banner (`oncourse-location-banner`); `_busy` blocks double-tap; shot list shows club name and yards or **Distance pending**. (4) **Simulator mode:** GPS is not required; player enters distance travelled in yards (`oncourse-sim-yards-field`, blank/0 blocks save with validation copy per wireframe); recorded shots use typed yards (no fabricated coordinates).
 
 **CRSE-003 — Penalties, mulligans, concede**  
 As **Rory**, I want **these on the HUD** so **I don’t switch screens mid-round**.  
 **AC:** (1) +1/+2 penalties update totals. (2) Mulligan control increments + shows count. (3) Concede applies DB rule + refreshes. (4) Summary matches `RoundScore` after each action.
 
-**CRSE-004 — Finish hole/round**  
-As **Rory**, I want **Finish Hole / Finish Round** so **I progress through the course card**.  
-**AC:** (1) Advances hole, loads next hole's catalog par (or 4), & resets lie when below course hole count. (2) Final hole (9 or 18) action completes the round. (3) Persists + updates totals. (4) Invalid round id is safe.
+**CRSE-004 — Finish hole, holed end & round completion**  
+As **Rory**, I want **Finish Hole / Finish Round** and **clear hole-out rules** so **I progress without leaving the HUD**.  
+**AC:** (1) **Finish hole** (`oncourse-finish-hole-btn`) advances hole index, loads the next hole’s catalog par when the venue has a card (else default 4), and resets lie to **tee** when below course hole count. (2) On the final hole (9 or 18), control copy reads **Finish round** and persists the round without opening a new route. (3) **Holed out:** when strokes on the hole reach **par** or the player marks the ball **holed** (future explicit control or concede-on-green flow), the HUD may offer immediate hole advance; **double par** (strokes ≥ 2× par) still allows Finish Hole so the player can pick up pace of play. (4) Invalid or missing round id fails safe; totals stay consistent with `RoundScore` after each advance.
 
 **CRSE-005 — Live GPS distance to hole**  
 As **Rory**, I want **a live distance-from-hole yardage readout on the On Course HUD in Course mode** so **I can pick the right club for my approach**.  
@@ -106,7 +115,23 @@ As **Rory**, I want **a live distance-from-hole yardage readout on the On Course
 
 **CRSE-006 — On-Course hole map view & cached course maps (Future Feature)**  
 As **Rory**, I want **to switch between the HUD and a hole map view that plots tee-to-green geometry and my recorded strokes** so **I can visualize hole layout and shot dispersion offline**.  
-**AC:** (1) Map toggle (`ValueKey('on-course-map-toggle')`) is enabled only when the active course and hole have tee and green coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). (2) Map view frames the vector line between the hole's Tee coordinate and Green/Pin coordinate and plots markers/polylines for each recorded `ShotRecord` (`start_lat/lon` → `end_lat/lon`) on the current hole. (3) **Map caching & sync architecture:** Course map imagery/tiles are fetched via Google Maps API, cached per course in **Firebase Storage**, and synced down to local device storage so once a course map is downloaded, the map view renders offline on the fairway without repeated live Google Maps API calls. (4) If offline and the course map cache is not yet downloaded locally, gracefully falls back to the standard HUD or a simplified coordinate vector canvas.
+**AC:** (1) Map toggle (`ValueKey('on-course-map-toggle')`) is enabled only in **Course** mode when the active course and hole have tee and green coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) (hidden in **Simulator** mode, same gating as `CRSE-005`). (2) Map view frames the vector line between the hole's Tee coordinate and Green/Pin coordinate and plots markers/polylines for each recorded `ShotRecord` (`start_lat/lon` → `end_lat/lon`) on the current hole. (3) **Map caching & sync architecture:** Course map imagery/tiles are fetched via the approved map provider (see **MGDV-18** / Watson), cached per course in **Firebase Storage**, and synced down to local device storage so once a course map is downloaded, the map view renders offline on the fairway without repeated live API calls. (4) If offline and the course map cache is not yet downloaded locally, gracefully falls back to the standard tabular HUD (`CRSE-011`) or a simplified coordinate vector canvas.
+
+**CRSE-007 — Simulator post-shot logging (enhancement)**  
+As **Riley**, I want **to log simulator or indoor-table holes stroke-by-stroke after each shot** with **optional carry, distance-to-hole, and stroke notes** so **practice rounds trace like on-course data without GPS**.  
+**AC:** (1) With **Simulator** selected, the HUD emphasizes **post-shot** entry: club/lie before save, then optional **simulator carry (yds)** (`ValueKey('oncourse-sim-carry-field')`) and **distance-to-hole (yds)** (`ValueKey('oncourse-sim-distance-to-hole-field')`) in addition to the required **distance travelled** field (`oncourse-sim-yards-field`); all optional fields may be left blank without blocking save when travelled yards are valid. (2) Optional **stroke note** (`ValueKey('oncourse-stroke-note-field')`) attaches to the shot row (SQLite text column or note table per Architecture); survives hole navigation within the round. (3) Hole+par setup uses the same par chips and hole stepper as **Course** mode; **Finish hole** advances the virtual hole list for 9- or 18-hole sim rounds. (4) No GPS permission prompt in Simulator mode; switching to **Course** restores GPS capture rules from `CRSE-002` and hides simulator-only fields.
+
+**CRSE-008 — Course plan, record at ball & stroke distances**  
+As **Rory**, I want **to plan club, lie, and aim bearing on mapped holes**, then **record at the ball** with **stroke-to-stroke yardage** so **each segment reflects how I played the hole**.  
+**AC:** (1) In **Course** mode, club and lie chips represent the **plan** for the next stroke; optional **aim bearing** control (`ValueKey('oncourse-aim-bearing')`, compass or degree chip row per Eunice) is shown on mapped holes and stored on the shot when set. (2) **Record shot at ball** captures sparse GPS (single read by default per Architecture § battery); when a prior stroke on the hole has coordinates, the shot list shows **segment yards** between successive ball positions (Haversine → yards, same helper as live pin distance). (3) Strokes increment from shot count; penalties/mulligans/concede from `CRSE-003` compose hole gross without double-counting manual stroke entry. (4) On unmapped holes within **Course** mode, plan fields remain; GPS save still applies when permission granted, but segment yards may show pending until coordinates exist.
+
+**CRSE-009 — Map / satellite HUD & live markers (Course mode)**  
+As **Rory**, I want **a map or satellite hole view with tee, green, and my ball markers** layered on **live or sparse GPS** so **I orient between swings without a separate app**.  
+**AC:** (1) When `on-course-map-toggle` is available (`CRSE-006`), the map pane shows satellite or roadmap tiles per **MGDV-18** provider choice, frames current hole bounds, and plots tee pin, green/pin, and one marker per recorded stroke on the active hole. (2) Live GPS updates the **current ball** or **player** marker when a fix exists during **Course** mode on a mapped hole; throttling matches `CRSE-005` battery rules. (3) Switching to tabular HUD preserves the same hole, club/lie plan, and shot list. (4) **Simulator** mode never mounts the map pane (distance line and toggle absent).
+
+**CRSE-011 — Unmapped course tabular HUD fallback**  
+As **Rory**, I want **the full scoring HUD when my course has no surveyed coordinates** so **I never lose penalties, club/lie, or shot history waiting for maps**.  
+**AC:** (1) When the venue is custom or `hasHoleCoordinates` is false for the active hole, **Course** mode shows only the tabular HUD card (`CRSE-001` layout per wireframe): no `on-course-distance-to-hole`, no `on-course-map-toggle`, no error placeholder. (2) **Record shot at ball** and simulator-style typed yards (if user switches to Simulator) remain available per mode rules. (3) Partial catalog courses hide pin distance and map only on unmapped holes; mapped holes on the same round still get `CRSE-005`/`CRSE-009` when selected. (4) UI uses `ValueKey('oncourse-hud-tabular')` on the primary HUD card for tests.
 
 ### SCOR — Scorecard
 
@@ -222,7 +247,7 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 
 1. Open app → sees **bottom tabs** (My Bag / Range / On Course / Scorecard).  
 2. **Pre-round** → My Bag: category + yardages + notes.  
-3. **Tee** → On Course: pick course (autocomplete sets hole pars), view live GPS **distance to hole** (when course coordinates exist), record shots with GPS at natural breaks, or toggle to the cached **hole map view** (future) to inspect stroke coordinates.  
+3. **Tee or sim** → On Course: choose **Course** or **Simulator**; pick course (autocomplete sets hole pars) or sim venue; use hole picker; in **Course** mode view live **yards to pin** and optional **map/satellite HUD** when coordinates exist, **plan** club/lie/bearing, **record at ball**; in **Simulator** mode **log post-shot** with typed yards, optional carry/distance-to-hole and stroke notes.  
 4. **Adjust** → penalties / mulligans / concede on HUD; **Finish Hole** advances with the course card's next par.  
 5. **Verify** → Scorecard: totals; tap hole to fix strokes or par.  
 6. **Range — Select Drill** → tap the left header icon on Range to open the **Practice Drills** list ([`Range_Drills.md`](./Range_Drills.md)), read the step-by-step explainer (or add/delete custom drills), and apply a drill to the session.  
@@ -260,7 +285,7 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 9. **Sign in with Apple**, phone OTP, or providers other than Google and email/password, unless App Store review requires Apple (see §7).  
 10. A **manual row-by-row merge** UI. Multi-device conflicts stay last-write-wins.
 
-*(Note: **CRSE-006** cached course map view, **RNGE-004** Vertex AI swing diary, and **SYNC-005–SYNC-010** account avatar, Google and email/password sign-in, and multi-device retrieve are future features. Range logging and on-course capture do not depend on them.)*
+*(Note: **CRSE-006**/**CRSE-009** cached hole map / satellite HUD, **CRSE-007** simulator carry+note fields (schema touch), **RNGE-004** Vertex AI swing diary, and **SYNC-005–SYNC-010** account avatar, Google and email/password sign-in, and multi-device retrieve are future or enhancement tracks. Core tabular HUD, dual-mode chips, GPS shot capture, and simulator typed yards do not depend on map cache or accounts.)*
 
 ---
 
@@ -271,7 +296,9 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 | Yards vs meters (global preference)? | Watson + Product |
 | RNGE aggregates: overwrite vs blend vs history-only? | Watson |
 | Source of truth if shot count ≠ scorecard strokes? | Watson (document in Architecture) |
-| Google Maps Static/Tile API licensing & Firebase Storage bucket structure for per-course map caching (`CRSE-006`) | Watson |
+| Map provider, tile licensing, offline pack format, and Firebase Storage layout for per-course map caching (`CRSE-006`, **MGDV-18**) | Watson |
+| Simulator shot optional columns (carry, distance-to-hole, stroke note) vs JSON payload on `ShotRecord` (`CRSE-007`) | Watson |
+| Aim-bearing UX and persistence on `ShotRecord` (`CRSE-008`) | Eunice + Watson |
 | Where the saved evaluation and periodic-summary log appears in navigation (`RNGE-004`) | Jason + Eunice |
 | What replaces project-billed Vertex AI if the diary reaches about 1,000 people | Jason + Watson |
 | iOS **Info.plist** location strings | Watson |
@@ -284,7 +311,9 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 - Future `SYNC-006`: enable Google and Email/Password on that same project (no new Firebase project). Android needs the app’s SHA fingerprints; the PWA domain must be an authorized domain. Anonymous linking behavior is specified in `SYNC-008`.
 - [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) for `CRSE-005` live distance-to-hole and `CRSE-006` hole map bounds.
 - [`Range_Drills.md`](./Range_Drills.md) for `RNGE-003` seeded practice drills.
-- Future: a Firebase Storage bucket and a Google Maps key (`CRSE-006`). Vertex AI on `novusinc-8df79` for `RNGE-004`, with App Check. No separate Gemini API product and no player API key.
+- **MGDV-18** (Watson): selected map provider and keys for `CRSE-006`/`CRSE-009` satellite or roadmap tiles; must align with Architecture § Constraints (no secrets in repo, offline cache via Firebase Storage).
+- Future: a Firebase Storage bucket and provider map credentials (`CRSE-006`). Vertex AI on `novusinc-8df79` for `RNGE-004`, with App Check. No separate Gemini API product and no player API key.
+- [`designs/Wireframe_OnCourse.md`](./designs/Wireframe_OnCourse.md) for mode chips, hole stepper, record button, and simulator yards field keys; map layout in [`designs/Wireframe_HoleMap.md`](./designs/Wireframe_HoleMap.md).
 
 ---
 
@@ -315,3 +344,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.5 | 2026-11-11 | Add `RNGE-005` (Range session note + **Save and evaluate session** compiled session log bundling multi-club blocks, per-club notes, drill info, and the overall session review) and connect it as the primary input to `RNGE-004` Vertex AI evaluation |
 | 1.6 | 2026-11-15 | Add V2 **MGDV** epic table, **Intramuros Club** pilot note, and MGDV-2-001…003 stories (wizard, progressive disclosure, cross-tab diary); v1 module stories unchanged |
 | 1.7 | 2026-11-15 | Future account menu in the sync slot, rebased onto v1.6: `SYNC-005` avatar with Login, Sync, Profile, and Settings; `SYNC-006` Google and email/password; `SYNC-007` same diary on another device, including compiled `range_sessions`; `SYNC-008` link or explicit upload when leaving anonymous auth; `SYNC-009` Firebase profile, separate from the local MGDV-2 skill profile; `SYNC-010` sync settings. Local play stays signed-out. Not in the current build |
+| 1.8 | 2026-11-19 | **On Course dual-mode enhancement (Reuben):** refine `CRSE-001`/`CRSE-002`/`CRSE-004` for Course vs Simulator chips; add `CRSE-007` simulator post-shot logging (optional carry, distance-to-hole, stroke notes), `CRSE-008` plan + record-at-ball + stroke segments, `CRSE-009` map/satellite HUD markers, `CRSE-011` unmapped tabular fallback; tie map stack to **MGDV-18**; wireframe `ValueKey`s from `Wireframe_OnCourse.md` |

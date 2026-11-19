@@ -4,6 +4,7 @@ import '../data/ph_golf_hole_coords.dart';
 import '../models/course_map_manifest.dart';
 import '../models/golf_models.dart';
 import '../on_course/hole_map_geo.dart';
+import '../services/course_map_cache_service.dart';
 import '../services/pin_distance.dart';
 import 'hole_map_marker_painter.dart';
 
@@ -27,6 +28,9 @@ class OncourseSatelliteHoleMap extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final bounds = HoleMapBounds.fromManifest(frame.entry);
     final image = frame.imageFile;
+    final bytes = image == null
+        ? CourseMapCacheService.instance.cachedImageBytes(frame)
+        : null;
 
     return Semantics(
       label: 'Satellite hole map',
@@ -47,6 +51,15 @@ class OncourseSatelliteHoleMap extends StatelessWidget {
                   Image.file(
                     image,
                     fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        ColoredBox(color: scheme.surfaceContainerHigh),
+                  )
+                else if (bytes != null)
+                  Image.memory(
+                    bytes,
+                    key: const ValueKey('oncourse-hole-map-image'),
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
                     errorBuilder: (_, __, ___) =>
                         ColoredBox(color: scheme.surfaceContainerHigh),
                   )

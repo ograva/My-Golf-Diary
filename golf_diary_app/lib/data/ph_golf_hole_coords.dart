@@ -1552,5 +1552,8 @@ HoleCoordinates? holeCoordinates(String courseName, int holeNumber) {
   return _byCourse[name]?[holeNumber];
 }
 
+/// Canonical names of every course with surveyed holes.
+Iterable<String> get surveyedCourseNames => _byCourse.keys;
+
 bool hasHoleCoordinates(String courseName, int holeNumber) =>
     holeCoordinates(courseName, holeNumber) != null;

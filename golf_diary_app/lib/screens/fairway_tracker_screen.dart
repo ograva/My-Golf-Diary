@@ -942,7 +942,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
   Widget _courseSummary(BuildContext context) {
     final caption = PhGolfCatalog.courseCaption(_appliedCourseName);
-    return InkWell(
+    final summary = InkWell(
       key: const ValueKey('oncourse-course-summary'),
       onTap: _openCourseSheet,
       borderRadius: BorderRadius.circular(8),
@@ -977,6 +977,59 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           ),
         ),
       ),
+    );
+    return Row(
+      children: [
+        Expanded(child: summary),
+        const SizedBox(width: 8),
+        _modeToggle(),
+      ],
+    );
+  }
+
+  void _setSimulator(bool simulator) {
+    if (simulator == _simulator) return;
+    setState(() {
+      _simulator = simulator;
+      _yardsError = null;
+    });
+    _syncPinWatch();
+  }
+
+  Widget _modeToggle() {
+    return SegmentedButton<bool>(
+      key: const ValueKey('oncourse-mode-toggle'),
+      emptySelectionAllowed: false,
+      showSelectedIcon: false,
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? GolfPalette.fairwayGreen
+                : null),
+        foregroundColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? Colors.white : null),
+      ),
+      segments: const [
+        ButtonSegment<bool>(
+          value: false,
+          label: Text(
+            'FWY',
+            key: ValueKey('oncourse-mode-course'),
+            semanticsLabel: 'Fairway',
+          ),
+        ),
+        ButtonSegment<bool>(
+          value: true,
+          label: Text(
+            'SIM',
+            key: ValueKey('oncourse-mode-simulator'),
+            semanticsLabel: 'Simulator',
+          ),
+        ),
+      ],
+      selected: {_simulator},
+      onSelectionChanged: (selection) => _setSimulator(selection.first),
     );
   }
 
@@ -1032,38 +1085,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               ],
             ),
           ),
-        ),
-        const SizedBox(width: 4),
-        ChoiceChip(
-          key: const ValueKey('oncourse-mode-course'),
-          selectedColor: GolfPalette.fairwayGreen,
-          labelStyle: _chipLabel(!_simulator),
-          label: const Text('Course'),
-          showCheckmark: false,
-          visualDensity: VisualDensity.compact,
-          selected: !_simulator,
-          onSelected: (_) {
-            setState(() {
-              _simulator = false;
-              _yardsError = null;
-            });
-            _syncPinWatch();
-          },
-        ),
-        const SizedBox(width: 4),
-        ChoiceChip(
-          key: const ValueKey('oncourse-mode-simulator'),
-          selectedColor: GolfPalette.fairwayGreen,
-          labelStyle: _chipLabel(_simulator),
-          label: const Text('Sim', semanticsLabel: 'Simulator'),
-          tooltip: 'Simulator',
-          showCheckmark: false,
-          visualDensity: VisualDensity.compact,
-          selected: _simulator,
-          onSelected: (_) {
-            setState(() => _simulator = true);
-            _syncPinWatch();
-          },
         ),
       ],
     );
@@ -1197,6 +1218,18 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                               children: [
                                 _contextRow(
                                     context, strokes, penalties, holeScore),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 0, 0, 4),
+                                  child: Text(
+                                    'Strokes $strokes · Penalties $penalties · '
+                                    'Score $holeScore · Round total $_roundTotal',
+                                    key: const ValueKey(
+                                        'oncourse-hole-stats-row'),
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
                                 if (microLine != null)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
@@ -1299,40 +1332,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                           ],
                         ),
                       ],
-                      const SizedBox(height: 16),
-                      Text(
-                        'Strokes $strokes · Penalties $penalties · '
-                        'Score $holeScore · Round total $_roundTotal',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              key: const ValueKey('oncourse-concede-btn'),
-                              onPressed: _roundId == null
-                                  ? null
-                                  : () => LocalDatabaseService.instance
-                                      .concedeHole(_roundId!, _holeNumber)
-                                      .then((_) => _refreshHoleState()),
-                              child: const Text('Concede'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton(
-                              key: const ValueKey('oncourse-finish-hole-btn'),
-                              onPressed: _finishHole,
-                              child: Text(
-                                _holeNumber >= _holeCount
-                                    ? 'Finish Round'
-                                    : 'Finish Hole',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                       if (_shots.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         ExpansionTile(
@@ -1354,32 +1353,72 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: SizedBox(
-                height: 64,
-                width: double.infinity,
-                child: FilledButton(
-                  key: const ValueKey('oncourse-record-shot-btn'),
-                  onPressed: _busy ? null : _recordShot,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 64,
+                    width: double.infinity,
+                    child: FilledButton(
+                      key: const ValueKey('oncourse-record-shot-btn'),
+                      onPressed: _busy ? null : _recordShot,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                      ),
+                      child: _busy
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              _simulator
+                                  ? 'Record stroke'
+                                  : 'Record shot at ball',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
                   ),
-                  child: _busy
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          _simulator ? 'Record stroke' : 'Record shot at ball',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 48,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            key: const ValueKey('oncourse-concede-btn'),
+                            onPressed: _roundId == null
+                                ? null
+                                : () => LocalDatabaseService.instance
+                                    .concedeHole(_roundId!, _holeNumber)
+                                    .then((_) => _refreshHoleState()),
+                            child: const Text('Concede'),
                           ),
                         ),
-                ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            key: const ValueKey('oncourse-finish-hole-btn'),
+                            onPressed: _finishHole,
+                            child: Text(
+                              _holeNumber >= _holeCount
+                                  ? 'Finish Round'
+                                  : 'Finish Hole',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

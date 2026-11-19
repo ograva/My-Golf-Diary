@@ -30,7 +30,8 @@ void main() {
     expect(bounds.neLat, greaterThan(coords.greenLat));
   });
 
-  testWidgets('satellite map shows attribution and marker layer', (tester) async {
+  testWidgets('satellite map shows attribution and marker layer',
+      (tester) async {
     const course = 'Villamor Golf Club';
     final coords = holeCoordinates(course, 1)!;
     final bounds = boundsForHole(coords);

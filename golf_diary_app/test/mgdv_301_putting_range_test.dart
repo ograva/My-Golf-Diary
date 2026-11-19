@@ -13,8 +13,7 @@ void main() {
   Future<void> useFreshDatabase() async {
     await LocalDatabaseService.debugClose();
     LocalDatabaseService.debugSetFileName('golf_diary_mgdv3.db');
-    await deleteDatabase(
-        join(await getDatabasesPath(), 'golf_diary_mgdv3.db'));
+    await deleteDatabase(join(await getDatabasesPath(), 'golf_diary_mgdv3.db'));
   }
 
   Future<void> restoreDatabase() async {
@@ -55,8 +54,8 @@ void main() {
     await tester.tap(puttingChip);
     await tester.pump();
 
-    final row = find.byKey(
-        const ValueKey('range-drill-row-rng-drl-putt-gate-startline'));
+    final row = find
+        .byKey(const ValueKey('range-drill-row-rng-drl-putt-gate-startline'));
     await tester.ensureVisible(row);
     await tester.tap(row);
     await tester.pump();
@@ -64,7 +63,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byKey(const ValueKey('range-putting-yardage-hint')), findsOneWidget);
+    expect(find.byKey(const ValueKey('range-putting-yardage-hint')),
+        findsOneWidget);
     expect(find.text('Putter'), findsWidgets);
     expect(find.text('Driver'), findsNothing);
 

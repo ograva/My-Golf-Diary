@@ -18,7 +18,8 @@ void main() {
   Future<void> useFreshDatabase() async {
     await LocalDatabaseService.debugClose();
     LocalDatabaseService.debugSetFileName('golf_diary_mgdv203.db');
-    await deleteDatabase(join(await getDatabasesPath(), 'golf_diary_mgdv203.db'));
+    await deleteDatabase(
+        join(await getDatabasesPath(), 'golf_diary_mgdv203.db'));
   }
 
   Future<void> restoreDatabase() async {
@@ -26,7 +27,8 @@ void main() {
     LocalDatabaseService.debugSetFileName('golf_diary.db');
   }
 
-  testWidgets('beginner bag shows usual hero and Shortest labels in details', (tester) async {
+  testWidgets('beginner bag shows usual hero and Shortest labels in details',
+      (tester) async {
     final db = LocalDatabaseService.instance;
     await tester.runAsync(() async {
       await useFreshDatabase();
@@ -46,12 +48,14 @@ void main() {
         home: const ClubsScreen(),
       ),
     );
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
     expect(find.text('Min'), findsNothing);
     expect(find.byKey(const ValueKey('bag-hero-yards-driver')), findsOneWidget);
-    expect(find.byKey(const ValueKey('bag-details-btn-driver')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('bag-details-btn-driver')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('bag-details-btn-driver')));
     await tester.pumpAndSettle();
@@ -81,7 +85,8 @@ void main() {
         home: const ClubsScreen(),
       ),
     );
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
     expect(find.text('Min'), findsAtLeastNWidgets(1));
@@ -90,7 +95,8 @@ void main() {
     expect(find.byKey(const ValueKey('bag-details-btn-driver')), findsNothing);
   });
 
-  testWidgets('range simple mode hides min max until More numbers', (tester) async {
+  testWidgets('range simple mode hides min max until More numbers',
+      (tester) async {
     final db = LocalDatabaseService.instance;
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -115,13 +121,15 @@ void main() {
         home: const RangeDrillScreen(),
       ),
     );
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
     expect(find.text('Range'), findsOneWidget);
     expect(find.text('Range Drill Instructor'), findsNothing);
     expect(yardageLabel('Min (yds)'), findsNothing);
-    expect(find.byKey(const ValueKey('range-usual-yards-field')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('range-usual-yards-field')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('range-yardage-mode-expand')));
     await tester.pumpAndSettle();
@@ -130,7 +138,8 @@ void main() {
     expect(yardageLabel('Best (yds)'), findsOneWidget);
   });
 
-  testWidgets('simple range save with usual only updates club average', (tester) async {
+  testWidgets('simple range save with usual only updates club average',
+      (tester) async {
     final db = LocalDatabaseService.instance;
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -155,14 +164,17 @@ void main() {
         home: const RangeDrillScreen(),
       ),
     );
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const ValueKey('range-usual-yards-field')), '200');
+    await tester.enterText(
+        find.byKey(const ValueKey('range-usual-yards-field')), '200');
     final save = find.text('Save Drill Session');
     await tester.ensureVisible(save);
     await tester.tap(save);
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pump();
 
     final clubs = await tester.runAsync(db.getAllClubs);

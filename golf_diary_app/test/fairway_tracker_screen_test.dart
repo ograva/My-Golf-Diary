@@ -86,7 +86,7 @@ void main() {
     await tester.pump();
     expect(find.text('Enter a distance greater than 0'), findsOneWidget);
 
-    await tester.tap(find.text('Course'));
+    await tester.tap(find.byKey(const ValueKey('oncourse-mode-course')));
     await tester.pump();
     expect(find.text('Record shot at ball'), findsOneWidget);
     expect(find.text('Distance travelled (yds)'), findsNothing);
@@ -136,7 +136,7 @@ void main() {
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
     expect(client.live, 0);
 
-    await tester.tap(find.text('Course'));
+    await tester.tap(find.byKey(const ValueKey('oncourse-mode-course')));
     for (var i = 0; i < 20; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));

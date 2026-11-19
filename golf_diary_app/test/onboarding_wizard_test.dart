@@ -33,7 +33,10 @@ void main() {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
-      if (find.byKey(const ValueKey('onboarding-age-field')).evaluate().isNotEmpty ||
+      if (find
+              .byKey(const ValueKey('onboarding-age-field'))
+              .evaluate()
+              .isNotEmpty ||
           find.byKey(const ValueKey('shell-nav-bar')).evaluate().isNotEmpty) {
         return;
       }

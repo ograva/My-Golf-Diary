@@ -61,7 +61,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account-menu-sync')));
     await tester.pump();
-    final requiresSignIn = find.text('Sign in to save your diary to the cloud.');
+    final requiresSignIn =
+        find.text('Sign in to save your diary to the cloud.');
     final noFirebase =
         find.text('Firebase not configured — local data is saved on device');
     expect(

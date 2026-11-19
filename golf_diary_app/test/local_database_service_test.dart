@@ -224,7 +224,8 @@ void main() {
     expect((await db.getHoleScore(roundId, 1))!.strokes, 2);
   });
 
-  test('simulator shot persists carry distance-to-hole and stroke note', () async {
+  test('simulator shot persists carry distance-to-hole and stroke note',
+      () async {
     final roundId = await db.startNewRound(courseName: 'Sim Bay');
     await db.recordFairwayHit(
       roundId: roundId,
@@ -524,41 +525,60 @@ void main() {
   }
 
   test('compile links two clubs and leaves a note-only session', () async {
-    await saveBlock(id: 'block_driver', clubId: 'driver', tempo: 'Smooth', avg: 220, drillId: 'rng-drl-tempo-3to1');
+    await saveBlock(
+        id: 'block_driver',
+        clubId: 'driver',
+        tempo: 'Smooth',
+        avg: 220,
+        drillId: 'rng-drl-tempo-3to1');
     await saveBlock(id: 'block_iron', clubId: '7iron', tempo: 'Hold', avg: 150);
-    await db.updateClubIdentity((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').copyWith(
+    await db.updateClubIdentity((await db.getAllClubs())
+        .firstWhere((club) => club.id == 'driver')
+        .copyWith(
           name: 'Driver still',
           category: 'wood',
         ));
 
-    final session = await db.compileRangeSession(sessionNote: 'Felt easy', venueName: 'Topgolf');
+    final session = await db.compileRangeSession(
+        sessionNote: 'Felt easy', venueName: 'Topgolf');
     expect(session.blocks.map((block) => block.clubId), ['driver', '7iron']);
     expect(session.blocks.first.clubName, 'Driver still');
     expect(session.blocks.first.drillTitle, '3:1 Tour Tempo Rhythm');
     expect(session.blocks.first.drillSteps, isNotEmpty);
     expect(session.sessionNote, 'Felt easy');
 
-    await db.updateClubIdentity((await db.getAllClubs()).firstWhere((club) => club.id == 'driver').copyWith(
+    await db.updateClubIdentity((await db.getAllClubs())
+        .firstWhere((club) => club.id == 'driver')
+        .copyWith(
           name: 'Renamed driver',
           category: 'wood',
         ));
     final stored = await db.listRangeSessions();
     expect(stored.single.blocks.first.clubName, 'Driver still');
-    expect((await db.listRangeDrills()).every((row) => row.drill.sessionId == session.id), isTrue);
+    expect(
+        (await db.listRangeDrills())
+            .every((row) => row.drill.sessionId == session.id),
+        isTrue);
 
     await expectLater(
-      db.compileRangeSession(sessionNote: '', blockIds: ['block_driver', 'block_iron']),
+      db.compileRangeSession(
+          sessionNote: '', blockIds: ['block_driver', 'block_iron']),
       throwsArgumentError,
     );
-    expect((await db.listRangeDrills()).every((row) => row.drill.sessionId == session.id), isTrue);
+    expect(
+        (await db.listRangeDrills())
+            .every((row) => row.drill.sessionId == session.id),
+        isTrue);
 
-    final noteOnly = await db.compileRangeSession(sessionNote: 'Just a thought');
+    final noteOnly =
+        await db.compileRangeSession(sessionNote: 'Just a thought');
     expect(noteOnly.blocks, isEmpty);
     expect((await db.listRangeSessions()).length, 2);
   });
 
   test('a blank visit is rejected', () async {
-    await expectLater(db.compileRangeSession(sessionNote: '   '), throwsArgumentError);
+    await expectLater(
+        db.compileRangeSession(sessionNote: '   '), throwsArgumentError);
     expect(await db.listRangeSessions(), isEmpty);
   });
 
@@ -650,7 +670,8 @@ void main() {
     expect((await db.listRangeDrills()).single.drill.sessionId, session.id);
   });
 
-  test('diary history under the ceiling is raw and over it stores one brief', () async {
+  test('diary history under the ceiling is raw and over it stores one brief',
+      () async {
     final now = DateTime.now();
     await db.saveRangeDrill(RangeDrillLog(
       id: 'ancient',
@@ -675,7 +696,8 @@ void main() {
       drillId: 'rng-drl-tempo-3to1',
     ));
     final store = SwingDiaryService();
-    final under = await store.preparePrompt(tokenCeiling: kDiaryTokenCeiling, now: now);
+    final under =
+        await store.preparePrompt(tokenCeiling: kDiaryTokenCeiling, now: now);
     expect(under.summary, isNull);
     expect(under.prompt, contains('ANCIENT CUE'));
     expect(under.prompt, contains('TODAY CUE'));
@@ -688,7 +710,8 @@ void main() {
     expect(over.prompt, isNot(contains('ANCIENT CUE')));
     expect(over.prompt, contains('TODAY CUE'));
     expect(over.prompt, contains('Folded earlier practice'));
-    final briefs = (await store.listEvaluations()).where((row) => row.kind == 'periodic_summary');
+    final briefs = (await store.listEvaluations())
+        .where((row) => row.kind == 'periodic_summary');
     expect(briefs, hasLength(1));
 
     final named = await store.preparePrompt(

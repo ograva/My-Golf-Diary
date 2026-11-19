@@ -70,8 +70,37 @@ void main() {
     ]) {
       final rect = tester.getRect(key(id));
       expect(rect.bottom, lessThanOrEqualTo(dockTop), reason: id);
+      expect(rect.top, greaterThanOrEqualTo(0), reason: id);
       expect(rect.right, lessThanOrEqualTo(390), reason: id);
     }
+
+    final record = tester.getRect(key('oncourse-record-shot-btn'));
+    final concede = tester.getRect(key('oncourse-concede-btn'));
+    final finish = tester.getRect(key('oncourse-finish-hole-btn'));
+    expect(concede.top, greaterThan(record.bottom));
+    expect(concede.top - record.bottom, lessThanOrEqualTo(12));
+    expect(finish.top, concede.top);
+    expect(finish.bottom, lessThanOrEqualTo(844));
+
+    final holeRow = tester.getRect(key('on-course-hole-label'));
+    final par = tester.getRect(key('oncourse-par-summary'));
+    final stats = tester.getRect(key('oncourse-hole-stats-row'));
+    expect((par.center.dy - holeRow.center.dy).abs(), lessThan(4));
+    expect(stats.top, greaterThanOrEqualTo(holeRow.bottom - 1));
+    expect(stats.bottom,
+        lessThanOrEqualTo(tester.getRect(key('oncourse-club-summary')).top));
+
+    final summary = tester.getRect(key('oncourse-course-summary'));
+    final toggle = tester.getRect(key('oncourse-mode-toggle'));
+    expect(find.byType(SegmentedButton<bool>), findsOneWidget);
+    expect((toggle.center.dy - summary.center.dy).abs(), lessThan(4));
+    expect(toggle.left, greaterThan(summary.right));
+    expect(toggle.right, greaterThan(390 - 20));
+    expect(find.text('FWY'), findsOneWidget);
+    expect(find.text('SIM'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fairway'), findsOneWidget);
+    expect(find.bySemanticsLabel('Simulator'), findsOneWidget);
+
     expect(key('oncourse-sim-carry-field'), findsNothing);
     expect(key('oncourse-sim-distance-to-hole-field'), findsNothing);
     expect(key('oncourse-sim-stroke-note-field'), findsNothing);

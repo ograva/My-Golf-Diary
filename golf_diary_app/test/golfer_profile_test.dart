@@ -27,7 +27,8 @@ void main() {
       ),
       clubsMissingSpecs: true,
     );
-    expect(afterBody.map((prompt) => prompt.id).toList(), ['training', 'equipment']);
+    expect(afterBody.map((prompt) => prompt.id).toList(),
+        ['training', 'equipment']);
   });
 
   test('distillation keeps a filled pillar when the model returns a blank', () {
@@ -108,7 +109,8 @@ void main() {
     final name = 'golf_diary_profile_v10_upgrade.db';
     final path = join(await getDatabasesPath(), name);
     await deleteDatabase(path);
-    final seeded = await openDatabase(path, version: 9, onCreate: (db, version) async {
+    final seeded =
+        await openDatabase(path, version: 9, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE golfer_profile (
           id TEXT PRIMARY KEY,
@@ -153,7 +155,8 @@ void main() {
     final name = 'golf_diary_profile_v9.db';
     final path = join(await getDatabasesPath(), name);
     await deleteDatabase(path);
-    final seeded = await openDatabase(path, version: 8, onCreate: (db, version) async {
+    final seeded =
+        await openDatabase(path, version: 8, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE golfer_profile (
           id TEXT PRIMARY KEY,
@@ -189,11 +192,13 @@ void main() {
     expect(profile.age, isNull);
   });
 
-  test('a version 7 database gains golfer_profile and ignores model text', () async {
+  test('a version 7 database gains golfer_profile and ignores model text',
+      () async {
     final name = 'golf_diary_profile_upgrade.db';
     final path = join(await getDatabasesPath(), name);
     await deleteDatabase(path);
-    final seeded = await openDatabase(path, version: 7, onCreate: (db, version) async {
+    final seeded =
+        await openDatabase(path, version: 7, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE range_sessions (
           id TEXT PRIMARY KEY,
@@ -332,7 +337,8 @@ class _SilentModel implements DiaryModel {
   String get modelName => 'fake';
 
   @override
-  Stream<String> generate(String prompt, {String? systemInstruction, DiaryCancel? cancel}) async* {}
+  Stream<String> generate(String prompt,
+      {String? systemInstruction, DiaryCancel? cancel}) async* {}
 
   @override
   Future<String?> generateJson({

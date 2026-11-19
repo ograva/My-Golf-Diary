@@ -88,7 +88,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('3:1 Tour Tempo Rhythm'), findsNWidgets(2));
 
-    await tester.enterText(find.byKey(const ValueKey('range-usual-yards-field')), '150');
+    await tester.enterText(
+        find.byKey(const ValueKey('range-usual-yards-field')), '150');
     await tester.tap(find.text('Save Drill Session'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -104,7 +105,8 @@ void main() {
         findsNothing);
     expect(find.text('3:1 Tour Tempo Rhythm'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const ValueKey('range-usual-yards-field')), '140');
+    await tester.enterText(
+        find.byKey(const ValueKey('range-usual-yards-field')), '140');
     await tester.tap(find.text('Save Drill Session'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));

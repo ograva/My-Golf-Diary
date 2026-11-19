@@ -23,11 +23,13 @@ void main() {
       ),
       isFalse,
     );
-    expect(activeHoleCoordinates(
-      simulator: false,
-      courseName: 'My Backyard',
-      holeNumber: 1,
-    ), isNull);
+    expect(
+        activeHoleCoordinates(
+          simulator: false,
+          courseName: 'My Backyard',
+          holeNumber: 1,
+        ),
+        isNull);
   });
 
   test('partial Sherwood layout maps only surveyed holes', () {

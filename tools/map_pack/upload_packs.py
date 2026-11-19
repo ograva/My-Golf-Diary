@@ -37,7 +37,7 @@ def _client():
 
 
 def _put(bucket, local: Path, remote: str, content_type: str, dry_run: bool) -> None:
-    print(f"{'DRY ' if dry_run else ''}upload {local.relative_to(OUT_DIR)} -> gs://{bucket.name if bucket else '?'}/{remote}")
+    print(f"{'DRY ' if dry_run else ''}upload {local.relative_to(OUT_DIR)} -> {remote}")
     if dry_run:
         return
     blob = bucket.blob(remote)

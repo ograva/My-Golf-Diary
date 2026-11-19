@@ -1,0 +1,70 @@
+name: Publish PWA
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'golf_diary_app/**'
+      - '.github/workflows/publish-pwa.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install web SQLite
+        working-directory: golf_diary_app
+        run: |
+          flutter pub get
+          dart run sqflite_common_ffi_web:setup
+
+      - name: Build web PWA
+        working-directory: golf_diary_app
+        env:
+          APP_BUILD_ID: ${{ github.sha }}
+        run: ./tool/build_web.sh --base-href /My-Golf-Diary/
+
+      - name: Publish gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO_ROOT="$(git rev-parse --show-toplevel)"
+          TMP="$(mktemp -d)"
+
+          cp -a "$REPO_ROOT/golf_diary_app/build/web/." "$TMP/"
+          touch "$TMP/.nojekyll"
+
+          cd "$TMP"
+          git init -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy My Golf Diary PWA to GitHub Pages"
+
+          FILE_COUNT="$(git ls-tree -r --name-only HEAD | wc -l)"
+          if [[ "$FILE_COUNT" -lt 5 ]]; then
+            echo "gh-pages tree looks empty ($FILE_COUNT files)" >&2
+            exit 1
+          fi
+          echo "Publishing $FILE_COUNT files to gh-pages"
+
+          git -c http.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+            push --force \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:gh-pages

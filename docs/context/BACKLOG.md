@@ -59,6 +59,7 @@ RNGE-022, RNGE-023, and RNGE-024 are done. The Range header opens an opt-in swin
 Next to build (v1):
 
 - CRSE-022: the hole map (`CRSE-006`).
+- **CRSE-030 (epic, shard TBD — Poe):** On Course **dual-mode enhancement** — `CRSE-007` simulator post-shot fields + notes, `CRSE-008` plan/aim/bearing + stroke segments, `CRSE-009` map/satellite markers (blocked on **MGDV-18** map provider), `CRSE-011` unmapped tabular HUD; refinements to `CRSE-001`/`CRSE-002`/`CRSE-004` per PRD v1.8.
 
 Next to build (V2 — MGDV-2):
 

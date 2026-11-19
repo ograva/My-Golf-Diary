@@ -15,6 +15,8 @@ Deploy My Golf Diary’s Flutter web build to the repository’s GitHub Pages si
 
 Do **not** use this skill for APK builds or GitHub Releases — use `publish-github-release-pwa-apk`.
 
+Pushes to `main` that change `golf_diary_app/**` (including merged pull requests) run [`.github/workflows/publish-pwa.yml`](../../../.github/workflows/publish-pwa.yml). That workflow builds with the same base href and force-publishes an orphan `gh-pages` branch. Use the steps below for an out-of-band deploy, or when that workflow did not run.
+
 ## Preconditions
 
 1. Work from a clean git state on a branch that includes the current web app under `golf_diary_app/`.

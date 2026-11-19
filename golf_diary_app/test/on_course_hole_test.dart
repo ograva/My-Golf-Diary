@@ -66,13 +66,13 @@ void main() {
             matching: find.text('Club Intramuros Golf Course')),
         findsOneWidget);
     expect(parSummaryLabel(tester), 'Par 3');
-    expect(find.text('18 holes · par 66'), findsOneWidget);
+    expect(find.text('18 holes · Par 66'), findsOneWidget);
 
     await pickCourse(tester, 'Camp Aguinaldo', 'Camp Aguinaldo Golf Club');
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pump();
-    expect(find.text('18 holes · par 68'), findsOneWidget);
+    expect(find.text('18 holes · Par 68'), findsOneWidget);
 
     await finishAction(tester, find.text('Finish Hole'));
     expect(find.text('Hole 2'), findsOneWidget);
@@ -92,7 +92,7 @@ void main() {
     await tester.pump();
 
     expect(parSummaryLabel(tester), 'Par 4');
-    expect(find.text('18 holes · par 66'), findsNothing);
+    expect(find.text('18 holes · Par 66'), findsNothing);
   });
 
   testWidgets('leaving On Course resumes the hole Finish Hole created',

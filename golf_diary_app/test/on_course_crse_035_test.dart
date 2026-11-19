@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/data/ph_golf_hole_coords.dart';
 import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
+import 'package:golf_diary_app/services/pin_distance.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+import 'package:golf_diary_app/widgets/oncourse_map_pane.dart';
 
 import 'support/on_course_test_helpers.dart';
+
+const kNavBarHeight = 80.0;
+
+class _FixedPin implements PinDistanceClient {
+  _FixedPin(this.fix);
+
+  final PinFix fix;
+
+  @override
+  Future<PinFix?> current() async => fix;
+
+  @override
+  Stream<PinFix> watch() => Stream<PinFix>.value(fix);
+}
 
 void main() {
   setUp(() async {
@@ -18,13 +35,20 @@ void main() {
   });
 
   Future<void> pumpOnCourse(WidgetTester tester,
-      {Size size = const Size(390, 844)}) async {
+      {Size size = const Size(390, 844),
+      PinDistanceClient? pinDistance}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    // Mirrors HomeShell: the bottom NavigationBar takes 80dp under the screen.
     await tester.pumpWidget(MaterialApp(
-        theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
+      theme: buildGolfTheme(),
+      home: Scaffold(
+        body: FairwayTrackerScreen(pinDistance: pinDistance),
+        bottomNavigationBar: const SizedBox(height: kNavBarHeight),
+      ),
+    ));
     for (var i = 0; i < 30; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 100)));
@@ -41,6 +65,7 @@ void main() {
   }
 
   Finder key(String value) => find.byKey(ValueKey(value));
+  const fold = 844 - kNavBarHeight;
 
   testWidgets('Simulator core loop fits 390x844 without scrolling',
       (tester) async {
@@ -51,14 +76,12 @@ void main() {
         tester.state<ScrollableState>(find.byType(Scrollable).first);
     expect(scrollable.position.pixels, 0);
 
-    final dockTop = tester.getRect(key('oncourse-record-shot-btn')).top;
-    expect(tester.getRect(key('oncourse-record-shot-btn')).bottom,
-        lessThanOrEqualTo(844));
     for (final id in [
       'oncourse-course-summary',
+      'oncourse-mode-simulator',
       'on-course-hole-label',
       'oncourse-par-summary',
-      'oncourse-mode-simulator',
+      'oncourse-hole-stats-row',
       'oncourse-club-summary',
       'oncourse-lie-summary',
       'oncourse-sim-yards-field',
@@ -67,10 +90,13 @@ void main() {
       'oncourse-sim-notes-chip',
       'oncourse-penalty-step-up',
       'oncourse-mulligan-step-up',
+      'oncourse-record-shot-btn',
+      'oncourse-concede-btn',
+      'oncourse-finish-hole-btn',
     ]) {
       final rect = tester.getRect(key(id));
-      expect(rect.bottom, lessThanOrEqualTo(dockTop), reason: id);
       expect(rect.top, greaterThanOrEqualTo(0), reason: id);
+      expect(rect.bottom, lessThanOrEqualTo(fold), reason: id);
       expect(rect.right, lessThanOrEqualTo(390), reason: id);
     }
 
@@ -80,7 +106,24 @@ void main() {
     expect(concede.top, greaterThan(record.bottom));
     expect(concede.top - record.bottom, lessThanOrEqualTo(12));
     expect(finish.top, concede.top);
-    expect(finish.bottom, lessThanOrEqualTo(844));
+
+    final club = tester.getRect(key('oncourse-club-summary'));
+    final lie = tester.getRect(key('oncourse-lie-summary'));
+    expect((club.center.dy - lie.center.dy).abs(), lessThan(1));
+    expect(club.height, greaterThanOrEqualTo(56));
+    expect(lie.height, greaterThanOrEqualTo(56));
+    expect(club.left, lessThan(32));
+    expect(lie.right, greaterThan(390 - 32));
+    expect(club.width, greaterThan(140));
+    expect(lie.width, greaterThan(140));
+
+    final penaltyUp = tester.getRect(key('oncourse-penalty-step-up'));
+    final mulliganUp = tester.getRect(key('oncourse-mulligan-step-up'));
+    expect(mulliganUp.top, greaterThanOrEqualTo(penaltyUp.bottom));
+    expect(penaltyUp.right, greaterThan(390 - 40));
+    expect(mulliganUp.right, greaterThan(390 - 40));
+    expect(tester.getRect(find.text('Penalty')).left, lessThan(40));
+    expect(tester.getRect(find.text('Mulligan')).left, lessThan(40));
 
     final holeRow = tester.getRect(key('on-course-hole-label'));
     final par = tester.getRect(key('oncourse-par-summary'));
@@ -107,6 +150,41 @@ void main() {
     expect(find.byType(FilledButton), findsOneWidget);
   });
 
+  testWidgets('Fairway Map pane on a mapped hole keeps the card above the dock',
+      (tester) async {
+    const course = 'Sherwood Hills Golf Club';
+    final hole = holeCoordinates(course, 1)!;
+    await pumpOnCourse(tester,
+        pinDistance:
+            _FixedPin(PinFix(latitude: hole.teeLat, longitude: hole.teeLon)));
+    await submitCourseName(tester, course);
+    for (var i = 0; i < 24; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      if (key('on-course-map-toggle').evaluate().isNotEmpty) break;
+    }
+    await tester.tap(find.descendant(
+        of: key('on-course-map-toggle'), matching: find.text('Map')));
+    await tester.pump();
+    await waitForDb(tester);
+    expect(find.byType(OncourseMapPane), findsOneWidget);
+    expect(key('oncourse-aim-summary'), findsOneWidget);
+
+    final scrollable =
+        tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0);
+    final record = tester.getRect(key('oncourse-record-shot-btn'));
+    final card = tester.getRect(key('oncourse-hud-tabular'));
+    final map = tester.getRect(find.byType(OncourseMapPane));
+    expect(card.bottom, lessThanOrEqualTo(record.top));
+    expect(tester.getRect(key('oncourse-mulligan-step-up')).bottom,
+        lessThanOrEqualTo(record.top));
+    expect(tester.getRect(key('oncourse-finish-hole-btn')).bottom,
+        lessThanOrEqualTo(fold));
+    expect(map.height, greaterThanOrEqualTo(120));
+  });
+
   testWidgets('stroke log follows Concede | Finish Hole below the fold',
       (tester) async {
     await pumpOnCourse(tester);
@@ -119,9 +197,9 @@ void main() {
         tester.state<ScrollableState>(find.byType(Scrollable).first);
     expect(scrollable.position.pixels, 0);
     expect(tester.getRect(key('oncourse-record-shot-btn')).bottom,
-        lessThanOrEqualTo(844));
+        lessThanOrEqualTo(fold));
     expect(tester.getRect(key('oncourse-finish-hole-btn')).bottom,
-        lessThanOrEqualTo(844));
+        lessThanOrEqualTo(fold));
 
     await expandShotList(tester);
     final finish = tester.getRect(key('oncourse-finish-hole-btn'));
@@ -129,6 +207,28 @@ void main() {
     expect(log.top, greaterThanOrEqualTo(finish.bottom));
     expect(log.top - finish.bottom, lessThanOrEqualTo(16));
     expect(key('oncourse-shot-row-1'), findsOneWidget);
+  });
+
+  testWidgets('course meta sits on its own line under the course name',
+      (tester) async {
+    await pumpOnCourse(tester);
+
+    await submitCourseName(tester, 'Club Intramuros Golf Course');
+    await waitForDb(tester);
+
+    final summary = tester.getRect(key('oncourse-course-summary'));
+    final meta = tester.getRect(key('oncourse-course-meta'));
+    final toggle = tester.getRect(key('oncourse-mode-toggle'));
+    expect(find.text('18 holes · Par 66'), findsOneWidget);
+    expect(meta.top, greaterThanOrEqualTo(summary.bottom - 1));
+    expect(meta.left, lessThan(summary.left + 8));
+    expect(
+        find.descendant(
+            of: key('oncourse-course-summary'),
+            matching: find.text('18 holes · Par 66')),
+        findsNothing);
+    expect((toggle.center.dy - summary.center.dy).abs(), lessThan(4));
+    expect(toggle.bottom, lessThanOrEqualTo(meta.top + 1));
   });
 
   testWidgets('optional chips reveal fields and hide clears them',

@@ -97,7 +97,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('oncourse-aim-right')));
     await settleSheet(tester);
     expect(find.byKey(const ValueKey('oncourse-aim-sheet')), findsNothing);
-    expect(find.text('Aim R ▶'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('oncourse-aim-summary')),
+            matching: find.text('R ▶')),
+        findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('oncourse-record-shot-btn')));
     await tester.pump();

@@ -64,7 +64,7 @@ jobs:
           fi
           echo "Publishing $FILE_COUNT files to gh-pages"
 
-          git -c http.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
-            push --force \
-            "https://github.com/${GITHUB_REPOSITORY}.git" \
+          # GitHub's git endpoint rejects bearer headers for GITHUB_TOKEN; it needs Basic auth.
+          git push --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:gh-pages

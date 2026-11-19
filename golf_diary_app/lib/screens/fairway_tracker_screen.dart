@@ -6,7 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import '../data/ph_golf_catalog.dart';
 import '../data/ph_golf_hole_coords.dart';
 import '../models/diary_context_note.dart';
+import '../on_course/on_course_aim.dart';
 import '../on_course/on_course_hud_gating.dart';
+import '../on_course/on_course_shot_segment.dart';
 import '../services/course_map_pack_local.dart';
 import '../widgets/oncourse_vector_hole_map.dart';
 import '../models/golf_models.dart';
@@ -24,6 +26,7 @@ class FairwayTrackerScreen extends StatefulWidget {
     this.pinDistance,
     this.diary,
     this.onProfileSettingsChanged,
+    this.positionForShot,
   });
 
   /// When null, the screen uses [GeolocatorPinDistanceClient].
@@ -32,6 +35,10 @@ class FairwayTrackerScreen extends StatefulWidget {
   /// When null, diary entry uses [VertexDiaryModel]. Tests pass a fake.
   final DiaryModel? diary;
   final VoidCallback? onProfileSettingsChanged;
+
+  /// When set, Course-mode **Record shot at ball** uses this instead of
+  /// [Geolocator.getCurrentPosition] (widget tests only).
+  final Future<Position?> Function()? positionForShot;
 
   @override
   State<FairwayTrackerScreen> createState() => FairwayTrackerScreenState();
@@ -77,6 +84,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   StreamSubscription<PinFix>? _pinSub;
   bool _showMapPane = false;
   bool _offlineVectorSnackShown = false;
+  String _aimDirection = kOnCourseAimCenter;
+  bool _locationPermissionBlocked = false;
 
   PinDistanceClient get _pinDistance =>
       widget.pinDistance ?? GeolocatorPinDistanceClient();
@@ -307,8 +316,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   Future<void> _editShot(ShotRecord shot) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) =>
-          ShotEditDialog(shot: shot, clubs: _clubs, lies: _lies),
+      builder: (context) => ShotEditDialog(
+        shot: shot,
+        clubs: _clubs,
+        lies: _lies,
+        showAim: _mappedHoleFeatures && !_simulator,
+      ),
     );
     if (saved == true) await _refreshHoleState();
   }
@@ -335,6 +348,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   }
 
   Future<Position?> _readGps() async {
+    final inject = widget.positionForShot;
+    if (inject != null) {
+      return inject();
+    }
+
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -342,18 +360,27 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (mounted) {
+        setState(() => _locationPermissionBlocked = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text('Location permission is required for shot tracking')),
+            content: Text('Location permission is required for shot tracking'),
+          ),
         );
       }
       return null;
     }
+    if (mounted && _locationPermissionBlocked) {
+      setState(() => _locationPermissionBlocked = false);
+    }
 
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   double? _typedYards() {
@@ -387,7 +414,16 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         _yardsController.clear();
       } else {
         final position = await _readGps();
-        if (position == null) return;
+        if (position == null) {
+          if (mounted && !_locationPermissionBlocked) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Couldn't read location. Shot not saved."),
+              ),
+            );
+          }
+          return;
+        }
 
         await LocalDatabaseService.instance.recordFairwayHit(
           roundId: _roundId!,
@@ -396,6 +432,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           lieType: _lieType,
           currentLat: position.latitude,
           currentLon: position.longitude,
+          aimDirection: _mappedHoleFeatures
+              ? normalizeOnCourseAim(_aimDirection)
+              : kOnCourseAimCenter,
         );
       }
       await _refreshHoleState();
@@ -654,6 +693,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
+                                key: ValueKey('oncourse-club-chip-${club.id}'),
                                 label: Text(club.name),
                                 selected: _selectedClub?.id == club.id,
                                 onSelected: (_) =>
@@ -677,6 +717,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
+                                key: ValueKey('oncourse-lie-chip-$lie'),
                                 label: Text(label),
                                 selected: _lieType == lie,
                                 onSelected: (_) =>
@@ -686,11 +727,57 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                           }).toList(),
                         ),
                       ),
+                      if (_mappedHoleFeatures && !_simulator) ...[
+                        const SizedBox(height: 16),
+                        const Text('Aim',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-left'),
+                              label: const Text('◀ L'),
+                              selected: _aimDirection == kOnCourseAimLeft,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimLeft),
+                            ),
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-center'),
+                              label: const Text('●'),
+                              selected: _aimDirection == kOnCourseAimCenter,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimCenter),
+                            ),
+                            ChoiceChip(
+                              key: const ValueKey('oncourse-aim-right'),
+                              label: const Text('R ▶'),
+                              selected: _aimDirection == kOnCourseAimRight,
+                              onSelected: (_) => setState(
+                                  () => _aimDirection = kOnCourseAimRight),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
             ),
+            if (_locationPermissionBlocked && !_simulator) ...[
+              const SizedBox(height: 12),
+              MaterialBanner(
+                key: const ValueKey('oncourse-location-banner'),
+                content:
+                    const Text('Location is off for shot tracking.'),
+                actions: [
+                  TextButton(
+                    onPressed: Geolocator.openAppSettings,
+                    child: const Text('Open settings'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               height: 80,
@@ -702,7 +789,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 child: _busy
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        _simulator ? 'Record shot' : 'Record Shot at Ball',
+                        _simulator ? 'Record shot' : 'Record shot at ball',
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
@@ -781,19 +868,28 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ..._shots.map(
-                (s) => ListTile(
-                  key: ValueKey('on-course-shot-${s.id}'),
-                  dense: true,
-                  onTap: () => _editShot(s),
-                  title: Text(
-                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}'),
-                  subtitle: Text(
-                    s.distanceYards > 0
-                        ? '${s.distanceYards.round()} yds'
-                        : 'Distance pending',
-                  ),
-                  trailing: const Icon(Icons.edit_outlined),
-                ),
+                (s) {
+                  final yards = shotDistanceLabel(
+                    shots: _shots,
+                    shot: s,
+                    simulator: _simulator,
+                  );
+                  final aimNote = !_simulator &&
+                          s.aimDirection != kOnCourseAimCenter
+                      ? ' · Aim ${s.aimDirection}'
+                      : '';
+                  return ListTile(
+                    key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
+                    dense: true,
+                    onTap: () => _editShot(s),
+                    title: Text(
+                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}$aimNote',
+                    ),
+                    subtitle:
+                        yards.isEmpty ? null : Text(yards),
+                    trailing: const Icon(Icons.edit_outlined),
+                  );
+                },
               ),
             ],
           ],
@@ -805,12 +901,18 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
 @visibleForTesting
 class ShotEditDialog extends StatefulWidget {
-  const ShotEditDialog(
-      {super.key, required this.shot, required this.clubs, required this.lies});
+  const ShotEditDialog({
+    super.key,
+    required this.shot,
+    required this.clubs,
+    required this.lies,
+    this.showAim = false,
+  });
 
   final ShotRecord shot;
   final List<Club> clubs;
   final List<String> lies;
+  final bool showAim;
 
   @override
   State<ShotEditDialog> createState() => _ShotEditDialogState();
@@ -819,12 +921,14 @@ class ShotEditDialog extends StatefulWidget {
 class _ShotEditDialogState extends State<ShotEditDialog> {
   late String _lie = widget.shot.lieType;
   late String _clubId = widget.shot.clubId;
+  late String _aim = normalizeOnCourseAim(widget.shot.aimDirection);
 
   Future<void> _save() async {
     await LocalDatabaseService.instance.updateShotDetails(
       shotId: widget.shot.id,
       clubId: _clubId,
       lieType: _lie,
+      aimDirection: widget.showAim ? _aim : null,
     );
     if (mounted) Navigator.pop(context, true);
   }
@@ -872,6 +976,27 @@ class _ShotEditDialogState extends State<ShotEditDialog> {
                 );
               }).toList(),
             ),
+            if (widget.showAim) ...[
+              const SizedBox(height: 16),
+              const Text('Aim'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: kOnCourseAimChoices.map((aim) {
+                  final label = switch (aim) {
+                    kOnCourseAimLeft => '◀ L',
+                    kOnCourseAimRight => 'R ▶',
+                    _ => '●',
+                  };
+                  return ChoiceChip(
+                    key: ValueKey('oncourse-aim-$aim'),
+                    label: Text(label),
+                    selected: _aim == aim,
+                    onSelected: (_) => setState(() => _aim = aim),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),

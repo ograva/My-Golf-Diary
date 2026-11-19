@@ -35,7 +35,8 @@ class SharedHeaderActions extends StatelessWidget {
   final String caddyInviteKey;
 
   GolferProfile _profile(BuildContext context) {
-    return GolferProfileScope.maybeOf(context)?.profile ?? const GolferProfile();
+    return GolferProfileScope.maybeOf(context)?.profile ??
+        const GolferProfile();
   }
 
   @override
@@ -74,7 +75,7 @@ class SharedHeaderActions extends StatelessWidget {
 
     if (policy.usePlayOverflow) {
       actions.add(
-        _PlayHeaderOverflowButton(
+        PlayHeaderOverflowButton(
           showDiary: policy.showDiaryInOverflow,
           showCaddy: policy.showCaddyInOverflow && roundActive,
           diaryEntryKey: diaryEntryKey,
@@ -124,8 +125,10 @@ class SharedHeaderActions extends StatelessWidget {
   }
 }
 
-class _PlayHeaderOverflowButton extends StatelessWidget {
-  const _PlayHeaderOverflowButton({
+/// Play-tab overflow menu holding the diary and caddy invite entries.
+class PlayHeaderOverflowButton extends StatelessWidget {
+  const PlayHeaderOverflowButton({
+    super.key,
     required this.showDiary,
     required this.showCaddy,
     required this.diaryEntryKey,
@@ -135,8 +138,10 @@ class _PlayHeaderOverflowButton extends StatelessWidget {
     required this.roundId,
     required this.courseName,
     required this.caddyInviteKey,
+    this.diaryLabel = 'Swing diary',
   });
 
+  final String diaryLabel;
   final bool showDiary;
   final bool showCaddy;
   final String? diaryEntryKey;
@@ -192,9 +197,9 @@ class _PlayHeaderOverflowButton extends StatelessWidget {
             PopupMenuItem<String>(
               value: 'diary',
               child: ListTile(
-                key: ValueKey(diaryEntryKey),
+                key: ValueKey<String>(diaryEntryKey!),
                 leading: const Icon(Icons.auto_stories_outlined),
-                title: const Text('Swing diary'),
+                title: Text(diaryLabel),
                 contentPadding: EdgeInsets.zero,
               ),
             ),

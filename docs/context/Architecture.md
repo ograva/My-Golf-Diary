@@ -4,7 +4,7 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.13 | Active | 2026-11-15 | Watson / Athena |
+| 1.15 | Active | 2026-11-19 | Watson |
 
 **Inputs:** [`PRD.md`](./PRD.md) v1.5 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
 
@@ -62,7 +62,8 @@ flowchart LR
 | cloud_firestore | `^7.1.0` | Optional pull/push LWW sync on named DB `my-golf-diary` |
 | provider | `^6.1.2` | State management where needed |
 | google_fonts | `^9.0.0` | Playfair Display, Inter, Roboto Mono |
-| *Planned (`CRSE-006`)* | `firebase_storage`, `google_maps_flutter` (or static tile renderer) | Course-level map caching in Firebase Storage & local offline map rendering |
+| *Planned (`CRSE-006`)* | `firebase_storage` + Flutter `Image` / `CustomPainter` overlay (no runtime Maps SDK in v1) | Download per-course map packs from Firebase Storage; render satellite hole imagery offline with GPS stroke overlay |
+| *Planned (`CRSE-006` server)* | Cloud Function or admin script + **Maps Static API** | One-time (per version) satellite image fetch per hole; writes packs to Firebase Storage — **not** called from the Flutter client |
 | `RNGE-004` | `firebase_ai` (`FirebaseAI.agentPlatform()`) | Vertex AI Gemini for the swing diary. `firebase_ai` 5.1 renamed `vertexAI()` to `agentPlatform()`. The project owner pays. No player API keys |
 
 ---
@@ -251,6 +252,63 @@ flowchart TD
   - Plots each `ShotRecord` for the active hole (`start_lat/lon` → `end_lat/lon`) with club labels and yardage badges.
 - **Offline Fallback:** If a golfer is on the course with no cellular data and the course pack was not pre-downloaded, the view still renders a clean 2D vector fairway schematic (scaled from Tee-to-Green coordinates and `ShotRecord` GPS points) without failing.
 
+#### On Course map provider (v1 decision — `CRSE-006`)
+
+**Primary provider:** **Google Maps Platform** — **Maps Static API** (`maptype=satellite`) for *cache construction only*. **Runtimes (PWA, Android, iOS) do not embed `google_maps_flutter` or live map tiles in v1.** The hole map is a **pre-rendered, locally stored image** plus a **Mercator pixel overlay** for the live player pin (`CRSE-005` stream), tee/green markers, stroke polylines, and optional fairway aim bearing. That matches ship order (PWA → Android → iOS), the offline non-negotiable, and the existing Firebase Storage pattern in the PRD.
+
+| Option | Satellite quality (PH golf) | Mobile + PWA licensing | Offline / cache fit | Cost & ops | Verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Google Static API → Storage → device** (chosen) | Strong aerial coverage on Luzon/Visayas courses | Static API server-side; clients display owned packs with [Maps attribution](https://developers.google.com/maps/documentation/maps-static/policies) | Full offline after pack download; no per-round Maps calls | ~17 PHP courses × ≤18 holes ≈ few hundred static requests **once per pack version**; ongoing cost is Storage egress + occasional rebuilds | **v1 primary** |
+| **Google `google_maps_flutter` / Map Tiles API** | Excellent interactive satellite | SDK keys in app; tile loads per pan/zoom session | Tiles require network unless proprietary offline tile DB (not in scope) | Scales with active users and session length on the fairway | **Reject for v1** — conflicts with local-first map pane in [`Wireframe_HoleMap.md`](./designs/Wireframe_HoleMap.md) |
+| **Mapbox Satellite** | Good; separate account | Mapbox ToS; offline requires Mapbox Offline Manager | Achievable but second vendor + billing | Per-MAU tile loads if interactive | **Reject** — duplicates GCP/Firebase stack user already funds |
+| **Apple MapKit** (`MKMapView`) | Good on iOS | iOS only | No PWA path | N/A for first ship target | **Reject** until a native-only experiment; not v1 |
+| **OpenStreetMap “satellite”** | No canonical global satellite layer; third-party XYZ often blocks redistribution | Provider-specific; many prohibit Firebase redistribution | Unreliable for caching | Legal/quality risk in PH | **Reject** |
+| **Esri World Imagery** | Enterprise GIS-grade | ArcGIS licensing & attribution rules | Offline bundles possible | Higher minimum commit / GIS workflow | **Reject** — overkill for a diary HUD |
+
+**Why Static + pack, not dynamic SDK**
+
+1. **Local-first:** Constraint §9 requires on-course map render **without** repeated live API calls; golfers download `course_maps/{courseId}/` once (Wi‑Fi or cellular) and play offline.
+2. **PWA-first:** The map pane is an `Image` + `CustomPainter` stack — same code on web (`sqflite_common_ffi_web` + device/IndexedDB paths) and mobile, without Maps JavaScript or Flutter web plugin constraints.
+3. **Key security:** Maps **API keys stay server-side** (Cloud Function / admin cache builder in Secret Manager). Flutter ships **no** Maps secret — only public Firebase config (existing App Check pattern for other services). Storage reads use **Authenticated** + optional App Check; **writes** to `course_maps/` are **admin/cache-builder only** (see §7), not every golfer client.
+4. **Firebase alignment:** Packs live beside Firestore sync in the same project; anonymous auth already gates Storage reads.
+
+**Maps Static API parameters (per hole)**
+
+- Bounding box from `ph_golf_hole_coords.dart`: center on tee–green midpoint; pad **~60 yards** (and min width so long par‑5s fit).
+- `maptype=satellite`, `scale=2` (retina), size up to **640×640** logical (1280×1280 px) — sufficient for HUD framing; if a layout exceeds limits, v1.1 may stitch **two** static requests or lower zoom with wider crop (document in pack `manifest.json`).
+- `manifest.json` per course: `version`, `courseId`, per-hole `holeNumber`, `imagePath`, `bbox` (NE/SW), `center`, `zoom`, `widthPx`, `heightPx`, and **affine coefficients** (or anchor points) for WGS84 → image pixels used by overlay code shared with Haversine shot plotting.
+
+**Caching tiers (canonical)**
+
+| Tier | Location | Writer | Reader |
+| :--- | :--- | :--- | :--- |
+| 1 | Google Maps Static API | Cache builder (CF/admin) | Builder only |
+| 2 | `gs://<bucket>/course_maps/{courseId}/manifest.json`, `hole_{n}.webp` | Cache builder | Authenticated app download |
+| 3 | `<appDocDir>/course_maps/{courseId}/` (web: Cache API / IndexedDB + SQLite `course_map_cache`) | App after Storage fetch | `FairwayTrackerScreen` map pane offline |
+
+**Attribution & compliance:** Show the Google Maps logo / attribution line on the map pane when satellite imagery is visible (hide on vector fallback only). Rebuild packs when Google imagery updates materially (bump `manifest.version`; clients refresh when local version < remote).
+
+**`CRSE-006` / CRSE-022 implementation path**
+
+1. **Athena — no new Maps packages in app until shard start** (per CRSE-022); first add `firebase_storage` for pack download.
+2. **Server:** `buildCourseMapPack(courseId)` — reads coordinate catalog, calls Static API with server key, writes WebP + manifest to Storage; idempotent per `(courseId, packVersion)`.
+3. **Client:** `CourseMapCacheService` — check SQLite + disk → else Storage → populate local cache; expose `HoleMapFrame` for one hole.
+4. **UI:** `on-course-map-toggle` → `oncourse-hole-map` (`Image` + overlay); offline miss → `oncourse-map-vector`; live pin updates from existing `CRSE-005` position stream projected to pixels.
+5. **v2 optional:** Interactive pan/zoom via Maps SDK on native only, still **prefer** showing cached hole frame by default to control cost — not v1.
+
+**Google Cloud / Firebase — enable for Reuben (project owner)**
+
+On the **same GCP project** linked to Firebase (`novusinc-8df79` / My Golf Diary):
+
+1. **Billing** enabled on the project (Static API is pay-as-you-go after monthly credit).
+2. **APIs & Services → Enable:** **Maps Static API** only for v1 cache builder (do **not** enable Maps SDK for Android/iOS or Maps JavaScript API until an interactive v2 is scoped).
+3. **Credentials:** Create an API key restricted to **Maps Static API** + **Application restriction: IP addresses** (Cloud Function egress) *or* use a **server key** stored in **Secret Manager** (`MAPS_STATIC_API_KEY`) referenced by the cache builder — **do not** paste this key into `firebase_options.dart` or Flutter env.
+4. **Firebase Storage:** Default bucket (or dedicated bucket) with rules: `course_maps/{courseId}/{file}` **read** if `request.auth != null`; **write** deny for clients (`request.auth != null` is insufficient — use custom claim `cacheAdmin` or Functions-only service account writes).
+5. **Optional:** Deploy cache builder as **2nd gen Cloud Function** (scheduler or manual HTTP trigger guarded by IAM) — keeps quota predictable vs. ad-hoc laptop scripts.
+6. **Budget alert** on Maps Static API + Storage egress (e.g. notify at 50% / 90% of monthly budget).
+
+No golfer-facing Google Maps API key is required for v1.
+
 ### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004`)
 
 The diary comments on **the compiled range session log (`RNGE-005`) and today’s drills in the context of earlier practice**: what the player has been focusing on, how they felt about the session (`session_note`), and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
@@ -427,3 +485,4 @@ Background location **not** required for current flows.
 | 1.12 | 2026-11-13 | Athena | DB v8 `golfer_profile` replaces the hardcoded personal baseline. Lead-in chips sit beside the session note and diary composer. Distillation reads only golfer-written notes after `distilled_through_ms` and never model replies |
 | 1.13 | 2026-11-15 | Athena | MGDV-401 cart scoring on Scorecard tab. DB v13 adds `scorecard_view_mode` and `scorecard_cart_high_contrast` on `golfer_profile`. **`wakelock_plus`** keeps the screen awake during cart scoring on an in-progress round only (optional UX; no GPS change on CRSE). |
 | 1.14 | 2026-11-15 | Athena | MGDV-5 caddy pairing: Firestore `caddy_round_channels`, PWA `mode=caddy`, DB v14 session/queue tables, `recordCaddyStroke`, **`qr_flutter`** for invite QR |
+| 1.15 | 2026-11-19 | Watson | `CRSE-006` map provider decision: Google **Maps Static API** (server-side cache builder) → Firebase Storage → on-device WebP; reject runtime `google_maps_flutter`/Mapbox/OSM/Esri/MapKit for v1; document Reuben GCP enablement and key isolation |

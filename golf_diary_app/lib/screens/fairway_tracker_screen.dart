@@ -10,10 +10,8 @@ import '../on_course/on_course_aim.dart';
 import '../on_course/on_course_hud_gating.dart';
 import '../on_course/on_course_shot_segment.dart';
 import '../widgets/oncourse_map_pane.dart';
-import '../models/golfer_profile.dart';
 import '../models/golf_models.dart';
 import '../services/diary_model.dart';
-import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
 import '../ui/header_action_policy.dart';
@@ -90,12 +88,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   bool _showMapPane = false;
   String _aimDirection = kOnCourseAimCenter;
   bool _locationPermissionBlocked = false;
-  bool _simOptionalFieldsExpanded = false;
-  bool _simNoteExpanded = false;
-  GolferProfile _profile = const GolferProfile();
-  GolferProfileStore? _profileStore;
-
-  YardageUiDensity get _yardageDensity => resolveYardageUiDensity(_profile);
+  bool _showSimCarry = false;
+  bool _showSimToHole = false;
+  bool _showSimNote = false;
+  List<String> _recentClubIds = [];
 
   PinDistanceClient get _pinDistance =>
       widget.pinDistance ?? GeolocatorPinDistanceClient();
@@ -120,23 +116,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _bootstrap();
   }
 
-  void _onProfileStoreChanged() {
-    if (!mounted || _profileStore == null) return;
-    setState(() => _profile = _profileStore!.profile);
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final next = GolferProfileScope.maybeOf(context);
-    if (!identical(next, _profileStore)) {
-      _profileStore?.removeListener(_onProfileStoreChanged);
-      _profileStore = next;
-      _profileStore?.addListener(_onProfileStoreChanged);
-      if (_profileStore != null && _profileStore!.profile.updatedAtMs > 0) {
-        _profile = _profileStore!.profile;
-      }
-    }
     final visible = TickerMode.valuesOf(context).enabled;
     if (visible == _screenVisible) return;
     _screenVisible = visible;
@@ -156,7 +138,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _profileStore?.removeListener(_onProfileStoreChanged);
     _stopPinWatch();
     _courseFocus.removeListener(_onCourseFocus);
     _persistCourseName();
@@ -185,11 +166,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     }
   }
 
-
   void _syncPinWatch() {
     _clampMapPane();
-    final coords =
-        _screenVisible ? _activeCoords : null;
+    final coords = _screenVisible ? _activeCoords : null;
     if (coords == null) {
       final hadLine = _yardsToPin != null ||
           _readingLocation ||
@@ -360,6 +339,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       if (_selectedClub == null && _clubs.isNotEmpty) {
         _selectedClub = _clubs.first;
       }
+      if (_recentClubIds.isEmpty) {
+        for (final shot in shots.reversed) {
+          _rememberClub(shot.clubId);
+        }
+      }
       if (hole != null) {
         _par = hole.par;
       }
@@ -425,7 +409,17 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _carryController.clear();
     _distanceToHoleController.clear();
     _strokeNoteController.clear();
+    _showSimCarry = false;
+    _showSimToHole = false;
+    _showSimNote = false;
     _yardsError = null;
+  }
+
+  void _rememberClub(String clubId) {
+    _recentClubIds = [
+      clubId,
+      ..._recentClubIds.where((id) => id != clubId),
+    ].take(5).toList();
   }
 
   Future<void> _recordShot() async {
@@ -475,6 +469,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               : kOnCourseAimCenter,
         );
       }
+      _rememberClub(_selectedClub!.id);
       await _refreshHoleState();
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -532,20 +527,343 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     return parts.join(' · ');
   }
 
-  List<Widget> _simulatorFieldWidgets() {
-    final density = _yardageDensity;
-    final optionalInline = density != YardageUiDensity.simple;
-    final noteInline = density != YardageUiDensity.simple;
-  final showOptionalFields = optionalInline || _simOptionalFieldsExpanded;
-    final showNoteField = noteInline || _simNoteExpanded;
+  static String _lieLabel(String lie) =>
+      lie[0].toUpperCase() + lie.substring(1);
 
+  static TextStyle? _chipLabel(bool selected) =>
+      selected ? const TextStyle(color: Colors.white) : null;
+
+  static String _aimLabel(String aim) => switch (aim) {
+        kOnCourseAimLeft => '◀ L',
+        kOnCourseAimRight => 'R ▶',
+        _ => '●',
+      };
+
+  Future<T?> _openSheet<T>({
+    required String key,
+    required String title,
+    required WidgetBuilder builder,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          key: ValueKey(key),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: Theme.of(sheetContext).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Flexible(child: builder(sheetContext)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openCourseSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        void apply() {
+          _persistCourseName();
+          if (ModalRoute.of(sheetContext)?.isCurrent ?? false) {
+            Navigator.of(sheetContext).pop();
+          }
+        }
+
+        return Padding(
+          key: const ValueKey('oncourse-course-sheet'),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            16 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: SizedBox(
+            height: 320,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Course',
+                    style: Theme.of(sheetContext).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                VenueNameField(
+                  key: const ValueKey('oncourse-course-name-field'),
+                  controller: _courseController,
+                  focusNode: _courseFocus,
+                  labelText: 'Course name',
+                  recentNames: _recentCourses,
+                  catalogNames: PhGolfCatalog.courseNames,
+                  captionFor: PhGolfCatalog.courseCaption,
+                  onSelected: (_) => apply(),
+                  onSubmitted: (_) => apply(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    await _persistCourseName();
+  }
+
+  Future<void> _openHoleSheet(int strokes, int penalties, int score) async {
+    final picked = await _openSheet<int>(
+      key: 'oncourse-hole-sheet',
+      title: 'Hole $_holeNumber · Par $_par',
+      builder: (sheetContext) => SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Strokes $strokes · Penalties $penalties · Score $score · '
+              'Round $_roundTotal',
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var hole = 1; hole <= _maxHole; hole++)
+                  ChoiceChip(
+                    key: ValueKey('oncourse-hole-sheet-chip-$hole'),
+                    label: Text('$hole'),
+                    selected: hole == _holeNumber,
+                    onSelected: (_) => Navigator.of(sheetContext).pop(hole),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked != _holeNumber) {
+      await _stepHole(picked - _holeNumber);
+    }
+  }
+
+  Future<void> _openParSheet() async {
+    final picked = await _openSheet<int>(
+      key: 'oncourse-par-sheet',
+      title: 'Par for hole $_holeNumber',
+      builder: (sheetContext) => Wrap(
+        spacing: 8,
+        children: [3, 4, 5].map((p) {
+          return ChoiceChip(
+            key: ValueKey('oncourse-par-chip-$p'),
+            label: Text('Par $p'),
+            selected: _par == p,
+            onSelected: (_) => Navigator.of(sheetContext).pop(p),
+          );
+        }).toList(),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _par = picked);
+    if (_roundId != null && _holeScore != null) {
+      await LocalDatabaseService.instance
+          .upsertHoleScore(_holeScore!.copyWith(par: picked, isSynced: 0));
+    }
+  }
+
+  Future<void> _openClubSheet() async {
+    final recent = [
+      for (final id in _recentClubIds) ..._clubs.where((club) => club.id == id),
+    ];
+    Widget chip(BuildContext sheetContext, Club club, String key) {
+      return ChoiceChip(
+        key: ValueKey(key),
+        label: Text(club.name),
+        selected: _selectedClub?.id == club.id,
+        onSelected: (_) => Navigator.of(sheetContext).pop(club),
+      );
+    }
+
+    final picked = await _openSheet<Club>(
+      key: 'oncourse-club-sheet',
+      title: 'Club',
+      builder: (sheetContext) => SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (recent.isNotEmpty) ...[
+              Text('Recent',
+                  style: Theme.of(sheetContext).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: recent
+                    .map((club) => chip(
+                        sheetContext, club, 'oncourse-club-recent-${club.id}'))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              Text('All clubs',
+                  style: Theme.of(sheetContext).textTheme.labelLarge),
+              const SizedBox(height: 8),
+            ],
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _clubs
+                  .map((club) => chip(sheetContext, club,
+                      'oncourse-club-sheet-chip-${club.id}'))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _selectedClub = picked);
+  }
+
+  Future<void> _openLieSheet() async {
+    final picked = await _openSheet<String>(
+      key: 'oncourse-lie-sheet',
+      title: 'Lie',
+      builder: (sheetContext) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _lies.map((lie) {
+          return ChoiceChip(
+            key: ValueKey('oncourse-lie-chip-$lie'),
+            label: Text(_lieLabel(lie)),
+            selected: _lieType == lie,
+            onSelected: (_) => Navigator.of(sheetContext).pop(lie),
+          );
+        }).toList(),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _lieType = picked);
+  }
+
+  Future<void> _openAimSheet() async {
+    final picked = await _openSheet<String>(
+      key: 'oncourse-aim-sheet',
+      title: 'Aim',
+      builder: (sheetContext) => Wrap(
+        spacing: 8,
+        children: kOnCourseAimChoices.map((aim) {
+          return ChoiceChip(
+            key: ValueKey('oncourse-aim-$aim'),
+            label: Text(_aimLabel(aim)),
+            selected: _aimDirection == aim,
+            onSelected: (_) => Navigator.of(sheetContext).pop(aim),
+          );
+        }).toList(),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _aimDirection = picked);
+  }
+
+  Widget _summaryPill({
+    required String key,
+    required String label,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) {
+    return ActionChip(
+      key: ValueKey(key),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          const Icon(Icons.arrow_drop_down, size: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepper({
+    required String label,
+    required String keyPrefix,
+    required int count,
+    required Future<void> Function(int delta) onStep,
+  }) {
+    final enabled = _roundId != null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        IconButton(
+          key: ValueKey('$keyPrefix-step-down'),
+          tooltip: 'Remove ${label.toLowerCase()}',
+          onPressed: enabled && count > 0
+              ? () => onStep(-1).then((_) => _refreshHoleState())
+              : null,
+          icon: const Icon(Icons.remove_circle_outline),
+        ),
+        Text(
+          '$count',
+          key: ValueKey('$keyPrefix-count'),
+          semanticsLabel: '$label $count',
+          style: GolfTextStyles.tabularNum(context, fontSize: 18),
+        ),
+        IconButton(
+          key: ValueKey('$keyPrefix-step-up'),
+          tooltip: 'Add ${label.toLowerCase()}',
+          onPressed:
+              enabled ? () => onStep(1).then((_) => _refreshHoleState()) : null,
+          icon: const Icon(Icons.add_circle_outline),
+        ),
+      ],
+    );
+  }
+
+  Widget _optionalSimField({
+    required String fieldKey,
+    required String hideKey,
+    required TextEditingController controller,
+    required String label,
+    required VoidCallback onHide,
+    bool numeric = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: TextField(
+        key: ValueKey(fieldKey),
+        controller: controller,
+        keyboardType: numeric
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.text,
+        maxLines: numeric ? 1 : 2,
+        minLines: 1,
+        decoration: InputDecoration(
+          isDense: true,
+          labelText: label,
+          suffixIcon: IconButton(
+            key: ValueKey(hideKey),
+            tooltip: 'Hide',
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              controller.clear();
+              setState(onHide);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _simulatorFieldWidgets() {
     return [
+      const SizedBox(height: 8),
       TextField(
         key: const ValueKey('oncourse-sim-yards-field'),
         controller: _yardsController,
-        keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: InputDecoration(
+          isDense: true,
           labelText: 'Distance travelled (yds)',
           errorText: _yardsError,
         ),
@@ -555,68 +873,271 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           }
         },
       ),
-      if (!optionalInline && !_simOptionalFieldsExpanded) ...[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            key: const ValueKey('oncourse-sim-add-distance-link'),
-            onPressed: () =>
-                setState(() => _simOptionalFieldsExpanded = true),
-            child: const Text('Add distance'),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        children: [
+          FilterChip(
+            key: const ValueKey('oncourse-sim-carry-chip'),
+            selectedColor: GolfPalette.fairwayGreen,
+            labelStyle: _chipLabel(_showSimCarry),
+            label: const Text('Carry'),
+            selected: _showSimCarry,
+            onSelected: (on) => setState(() {
+              _showSimCarry = on;
+              if (!on) _carryController.clear();
+            }),
           ),
-        ),
-      ],
-      if (showOptionalFields) ...[
-        const SizedBox(height: 8),
-        TextField(
-          key: const ValueKey('oncourse-sim-carry-field'),
+          FilterChip(
+            key: const ValueKey('oncourse-sim-to-hole-chip'),
+            selectedColor: GolfPalette.fairwayGreen,
+            labelStyle: _chipLabel(_showSimToHole),
+            label: const Text('To hole'),
+            selected: _showSimToHole,
+            onSelected: (on) => setState(() {
+              _showSimToHole = on;
+              if (!on) _distanceToHoleController.clear();
+            }),
+          ),
+          FilterChip(
+            key: const ValueKey('oncourse-sim-notes-chip'),
+            selectedColor: GolfPalette.fairwayGreen,
+            labelStyle: _chipLabel(_showSimNote),
+            label: const Text('Notes'),
+            selected: _showSimNote,
+            onSelected: (on) => setState(() {
+              _showSimNote = on;
+              if (!on) _strokeNoteController.clear();
+            }),
+          ),
+        ],
+      ),
+      if (_showSimCarry)
+        _optionalSimField(
+          fieldKey: 'oncourse-sim-carry-field',
+          hideKey: 'oncourse-sim-carry-hide-btn',
           controller: _carryController,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Carry (yds, optional)',
-          ),
+          label: 'Carry (yds)',
+          onHide: () => _showSimCarry = false,
         ),
-        const SizedBox(height: 8),
-        TextField(
-          key: const ValueKey('oncourse-sim-distance-to-hole-field'),
+      if (_showSimToHole)
+        _optionalSimField(
+          fieldKey: 'oncourse-sim-distance-to-hole-field',
+          hideKey: 'oncourse-sim-to-hole-hide-btn',
           controller: _distanceToHoleController,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Distance to hole (yds, optional)',
-          ),
+          label: 'Distance to hole (yds)',
+          onHide: () => _showSimToHole = false,
         ),
-      ],
-      if (!noteInline && !_simNoteExpanded) ...[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            key: const ValueKey('oncourse-sim-add-note-link'),
-            onPressed: () => setState(() => _simNoteExpanded = true),
-            child: const Text('Add note'),
-          ),
-        ),
-      ],
-      if (showNoteField) ...[
-        const SizedBox(height: 8),
-        TextField(
-          key: const ValueKey('oncourse-sim-stroke-note-field'),
+      if (_showSimNote)
+        _optionalSimField(
+          fieldKey: 'oncourse-sim-stroke-note-field',
+          hideKey: 'oncourse-sim-notes-hide-btn',
           controller: _strokeNoteController,
-          maxLines: 2,
-          decoration: const InputDecoration(
-            labelText: 'Stroke note (optional)',
+          label: 'Stroke note',
+          numeric: false,
+          onHide: () => _showSimNote = false,
+        ),
+    ];
+  }
+
+  Widget _courseSummary(BuildContext context) {
+    final caption = PhGolfCatalog.courseCaption(_appliedCourseName);
+    return InkWell(
+      key: const ValueKey('oncourse-course-summary'),
+      onTap: _openCourseSheet,
+      borderRadius: BorderRadius.circular(8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _appliedCourseName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (caption != null) ...[
+                      const SizedBox(width: 8),
+                      Text(caption,
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(Icons.edit_outlined,
+                  size: 20, semanticLabel: 'Edit course'),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _contextRow(
+      BuildContext context, int strokes, int penalties, int holeScore) {
+    return Row(
+      children: [
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: const Key('on-course-hole-previous'),
+                  tooltip: 'Previous hole',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _holeNumber > 1 ? () => _stepHole(-1) : null,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                InkWell(
+                  key: const Key('on-course-hole-label'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _openHoleSheet(strokes, penalties, holeScore),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                    child: Text(
+                      'Hole $_holeNumber',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: const Key('on-course-hole-next'),
+                  tooltip: 'Next hole',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _holeNumber < _maxHole ? () => _stepHole(1) : null,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  key: const ValueKey('oncourse-par-summary'),
+                  tooltip: 'Change par',
+                  visualDensity: VisualDensity.compact,
+                  label: Text('Par $_par'),
+                  onPressed: _openParSheet,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        ChoiceChip(
+          key: const ValueKey('oncourse-mode-course'),
+          selectedColor: GolfPalette.fairwayGreen,
+          labelStyle: _chipLabel(!_simulator),
+          label: const Text('Course'),
+          showCheckmark: false,
+          visualDensity: VisualDensity.compact,
+          selected: !_simulator,
+          onSelected: (_) {
+            setState(() {
+              _simulator = false;
+              _yardsError = null;
+            });
+            _syncPinWatch();
+          },
+        ),
+        const SizedBox(width: 4),
+        ChoiceChip(
+          key: const ValueKey('oncourse-mode-simulator'),
+          selectedColor: GolfPalette.fairwayGreen,
+          labelStyle: _chipLabel(_simulator),
+          label: const Text('Sim', semanticsLabel: 'Simulator'),
+          tooltip: 'Simulator',
+          showCheckmark: false,
+          visualDensity: VisualDensity.compact,
+          selected: _simulator,
+          onSelected: (_) {
+            setState(() => _simulator = true);
+            _syncPinWatch();
+          },
+        ),
       ],
-    ];
+    );
+  }
+
+  Widget? _courseMicroLine(BuildContext context) {
+    if (!_mappedHoleFeatures) return null;
+    final Widget distance;
+    if (_yardsToPin != null) {
+      distance = Text(
+        '$_yardsToPin yds to pin',
+        key: const ValueKey('on-course-distance-to-hole'),
+        semanticsLabel: 'Yards to the pin',
+        style: GolfTextStyles.tabularNum(context, fontSize: 20),
+      );
+    } else if (_readingLocation) {
+      distance = Text(
+        'Reading location…',
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    } else {
+      distance = const SizedBox.shrink();
+    }
+    return Row(
+      children: [
+        Expanded(child: distance),
+        SegmentedButton<bool>(
+          key: const ValueKey('on-course-map-toggle'),
+          emptySelectionAllowed: false,
+          showSelectedIcon: false,
+          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          segments: const [
+            ButtonSegment<bool>(value: false, label: Text('HUD')),
+            ButtonSegment<bool>(value: true, label: Text('Map')),
+          ],
+          selected: {_showMapPane},
+          onSelectionChanged: (selection) {
+            setState(() => _showMapPane = selection.first);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _shotTile(ShotRecord s) {
+    final aimNote = !_simulator && s.aimDirection != kOnCourseAimCenter
+        ? ' · Aim ${s.aimDirection}'
+        : '';
+    final subtitle = _simulator
+        ? _shotSubtitle(s)
+        : shotDistanceLabel(shots: _shots, shot: s, simulator: _simulator);
+    return ListTile(
+      key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      onTap: () => _editShot(s),
+      title: Text(
+        'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}$aimNote',
+      ),
+      subtitle: subtitle.isEmpty ? null : Text(subtitle),
+      trailing: s.notes.trim().isNotEmpty
+          ? const Icon(Icons.notes_outlined)
+          : const Icon(Icons.edit_outlined),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final strokes = _holeScore?.strokes ?? _shots.length;
     final penalties = _holeScore?.penalties ?? 0;
+    final mulligans = _holeScore?.mulligans ?? 0;
     final holeScore = computeFinalScore(strokes: strokes, penalties: penalties);
+    final microLine = _simulator ? null : _courseMicroLine(context);
+    final showAim = _mappedHoleFeatures && !_simulator;
 
     return Scaffold(
       appBar: AppBar(
@@ -636,355 +1157,197 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-            VenueNameField(
-              key: const ValueKey('oncourse-course-name-field'),
-              controller: _courseController,
-              focusNode: _courseFocus,
-              labelText: 'Course name',
-              recentNames: _recentCourses,
-              catalogNames: PhGolfCatalog.courseNames,
-              captionFor: PhGolfCatalog.courseCaption,
-              onSelected: (_) => _persistCourseName(),
-              onSubmitted: (_) => _persistCourseName(),
-            ),
-            const SizedBox(height: 12),
-            if (_mappedHoleFeatures) ...[
-              SegmentedButton<bool>(
-                key: const ValueKey('on-course-map-toggle'),
-                emptySelectionAllowed: false,
-                segments: const [
-                  ButtonSegment<bool>(value: false, label: Text('HUD')),
-                  ButtonSegment<bool>(value: true, label: Text('Map')),
-                ],
-                selected: {_showMapPane},
-                onSelectionChanged: (selection) {
-                  setState(() => _showMapPane = selection.first);
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_showMapPane && _activeCoords != null)
-              OncourseMapPane(
-                courseName: _appliedCourseName,
-                holeNumber: _holeNumber,
-                coords: _activeCoords!,
-                shots: _shots,
-                player: _playerFix,
-              ),
-            Card(
-              key: const ValueKey('oncourse-hud-tabular'),
-              margin: EdgeInsets.zero,
-              child: Semantics(
-                label: 'On course scoring summary',
-                container: true,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final mapHeight =
+                    (constraints.maxHeight - 300).clamp(200.0, 520.0);
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          ChoiceChip(
-                            key: const ValueKey('oncourse-mode-course'),
-                            label: const Text('Course'),
-                            selected: !_simulator,
-                            onSelected: (_) {
-                              setState(() {
-                                _simulator = false;
-                                _yardsError = null;
-                              });
-                              _syncPinWatch();
-                            },
-                          ),
-                          ChoiceChip(
-                            key: const ValueKey('oncourse-mode-simulator'),
-                            label: const Text('Simulator'),
-                            selected: _simulator,
-                            onSelected: (_) {
-                              setState(() => _simulator = true);
-                              _syncPinWatch();
-                            },
-                          ),
-                        ],
-                      ),
-                      if (_mappedHoleFeatures && _yardsToPin != null)
+                      _courseSummary(context),
+                      const SizedBox(height: 8),
+                      if (!_simulator && _showMapPane && _activeCoords != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            '$_yardsToPin yds to pin',
-                            key: const ValueKey('on-course-distance-to-hole'),
-                            semanticsLabel: 'Yards to the pin',
-                            style: GolfTextStyles.tabularNum(context,
-                                fontSize: 22),
-                          ),
-                        )
-                      else if (_mappedHoleFeatures && _readingLocation)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            'Reading location…',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                      if (_simulator) ...[
-                        const SizedBox(height: 12),
-                        ..._simulatorFieldWidgets(),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          IconButton(
-                            key: const Key('on-course-hole-previous'),
-                            tooltip: 'Previous hole',
-                            onPressed:
-                                _holeNumber > 1 ? () => _stepHole(-1) : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          Text('Hole $_holeNumber',
-                              key: const Key('on-course-hole-label'),
-                              style: Theme.of(context).textTheme.headlineSmall),
-                          IconButton(
-                            key: const Key('on-course-hole-next'),
-                            tooltip: 'Next hole',
-                            onPressed: _holeNumber < _maxHole
-                                ? () => _stepHole(1)
-                                : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                          const Spacer(),
-                          Text('Round total: $_roundTotal',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                          'Par $_par · Strokes $strokes · Penalties $penalties · Score $holeScore'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [3, 4, 5].map((p) {
-                          return ChoiceChip(
-                            key: ValueKey('oncourse-par-chip-$p'),
-                            label: Text('Par $p'),
-                            selected: _par == p,
-                            onSelected: (_) async {
-                              setState(() => _par = p);
-                              if (_roundId != null && _holeScore != null) {
-                                await LocalDatabaseService.instance
-                                    .upsertHoleScore(
-                                  _holeScore!.copyWith(par: p, isSynced: 0),
-                                );
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Club',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 44,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: _clubs.map((club) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                key: ValueKey('oncourse-club-chip-${club.id}'),
-                                label: Text(club.name),
-                                selected: _selectedClub?.id == club.id,
-                                onSelected: (_) =>
-                                    setState(() => _selectedClub = club),
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: SizedBox(
+                            height: mapHeight,
+                            child: Center(
+                              child: OncourseMapPane(
+                                courseName: _appliedCourseName,
+                                holeNumber: _holeNumber,
+                                coords: _activeCoords!,
+                                shots: _shots,
+                                player: _playerFix,
                               ),
-                            );
-                          }).toList(),
+                            ),
+                          ),
+                        ),
+                      Card(
+                        key: const ValueKey('oncourse-hud-tabular'),
+                        margin: EdgeInsets.zero,
+                        child: Semantics(
+                          label: 'On course scoring summary',
+                          container: true,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 8, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _contextRow(
+                                    context, strokes, penalties, holeScore),
+                                if (microLine != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: microLine,
+                                  ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Wrap(
+                                        spacing: 8,
+                                        children: [
+                                          _summaryPill(
+                                            key: 'oncourse-club-summary',
+                                            label:
+                                                _selectedClub?.name ?? 'Club',
+                                            tooltip: 'Choose club',
+                                            onPressed: _openClubSheet,
+                                          ),
+                                          _summaryPill(
+                                            key: 'oncourse-lie-summary',
+                                            label: _lieLabel(_lieType),
+                                            tooltip: 'Choose lie',
+                                            onPressed: _openLieSheet,
+                                          ),
+                                          if (showAim)
+                                            _summaryPill(
+                                              key: 'oncourse-aim-summary',
+                                              label:
+                                                  'Aim ${_aimLabel(_aimDirection)}',
+                                              tooltip: 'Choose aim',
+                                              onPressed: _openAimSheet,
+                                            ),
+                                        ],
+                                      ),
+                                      if (_simulator)
+                                        ..._simulatorFieldWidgets(),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerLeft,
+                                              child: _stepper(
+                                                label: 'Penalty',
+                                                keyPrefix: 'oncourse-penalty',
+                                                count: penalties,
+                                                onStep: (delta) =>
+                                                    LocalDatabaseService
+                                                        .instance
+                                                        .incrementPenalties(
+                                                            _roundId!,
+                                                            _holeNumber,
+                                                            delta),
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerRight,
+                                              child: _stepper(
+                                                label: 'Mulligan',
+                                                keyPrefix: 'oncourse-mulligan',
+                                                count: mulligans,
+                                                onStep: (delta) =>
+                                                    LocalDatabaseService
+                                                        .instance
+                                                        .incrementMulligans(
+                                                            _roundId!,
+                                                            _holeNumber,
+                                                            delta),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text('Lie',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 44,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: _lies.map((lie) {
-                            final label =
-                                lie[0].toUpperCase() + lie.substring(1);
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                key: ValueKey('oncourse-lie-chip-$lie'),
-                                label: Text(label),
-                                selected: _lieType == lie,
-                                onSelected: (_) =>
-                                    setState(() => _lieType = lie),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      if (_mappedHoleFeatures && !_simulator) ...[
-                        const SizedBox(height: 16),
-                        const Text('Aim',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      if (_locationPermissionBlocked && !_simulator) ...[
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ChoiceChip(
-                              key: const ValueKey('oncourse-aim-left'),
-                              label: const Text('◀ L'),
-                              selected: _aimDirection == kOnCourseAimLeft,
-                              onSelected: (_) => setState(
-                                  () => _aimDirection = kOnCourseAimLeft),
-                            ),
-                            ChoiceChip(
-                              key: const ValueKey('oncourse-aim-center'),
-                              label: const Text('●'),
-                              selected: _aimDirection == kOnCourseAimCenter,
-                              onSelected: (_) => setState(
-                                  () => _aimDirection = kOnCourseAimCenter),
-                            ),
-                            ChoiceChip(
-                              key: const ValueKey('oncourse-aim-right'),
-                              label: const Text('R ▶'),
-                              selected: _aimDirection == kOnCourseAimRight,
-                              onSelected: (_) => setState(
-                                  () => _aimDirection = kOnCourseAimRight),
+                        MaterialBanner(
+                          key: const ValueKey('oncourse-location-banner'),
+                          content:
+                              const Text('Location is off for shot tracking.'),
+                          actions: [
+                            TextButton(
+                              onPressed: Geolocator.openAppSettings,
+                              child: const Text('Open settings'),
                             ),
                           ],
                         ),
                       ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Strokes $strokes · Penalties $penalties · '
+                        'Score $holeScore · Round total $_roundTotal',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              key: const ValueKey('oncourse-concede-btn'),
+                              onPressed: _roundId == null
+                                  ? null
+                                  : () => LocalDatabaseService.instance
+                                      .concedeHole(_roundId!, _holeNumber)
+                                      .then((_) => _refreshHoleState()),
+                              child: const Text('Concede'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              key: const ValueKey('oncourse-finish-hole-btn'),
+                              onPressed: _finishHole,
+                              child: Text(
+                                _holeNumber >= _holeCount
+                                    ? 'Finish Round'
+                                    : 'Finish Hole',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_shots.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ExpansionTile(
+                          key: const ValueKey('oncourse-shots-list-expander'),
+                          tilePadding: EdgeInsets.zero,
+                          shape: const Border(),
+                          collapsedShape: const Border(),
+                          title: Text('Shots this hole (${_shots.length})'),
+                          children: _shots.map(_shotTile).toList(),
+                        ),
+                      ],
                     ],
                   ),
-                ),
-              ),
-            ),
-            if (_locationPermissionBlocked && !_simulator) ...[
-              const SizedBox(height: 12),
-              MaterialBanner(
-                key: const ValueKey('oncourse-location-banner'),
-                content:
-                    const Text('Location is off for shot tracking.'),
-                actions: [
-                  TextButton(
-                    onPressed: Geolocator.openAppSettings,
-                    child: const Text('Open settings'),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('oncourse-penalty-1-btn'),
-                    onPressed: _roundId == null
-                        ? null
-                        : () => LocalDatabaseService.instance
-                            .incrementPenalties(_roundId!, _holeNumber, 1)
-                            .then((_) => _refreshHoleState()),
-                    child: const Text('Penalty +1'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('oncourse-penalty-2-btn'),
-                    onPressed: _roundId == null
-                        ? null
-                        : () => LocalDatabaseService.instance
-                            .incrementPenalties(_roundId!, _holeNumber, 2)
-                            .then((_) => _refreshHoleState()),
-                    child: const Text('Penalty +2'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('oncourse-mulligan-btn'),
-                    onPressed: _roundId == null
-                        ? null
-                        : () => LocalDatabaseService.instance
-                            .incrementMulligans(_roundId!, _holeNumber)
-                            .then((_) => _refreshHoleState()),
-                    child: Text('Mulligans ${_holeScore?.mulligans ?? 0}'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('oncourse-concede-btn'),
-                    onPressed: _roundId == null
-                        ? null
-                        : () => LocalDatabaseService.instance
-                            .concedeHole(_roundId!, _holeNumber)
-                            .then((_) => _refreshHoleState()),
-                    child: const Text('Concede / Gimme'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: OutlinedButton(
-                key: const ValueKey('oncourse-finish-hole-btn'),
-                onPressed: _finishHole,
-                child: Text(
-                  _holeNumber >= _holeCount ? 'Finish Round' : 'Finish Hole',
-                ),
-              ),
-            ),
-            if (_shots.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text('Shots this hole',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ..._shots.map(
-                (s) {
-                  final aimNote = !_simulator &&
-                          s.aimDirection != kOnCourseAimCenter
-                      ? ' · Aim ${s.aimDirection}'
-                      : '';
-                  final subtitle = _simulator
-                      ? _shotSubtitle(s)
-                      : shotDistanceLabel(
-                          shots: _shots,
-                          shot: s,
-                          simulator: _simulator,
-                        );
-                  return ListTile(
-                    key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
-                    dense: true,
-                    onTap: () => _editShot(s),
-                    title: Text(
-                      'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}$aimNote',
-                    ),
-                    subtitle: subtitle.isEmpty ? null : Text(subtitle),
-                    trailing: s.notes.trim().isNotEmpty
-                        ? const Icon(Icons.notes_outlined)
-                        : const Icon(Icons.edit_outlined),
-                  );
-                },
-              ),
-            ],
-                ],
-              ),
+                );
+              },
             ),
           ),
           SafeArea(
@@ -1010,9 +1373,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                           ),
                         )
                       : Text(
-                          _simulator
-                              ? 'Record stroke'
-                              : 'Record shot at ball',
+                          _simulator ? 'Record stroke' : 'Record shot at ball',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

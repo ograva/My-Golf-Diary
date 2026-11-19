@@ -79,6 +79,9 @@ class Club {
   }
 }
 
+/// Note on the stroke Finish Hole adds for the ball going into the hole.
+const kHoledShotNote = 'Holed';
+
 class ShotRecord {
   final String id;
   final String roundId;
@@ -118,6 +121,8 @@ class ShotRecord {
     required this.timestamp,
     this.isSynced = 0,
   });
+
+  bool get isHoled => notes == kHoledShotNote;
 
   Map<String, dynamic> toMap() {
     return {

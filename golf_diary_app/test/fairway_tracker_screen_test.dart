@@ -7,6 +7,8 @@ import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/services/pin_distance.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
 import 'support/on_course_test_helpers.dart';
 
@@ -307,5 +309,51 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('oncourse-map-pack-image')), findsNothing);
     expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
+  });
+
+  testWidgets('simulator Finish Hole logs the holing putt in the score',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.runAsync(() async {
+      await deleteDatabase(
+          join(await getDatabasesPath(), 'golf_diary_fairway.db'));
+    });
+    await tester.pumpWidget(MaterialApp(
+        theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
+    await waitForBag(tester);
+    await selectSimulator(tester);
+
+    for (final yards in ['230', '150']) {
+      await tester.enterText(
+          find.byKey(const ValueKey('oncourse-sim-yards-field')), yards);
+      await tester.tap(find.widgetWithText(FilledButton, 'Record stroke'));
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump();
+    }
+
+    final finish = find.byKey(const ValueKey('oncourse-finish-hole-btn'));
+    await tester.ensureVisible(finish);
+    await tester.tap(finish);
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    final roundId = (await tester
+        .runAsync(() => LocalDatabaseService.instance.getActiveRoundId()))!;
+    final hole = (await tester.runAsync(
+        () => LocalDatabaseService.instance.getHoleScore(roundId, 1)))!;
+    final shots = (await tester.runAsync(
+        () => LocalDatabaseService.instance.getShotsForHole(roundId, 1)))!;
+    expect(hole.strokes, 3);
+    expect(hole.finalScore, 3);
+    expect(shots.last.isHoled, isTrue);
+    expect(shots.last.clubId, 'putter');
   });
 }

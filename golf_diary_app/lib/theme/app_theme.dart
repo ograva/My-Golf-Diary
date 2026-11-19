@@ -48,6 +48,15 @@ class GolfPalette {
   static const Color negative       = Color(0xFF8B2E2E); // bogey / over par / error
   static const Color negativeLight  = Color(0xFFCF8484); // error text on dark bg
   static const Color warning        = Color(0xFFA67B2E); // penalty / caution
+
+  // Hole map (matches tools/map_pack/render.py so packs and stand-ins agree)
+  static const Color mapOutside     = Color(0xFF8A9676); // beyond the course
+  static const Color mapRough       = Color(0xFF689256); // rough / course
+  static const Color mapFairway     = Color(0xFF96C66A); // fairway corridor
+  static const Color mapTee         = Color(0xFFA8D47A); // tee box
+  static const Color mapGreen       = Color(0xFFBAE08C); // putting green
+  static const Color mapMarker      = Color(0xFFFFC400); // pipeline aim marker
+  static const Color mapScrim       = Color(0xB3000000); // 70% black overlay
 }
 
 /// Backward-compatible aliases — migrate screens to colorScheme roles over time.

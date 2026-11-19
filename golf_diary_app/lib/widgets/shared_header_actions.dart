@@ -125,6 +125,25 @@ class SharedHeaderActions extends StatelessWidget {
   }
 }
 
+/// Screen-specific entry appended to [PlayHeaderOverflowButton].
+class PlayHeaderMenuAction {
+  const PlayHeaderMenuAction({
+    required this.id,
+    required this.key,
+    required this.icon,
+    required this.label,
+    required this.onSelected,
+    this.dividerBefore = false,
+  });
+
+  final String id;
+  final String key;
+  final IconData icon;
+  final String label;
+  final VoidCallback onSelected;
+  final bool dividerBefore;
+}
+
 /// Play-tab overflow menu holding the diary and caddy invite entries.
 class PlayHeaderOverflowButton extends StatelessWidget {
   const PlayHeaderOverflowButton({
@@ -139,9 +158,11 @@ class PlayHeaderOverflowButton extends StatelessWidget {
     required this.courseName,
     required this.caddyInviteKey,
     this.diaryLabel = 'Swing diary',
+    this.extraActions = const [],
   });
 
   final String diaryLabel;
+  final List<PlayHeaderMenuAction> extraActions;
   final bool showDiary;
   final bool showCaddy;
   final String? diaryEntryKey;
@@ -159,6 +180,12 @@ class PlayHeaderOverflowButton extends StatelessWidget {
       tooltip: 'More',
       icon: const Icon(Icons.more_vert),
       onSelected: (value) async {
+        for (final action in extraActions) {
+          if (action.id == value) {
+            action.onSelected();
+            return;
+          }
+        }
         switch (value) {
           case 'caddy':
             if (roundId == null) return;
@@ -200,6 +227,22 @@ class PlayHeaderOverflowButton extends StatelessWidget {
                 key: ValueKey<String>(diaryEntryKey!),
                 leading: const Icon(Icons.auto_stories_outlined),
                 title: Text(diaryLabel),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          );
+        }
+        for (final action in extraActions) {
+          if (action.dividerBefore && items.isNotEmpty) {
+            items.add(const PopupMenuDivider());
+          }
+          items.add(
+            PopupMenuItem<String>(
+              value: action.id,
+              child: ListTile(
+                key: ValueKey<String>(action.key),
+                leading: Icon(action.icon),
+                title: Text(action.label),
                 contentPadding: EdgeInsets.zero,
               ),
             ),

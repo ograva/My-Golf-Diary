@@ -766,22 +766,48 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (picked != null && mounted) setState(() => _aimDirection = picked);
   }
 
-  Widget _summaryPill({
+  Widget _selectorButton({
     required String key,
     required String label,
+    required String value,
     required VoidCallback onPressed,
     String? tooltip,
   }) {
-    return ActionChip(
-      key: ValueKey(key),
-      tooltip: tooltip,
-      onPressed: onPressed,
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label),
-          const Icon(Icons.arrow_drop_down, size: 20),
-        ],
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip ?? label,
+      child: SizedBox(
+        height: 56,
+        child: OutlinedButton(
+          key: ValueKey(key),
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.only(left: 14, right: 6),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: theme.textTheme.labelSmall),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_drop_down),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -794,9 +820,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   }) {
     final enabled = _roundId != null;
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.labelLarge),
+        ),
         IconButton(
           key: ValueKey('$keyPrefix-step-down'),
           tooltip: 'Remove ${label.toLowerCase()}',
@@ -943,7 +970,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   }
 
   Widget _courseSummary(BuildContext context) {
-    final caption = PhGolfCatalog.courseCaption(_appliedCourseName);
+    final course = PhGolfCatalog.matchCourse(_appliedCourseName);
+    final meta = course?.holePars == null
+        ? null
+        : '${course!.holes} holes · Par ${course.totalPar}';
     final summary = InkWell(
       key: const ValueKey('oncourse-course-summary'),
       onTap: _openCourseSheet,
@@ -954,25 +984,15 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _appliedCourseName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    if (caption != null) ...[
-                      const SizedBox(width: 8),
-                      Text(caption,
-                          style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ],
+              Flexible(
+                child: Text(
+                  _appliedCourseName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
+              const SizedBox(width: 8),
               const Icon(Icons.edit_outlined,
                   size: 20, semanticLabel: 'Edit course'),
             ],
@@ -980,11 +1000,26 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         ),
       ),
     );
-    return Row(
+    final nameRow = Row(
       children: [
-        Expanded(child: summary),
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: summary)),
         const SizedBox(width: 8),
         _modeToggle(),
+      ],
+    );
+    if (meta == null) return nameRow;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        nameRow,
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            meta,
+            key: const ValueKey('oncourse-course-meta'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       ],
     );
   }
@@ -1288,78 +1323,68 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                          Wrap(
-                                            spacing: 8,
+                                          const SizedBox(height: 4),
+                                          Row(
                                             children: [
-                                              _summaryPill(
-                                                key: 'oncourse-club-summary',
-                                                label: _selectedClub?.name ??
-                                                    'Club',
-                                                tooltip: 'Choose club',
-                                                onPressed: _openClubSheet,
-                                              ),
-                                              _summaryPill(
-                                                key: 'oncourse-lie-summary',
-                                                label: _lieLabel(_lieType),
-                                                tooltip: 'Choose lie',
-                                                onPressed: _openLieSheet,
-                                              ),
-                                              if (showAim)
-                                                _summaryPill(
-                                                  key: 'oncourse-aim-summary',
-                                                  label:
-                                                      'Aim ${_aimLabel(_aimDirection)}',
-                                                  tooltip: 'Choose aim',
-                                                  onPressed: _openAimSheet,
+                                              Expanded(
+                                                child: _selectorButton(
+                                                  key: 'oncourse-club-summary',
+                                                  label: 'Club',
+                                                  value: _selectedClub?.name ??
+                                                      'Club',
+                                                  tooltip: 'Choose club',
+                                                  onPressed: _openClubSheet,
                                                 ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: _selectorButton(
+                                                  key: 'oncourse-lie-summary',
+                                                  label: 'Lie',
+                                                  value: _lieLabel(_lieType),
+                                                  tooltip: 'Choose lie',
+                                                  onPressed: _openLieSheet,
+                                                ),
+                                              ),
+                                              if (showAim) ...[
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: _selectorButton(
+                                                    key: 'oncourse-aim-summary',
+                                                    label: 'Aim',
+                                                    value: _aimLabel(
+                                                        _aimDirection),
+                                                    tooltip: 'Choose aim',
+                                                    onPressed: _openAimSheet,
+                                                  ),
+                                                ),
+                                              ],
                                             ],
                                           ),
                                           if (_simulator)
                                             ..._simulatorFieldWidgets(),
                                           const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  child: _stepper(
-                                                    label: 'Penalty',
-                                                    keyPrefix:
-                                                        'oncourse-penalty',
-                                                    count: penalties,
-                                                    onStep: (delta) =>
-                                                        LocalDatabaseService
-                                                            .instance
-                                                            .incrementPenalties(
-                                                                _roundId!,
-                                                                _holeNumber,
-                                                                delta),
-                                                  ),
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  alignment:
-                                                      Alignment.centerRight,
-                                                  child: _stepper(
-                                                    label: 'Mulligan',
-                                                    keyPrefix:
-                                                        'oncourse-mulligan',
-                                                    count: mulligans,
-                                                    onStep: (delta) =>
-                                                        LocalDatabaseService
-                                                            .instance
-                                                            .incrementMulligans(
-                                                                _roundId!,
-                                                                _holeNumber,
-                                                                delta),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                          _stepper(
+                                            label: 'Penalty',
+                                            keyPrefix: 'oncourse-penalty',
+                                            count: penalties,
+                                            onStep: (delta) =>
+                                                LocalDatabaseService.instance
+                                                    .incrementPenalties(
+                                                        _roundId!,
+                                                        _holeNumber,
+                                                        delta),
+                                          ),
+                                          _stepper(
+                                            label: 'Mulligan',
+                                            keyPrefix: 'oncourse-mulligan',
+                                            count: mulligans,
+                                            onStep: (delta) =>
+                                                LocalDatabaseService.instance
+                                                    .incrementMulligans(
+                                                        _roundId!,
+                                                        _holeNumber,
+                                                        delta),
                                           ),
                                         ],
                                       ),

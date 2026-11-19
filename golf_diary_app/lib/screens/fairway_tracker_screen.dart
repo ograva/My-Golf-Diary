@@ -1245,9 +1245,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     final aimNote = !_simulator && s.aimDirection != kOnCourseAimCenter
         ? ' · Aim ${s.aimDirection}'
         : '';
-    final subtitle = _simulator
-        ? _shotSubtitle(s)
-        : shotDistanceLabel(shots: _shots, shot: s, simulator: _simulator);
+    final subtitle = s.isHoled
+        ? kHoledShotNote
+        : _simulator
+            ? _shotSubtitle(s)
+            : shotDistanceLabel(shots: _shots, shot: s, simulator: _simulator);
     return ListTile(
       key: ValueKey('oncourse-shot-row-${s.strokeNumber}'),
       dense: true,
@@ -1257,7 +1259,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         'Stroke ${s.strokeNumber} · ${s.lieType} · ${_clubName(s.clubId)}$aimNote',
       ),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),
-      trailing: s.notes.trim().isNotEmpty
+      trailing: s.isHoled
+          ? const Icon(Icons.flag_outlined)
+          : s.notes.trim().isNotEmpty
           ? const Icon(Icons.notes_outlined)
           : const Icon(Icons.edit_outlined),
     );

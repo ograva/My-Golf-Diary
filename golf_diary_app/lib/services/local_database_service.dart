@@ -1115,6 +1115,7 @@ class LocalDatabaseService {
     int holeCount = 18,
   }) async {
     await syncStrokeCountFromShots(roundId, holeNumber);
+    await _recordHoledStroke(roundId, holeNumber);
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole != null && hole.conceded == 0) {
       final score =
@@ -1136,6 +1137,41 @@ class LocalDatabaseService {
       par: nextPar,
     );
     await upsertHoleScore(nextHole);
+  }
+
+  /// Logs the putt that drops the ball, so Finish Hole scores strokes +
+  /// penalties + 1. Skipped once the player has picked up at double par, on a
+  /// conceded hole, or when the hole already ends with a holed stroke.
+  Future<void> _recordHoledStroke(String roundId, int holeNumber) async {
+    final hole = await getHoleScore(roundId, holeNumber);
+    if (hole == null || hole.conceded == 1) return;
+    if (hole.par > 0 && hole.strokes + hole.penalties >= 2 * hole.par) return;
+    final shots = await getShotsForHole(roundId, holeNumber);
+    if (shots.isNotEmpty && shots.last.isHoled) return;
+
+    final db = await database;
+    final putters = await db.query(
+      'clubs',
+      columns: ['id'],
+      where: "category = 'putter' AND deleted = 0",
+      limit: 1,
+    );
+    final now = _nowMs();
+    final shot = ShotRecord(
+      id: 'holed_shot_$now',
+      roundId: roundId,
+      holeNumber: holeNumber,
+      strokeNumber: shots.isEmpty ? 1 : shots.last.strokeNumber + 1,
+      clubId: putters.isEmpty ? 'putter' : putters.first['id'] as String,
+      lieType: 'green',
+      startLat: 0,
+      startLon: 0,
+      notes: kHoledShotNote,
+      timestamp: now,
+    );
+    await db.insert('shots', _newRow(shot.toMap()),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await syncStrokeCountFromShots(roundId, holeNumber);
   }
 
   Future<int> getRoundTotal(String roundId) async {

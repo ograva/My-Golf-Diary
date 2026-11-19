@@ -1,184 +1,193 @@
-# Wireframe — On Course
+# Wireframe — On Course · Course mode (map-first HUD)
 
 | Field | Value |
 | :--- | :--- |
-| **Widget** | `FairwayTrackerScreen` |
-| **PRD** | CRSE-001 … CRSE-006, SYNC-002 |
+| **Widget** | `FairwayTrackerScreen` (`_simulator == false`) |
+| **PRD** | CRSE-001 … CRSE-006, SYNC-002, MGDV-2-002 |
 | **Persona** | Rory — log between swings, phone out for a few seconds |
-| **Status** | Target v1.2 — includes as-built venue lookup and new distance / map |
-| **AppBar title** | **On Course** (replace "Fairway HUD") |
+| **Status** | Target v1.3 — map-first Course HUD; Simulator split out |
+| **AppBar title** | **On Course** |
+| **Companion** | [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) · [Flow_OnCourse-Modes.md](./Flow_OnCourse-Modes.md) |
 
 ## 1. Screen purpose
 
-Capture one GPS shot with club, lie, and hole context without scrolling to find the button. Penalties, mulligans, and concede stay on this screen. Sync stays optional and never blocks local save.
+Capture each **fairway stroke** with **club, lie, aim**, and **GPS at the ball** while a **satellite / cached map HUD** shows the hole line, **path markers**, and stroke polyline. **Yards to the next marker** (or **to pin** when only tee+green exist) stays readable in the header chip. Penalties, mulligans, concede, and finish-hole stay on this screen. **Simulator** logging is a separate layout — [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md).
 
-## 2. Mobile layout
+## 2. Mobile layout (map-first)
+
+Chrome wraps the map: **header** = course + mode + hole + distance; **body** = map; **footer rail** = plan shot + secondary actions + sticky record.
 
 ```
 ┌─────────────────────────────┐
-│ On Course            [sync] │
-├─────────────────────────────┤
-│ Local Course            ✎   │  VenueNameField; caption "18 holes · par 72" when known
-│ [ Course ] [ Simulator ]  │  as built
-│ 142 yds to pin            │  CRSE-005, tabular, only when mapped + Course mode
-│ [ HUD | Map ]             │  CRSE-006, only when this hole has tee and green
+│ On Course    [caddy][diary] │  AppBar — compact actions
+├─────────────────────────────┤  HEADER (fixed)
+│ Wack Wack East           ✎ │  VenueNameField · catalog pars
+│ [●Course ] [ Simulator ]  │
+│ ‹ H7 ›  Par 4  ·  Strokes 2│  tabular row
+│ ┌──────────┬──────────────┐ │
+│ │ 168 yds  │ to marker ▸  │ │  on-course-distance-to-hole /
+│ └──────────┴──────────────┘   oncourse-yards-to-marker
+├─────────────────────────────┤  MAP BODY (flex, ≥40vh)
 │ ┌─────────────────────────┐ │
-│ │ HOLE 7          PAR 4   │ │  HUD card
-│ │ Strokes 2  Pen 0        │ │
-│ │ Hole 2    Round 28      │ │  tabular
+│ │    ○ tee                │ │
+│ │      ╲                  │ │  satellite or cached tile
+│ │   ○───•───○ flag       │ │  fairway markers + shot dots
+│ │         ▲ you           │ │  path to next marker (dashed)
+│ └─────────────────────────┘ │  oncourse-hole-map
+│ [Vector]  offline · no pack │  chip when tiles absent
+├─────────────────────────────┤  FOOTER RAIL (scroll if needed)
+│ CLUB  [7i·155] [9i] …  ›   │  chip lanes 48dp
+│ LIE   [Fairway] [Rough] …   │
+│ Aim   [ ◀ L ] [ ● ] [ R ▶ ] │  aim wedge · oncourse-aim-*
+│ ┌ Shot 2 · 7i · 156 yds  ┐ │  segment GPS yds · tap edit
 │ └─────────────────────────┘ │
-│ Par   [3] [4] [5]           │
-│ CLUB                        │
-│ [Dr] 3W 5W … 7i …     ›     │  selected chip shows avg, e.g. "7i · 155"
-│ LIE                         │
-│ [Tee] Fairway Rough …       │
-│ ┌ Shot 1 · Tee · Dr       ┐ │
-│ │ 248 yds                 │ │  list, or "Distance pending"
-│ └─────────────────────────┘ │
-│ Penalty +1   Penalty +2     │  outlined, 48dp
-│ Mulligan 0   Concede        │
-│ Finish hole                 │  text / outlined, not filled gold
+│ Pen +1  Pen +2  Mulligan    │  outlined · single row scroll
+│ Concede    Finish hole      │
 ├─────────────────────────────┤
-│ [  Record shot at ball   ]  │  STICKY filled, 64dp, above nav bar
+│ [  Record shot at ball   ]  │  STICKY 64dp filled · above tab bar
+└─────────────────────────────┘
+│ ○ Bag  ○ Range  ● Course  ○ │
 └─────────────────────────────┘
 ```
 
-Body scrolls. The record button is a `bottomNavigationBar` **of this scaffold** stacked above the shell’s `NavigationBar` — implement as a `Column` footer inside the shell body, or `Scaffold.bottomNavigationBar` only if it does not replace the app’s tab bar. Preferred: persistent footer `Padding` + `FilledButton` as the last sliver’s sibling, **outside** the scroll view, with 16dp horizontal inset and 8dp gap above the tab bar.
+- Map is **not** behind a HUD/Map segmented toggle for the default outdoor experience — the **map is the screen**. A **Vector** chip collapses satellite to the offline schematic ([Wireframe_HoleMap.md](./Wireframe_HoleMap.md)).
+- **Plan shot** = club + lie + **aim wedge** (left / center / right) stored with the stroke; GPS fires on **Record shot at ball** only (Architecture battery rule).
+- **Stroke list** shows **segment yards** from prior ball position to new fix (or "Distance pending").
+- Hole ends at **Finish hole**, **concede** (`2× par`), or **Holed** / **double par** prompt (tier-gated visibility).
 
-### What changes vs current code
+### Skill tier density
 
-- **One primary:** Record Shot. Finish Hole is outlined. Today both are 72–80dp filled buttons (green and amber) and compete.
-- Course name is one tappable row. Tap expands the existing `TextEditingController` field. Default text stays `Local Course`. Editing updates the active round name (CRSE-001).
-- Club chips stay the full non-empty bag (putter included — a putter stroke is valid). Chip label is club name. Selected chip subtitle in the section header: `{name} · {avg} yds` when avg &gt; 0.
-- Chip lanes are **48dp** tall (current lanes are 44).
-- Shot rows show **club name**, not `clubId`.
-- Mulligans show the count on the button. They do not change gross.
-- Concede still sets strokes to `par * 2` via `concedeHole`. Button label: **Concede**. After concede, HUD shows a `Gimme` chip so it is not color-only.
-- Hole 18 button copy: **Finish round**. It does not open a new route.
-- Do not block the UI thread on GPS. Only the record button shows a 24dp `CircularProgressIndicator` and ignores a second tap (`_busy`).
+[MGDV-202](../shards/MGDV/MGDV-202-golfer-profile-skill-tier.md) · [MGDV-203](../shards/MGDV/MGDV-203-range-bag-progressive-disclosure.md).
+
+| Element | Beginner | Amateur | Seasoned pro |
+| :--- | :--- | :--- | :--- |
+| Map markers | Tee, flag, your ball only | + fairway markers | + aim cone on last shot |
+| Distance chip | **to green** one number | **to marker** with chevron when waypoints exist | Both marker + pin line |
+| Aim wedge | Hidden (defaults center) | L / R icons | Full L · center · R + compass hint |
+| Shot list rows | Club + stroke # | + lie + yards | + lat quality / edit affordance |
+| Footer penalties | Concede + Finish only | + Mulligan | Full penalty row |
+| Copy | "Yards left" | "Yds to marker" | "168 yds · M2" |
+
+Simulator tier table: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) § Skill tier density.
+
+### What changes vs current `fairway_tracker_screen.dart`
+
+| As built (`lib/screens/fairway_tracker_screen.dart`) | Target Course wireframe |
+| :--- | :--- |
+| `SingleChildScrollView` form; map not primary | Map **`Expanded`** body between header and footer rail |
+| Course `TextField` dominates first viewport | One-line venue row; tap expands `VenueNameField` |
+| Mode chips then optional distance text inline | Header **distance chip** + hole stepper on one band |
+| No aim direction | **Aim wedge** before record |
+| No marker / next-yard concept | **Yards to marker** when coords include waypoints; else CRSE-005 pin only |
+| Record + Finish both ~80dp filled `ElevatedButton` | Single filled **Record**; Finish **outlined** |
+| Club/lie lanes 44dp | **48dp** chips |
+| Simulator yards field in same column | Simulator UI only in [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) |
+| `CRSE-006` toggle not implemented | Map default; vector fallback chip instead of HUD/Map fork |
+| Keys: partial par/club/lie keys | Full Key map §7 + aim/marker keys |
+
+Behaviors **keep from code** until refactored: bootstrap round, `syncStrokeCountFromShots`, concede rule, pin watch gating when `!_simulator`, `ShotEditDialog`, hole stepper keys, invite caddy + diary buttons in AppBar.
 
 ### GPS and sync states (required)
 
 | State | UI |
 | :--- | :--- |
 | Idle | Record enabled if round and club exist |
-| Locating | Button spinner, label hidden, `onPressed: null` |
-| Permission denied / deniedForever | Banner under the HUD: "Location is off for shot tracking." Action **Open settings** (`Geolocator.openAppSettings` when deniedForever, else request again). Snackbar still fires (CRSE-002). |
-| Position null after grant | Snackbar "Couldn’t read location. Shot not saved." |
+| Locating | Spinner **on record button** only; distance chip may show "Reading location…" |
+| Permission denied / deniedForever | Banner in footer rail: "Location is off for shot tracking." Action **Open settings** |
+| Position null after grant | Snackbar "Couldn't read location. Shot not saved." |
+| Unmapped course or hole | No distance chip; vector map only — **no error** |
 | Sync, Firebase absent | Snackbar "Firebase not configured — local data is saved on device" |
 | Sync success | Snackbar "Synced {n} records to cloud" |
-| Bootstrap failure | Non-crashing banner "Couldn’t start the round. Pull to retry." |
+| Bootstrap failure | `oncourse-bootstrap-banner` |
 
 ## 3. Larger screens
 
-≥600dp: HUD and selectors in a left column (max 480); shot list in a right column. Record button remains full width of the left column, pinned to the bottom of that column. Phone layout is unchanged.
+≥600dp: map in the **right** column (flex 3); header stats + footer rail (plan shot, record, penalties) in **left** column max 420dp. Phone layout unchanged.
 
 ## 4. Widget inventory
 
 | Widget | Role |
 | :--- | :--- |
-| `AppBar` + `IconButton` | Title, sync |
-| HUD `Card` | Hole, par, strokes, penalties, hole gross, round total |
-| `ChoiceChip` | Par 3/4/5, club, lie |
-| `FilledButton` | Record shot |
-| `OutlinedButton` | Penalty +1, +2, mulligan, concede, finish hole |
+| `AppBar` + actions | Title, caddy QR, diary, account |
+| Header band | Venue, mode chips, hole stepper, distance chip |
+| Map surface | Satellite/cache/vector + markers (`oncourse-hole-map`) |
+| `ChoiceChip` | Mode, par, club, lie |
+| Aim wedge | `SegmentedButton` or icon toggle group |
+| `FilledButton` | Record shot at ball |
+| `OutlinedButton` | Penalties, mulligan, concede, finish |
 | `ListTile` | Shots this hole |
-| `MaterialBanner` or inline `Card` | Permission / bootstrap error |
-| `SnackBar` | Sync and GPS failure |
-| `CircularProgressIndicator` | On the record button only |
-
-Lie set (fixed): `tee`, `fairway`, `rough`, `bunker`, `green`, `penalty`.
+| `MaterialBanner` | Permission / bootstrap |
+| `SnackBar` | Sync, GPS, map pack |
+| `CircularProgressIndicator` | Record button busy |
+| `LinearProgressIndicator` | Map pack download |
 
 ## 5. Interaction & state map
 
 | Action | Result |
 | :--- | :--- |
-| Par chip | Updates hole row when a score row exists |
-| Record | Inserts shot; `strokes` become `shots.length` (Architecture §5.2). List refreshes. Lie stays as selected. |
-| Penalty +1 / +2 | `incrementPenalties`, HUD penalties and hole gross update (`strokes + penalties`) |
-| Mulligan | Count increments; gross unchanged |
-| Concede | Strokes become `par * 2`; HUD shows Gimme |
-| Finish hole (&lt;18) | Next hole, lie resets to **tee**, par defaults to 4 |
-| Finish round (18) | Persists hole; stay on screen; snackbar "Round saved on this device" |
-| Pull to refresh | Optional; `_refreshHoleState` |
-
-Recording a shot **replaces** a manual stroke count for that hole. The HUD does not need a warning dialog in v1; the scorecard editor remains the override path.
+| Catalog course pick | Hole pars, 9/18 count, marker layout when coords exist |
+| Par chip | Updates hole row when score row exists |
+| Aim wedge | Stores aim on next `ShotRecord` (L/center/R) |
+| Record | GPS read → shot row + polyline; strokes = shot count |
+| Penalty / mulligan / concede | Same as PRD CRSE-003 |
+| Finish hole (&lt; max) | Next hole, lie **tee**, catalog par |
+| Finish round (final hole) | Snackbar "Round saved on this device" |
+| Vector chip | Swap satellite off; keep markers + shots |
+| New shot saved | Map overlay updates without navigation |
 
 ## 6. UX flow
 
+High-level loop: [Flow_OnCourse-Modes.md](./Flow_OnCourse-Modes.md) §4.
+
 ```mermaid
 flowchart TD
-  boot[Bootstrap round] --> hud[HUD ready]
-  hud --> rec[Record shot]
+  boot[Bootstrap round] --> map[Map HUD ready]
+  map --> plan[Club · lie · aim]
+  plan --> rec[Record at ball]
   rec --> perm{Permission?}
-  perm -->|denied| banner[Permission banner + snackbar]
-  perm -->|granted| gps[Read position]
-  gps -->|fail| snack[Snackbar, no row]
-  gps -->|ok| saved[Shot row + stroke count]
-  hud --> pen[Penalty / mulligan / concede]
-  pen --> hud
-  hud --> fin{Hole 18?}
-  fin -->|no| next[Hole + 1, lie tee]
-  fin -->|yes| done[Finish round snackbar]
-  hud --> sync[Sync icon]
-  sync --> local[Local-only snackbar]
-  sync --> cloud[Synced count snackbar]
+  perm -->|denied| banner[Permission banner]
+  perm -->|granted| gps[GPS read]
+  gps -->|fail| snack[Snackbar]
+  gps -->|ok| overlay[Shot on map + list]
+  map --> fin{End hole?}
+  fin --> next[Next hole]
 ```
 
 ## 7. Key map
 
 | Element | ValueKey | Widget |
 | :--- | :--- | :--- |
-| Sync | `oncourse-sync-btn` | `IconButton` |
-| Course row | `oncourse-course-name-field` | `TextField` when expanded, else tappable row with same key |
-| Par 3 / 4 / 5 | `oncourse-par-chip-3` `oncourse-par-chip-4` `oncourse-par-chip-5` | `ChoiceChip` |
-| Club chip | `oncourse-club-chip-{clubId}` | `ChoiceChip` |
-| Lie chip | `oncourse-lie-chip-{lie}` | `ChoiceChip` |
+| Sync (legacy) / account | `oncourse-sync-btn` / account menu keys | `IconButton` |
+| Course row | `oncourse-course-name-field` | `VenueNameField` |
+| Mode | `oncourse-mode-course` `oncourse-mode-simulator` | `ChoiceChip` |
+| Hole stepper | `on-course-hole-previous` `on-course-hole-label` `on-course-hole-next` | `IconButton` / `Text` |
+| Yards to pin | `on-course-distance-to-hole` | `Text` (Roboto Mono) |
+| Yards to marker | `oncourse-yards-to-marker` | `Text` |
+| Map surface | `oncourse-hole-map` | Map / `CustomPaint` |
+| Vector fallback | `oncourse-map-vector` | `ChoiceChip` or toggle |
+| Map download | `oncourse-map-download` | `LinearProgressIndicator` |
+| Aim left / center / right | `oncourse-aim-left` `oncourse-aim-center` `oncourse-aim-right` | `SegmentedButton` slots |
+| Par chips | `oncourse-par-chip-3` … `5` | `ChoiceChip` |
+| Club / lie | `oncourse-club-chip-{id}` `oncourse-lie-chip-{lie}` | `ChoiceChip` |
 | Record | `oncourse-record-shot-btn` | `FilledButton` |
-| Penalty +1 | `oncourse-penalty-1-btn` | `OutlinedButton` |
-| Penalty +2 | `oncourse-penalty-2-btn` | `OutlinedButton` |
-| Mulligan | `oncourse-mulligan-btn` | `OutlinedButton` |
-| Concede | `oncourse-concede-btn` | `OutlinedButton` |
-| Finish hole | `oncourse-finish-hole-btn` | `OutlinedButton` |
+| Penalty / mulligan / concede / finish | `oncourse-penalty-1-btn` … `oncourse-finish-hole-btn` | `OutlinedButton` |
+| Holed | `oncourse-holed-btn` | `TextButton` |
 | Shot row | `oncourse-shot-row-{strokeNumber}` | `ListTile` |
 | Permission banner | `oncourse-location-banner` | `MaterialBanner` |
-| Course / Simulator | `oncourse-mode-course` `oncourse-mode-simulator` | `ChoiceChip` |
-| Distance to pin | `on-course-distance-to-hole` | `Text` (Roboto Mono) |
-| Map toggle | `on-course-map-toggle` | `SegmentedButton` |
-| Simulator yards | `oncourse-sim-yards-field` | `TextField` |
+| Bootstrap banner | `oncourse-bootstrap-banner` | `MaterialBanner` |
 
-## 8. As built (keep these states in the layout)
+Simulator-only keys: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) §7.
 
-The shipping screen still uses the AppBar title **Fairway HUD**, two large filled actions (Record and Finish), and a full course `TextField`. Those stay documented as the current code until the target dock in §2 is built. Behaviors that **are** in code and must appear on this wireframe:
+## 8. Distance & unmapped rules (CRSE-005)
 
-- **Course autocomplete** (`VenueNameField`): recent names, then the Philippines catalog. Custom text stays valid. Recognized course shows `18 holes · par 72` in `bodySmall`.
-- **Course / Simulator chips.** Simulator replaces GPS with a yards field. Blank or 0 shows "Enter a distance greater than 0".
-- **Hole stepper** keys already in code: `on-course-hole-previous`, `on-course-hole-label`, `on-course-hole-next`. Next is disabled until Finish Hole creates the next row. A 9-hole card ends at hole 9.
-- **Shot edit** opens `ShotEditDialog` (see [Wireframe_ShotEdit.md](./Wireframe_ShotEdit.md)). Row key in code: `on-course-shot-{id}`.
+- Live stream **only** in Course mode on mapped holes (`hasHoleCoordinates`).
+- Label **to pin** when no waypoint markers; **to marker** when Architecture exposes fairway marker coords.
+- Simulator or unmapped: chip **not in tree** (no placeholder).
 
-## 9. Distance to the hole (CRSE-005)
+## 9. Map imagery (CRSE-006)
 
-Shown only in **Course** mode when `hasHoleCoordinates(course, hole)` is true. Hidden with no error on Simulator, a custom course, or an unmapped hole (including a missing hole on a partial layout).
+Default **satellite/cache** per [Wireframe_HoleMap.md](./Wireframe_HoleMap.md). Offline without pack: vector tee→green + shot dots; snackbar once per session. **Record** remains available on all states.
 
-| State | UI |
-| :--- | :--- |
-| Eligible, locating | Caption "Reading location…" under the mode chips. No fake yardage. |
-| Fix received | `142 yds to pin` in Roboto Mono, `titleLarge`. Updates when the player moves about 3 m. |
-| Permission denied | Same location banner as shot capture. Distance line stays hidden. |
-| Leave tab, Simulator, or unmapped hole | Stream stops. The line is not in the tree. |
+## 10. Legacy target notes (superseded layout)
 
-The number is remaining yards to the **green**, not the last shot’s carry. Label it **to pin** so it is not confused with shot distance on the stroke list.
-
-## 10. Map toggle (CRSE-006, future)
-
-The HUD / Map control is omitted unless this hole has a tee and a green. Map layout is [Wireframe_HoleMap.md](./Wireframe_HoleMap.md). If the pack is not on the device and the phone is offline, stay on the HUD and snackbar "Map for this course isn’t on the phone yet."
-
-```mermaid
-flowchart TD
-  mode{Course mode?}
-  mode -->|no| hide[Hide distance and map]
-  mode -->|yes| coords{Tee and green for this hole?}
-  coords -->|no| hide
-  coords -->|yes| live[Show yards to pin]
-  coords -->|yes| map[Enable map toggle]
-```
+Earlier v1.2 wireframe showed HUD card **above** selectors and an optional HUD/Map segmented control. v1.3 **Course** mode inverts that: **map-first**, footer rail for planning. Simulator keeps HUD-card layout in the companion wireframe.

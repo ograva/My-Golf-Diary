@@ -14,6 +14,7 @@
 | 1.1 | 2026-11-06 | Eunice (`/wireframe`) | Target wireframes for shell + four tabs + hole editor; improvements over as-built UI |
 | 1.2 | 2026-11-09 | Eunice (`/wireframe`, `/audit-ux`) | New-feature wireframes, as-built dialogs that were missing, UX audit |
 | 1.3 | 2026-11-11 | Eunice (`/wireframe`, `/flow`) | Post-range sit-down flow (`RNGE-005` → `RNGE-004`): session note card, active visit summary, **Save and evaluate session** compilation, compiled session log cards, and seamless handoff to the Vertex AI Swing Diary sheet (`Flow_RangeSessionAndEvaluation.md`) |
+| 1.4 | 2026-11-19 | Eunice (`/wireframe`, `/flow`) | On Course **dual-mode** sharding: map-first **Course** HUD (header/footer rail, aim wedge, markers, sticky record), **Simulator** table layout (`Wireframe_OnCourse-Simulator.md`), end-to-end mode flow (`Flow_OnCourse-Modes.md`); skill-tier field density cross-ref MGDV-202/203 |
 
 ---
 
@@ -173,7 +174,9 @@ Target layouts (v1.1). These replace the as-built form stacks. Implementation st
 | :--- | :--- | :--- |
 | App shell | `HomeShell` | [Wireframe_HomeShell.md](./designs/Wireframe_HomeShell.md) |
 | My Bag | `ClubsScreen` | [Wireframe_MyBag.md](./designs/Wireframe_MyBag.md) |
-| On Course | `FairwayTrackerScreen` | [Wireframe_OnCourse.md](./designs/Wireframe_OnCourse.md) |
+| On Course (Course · map HUD) | `FairwayTrackerScreen` | [Wireframe_OnCourse.md](./designs/Wireframe_OnCourse.md) |
+| On Course (Simulator) | `FairwayTrackerScreen` | [Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md) |
+| On Course mode flow | Simulator ↔ Course loops | [Flow_OnCourse-Modes.md](./designs/Flow_OnCourse-Modes.md) |
 | Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md) |
 | Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) |
 | Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) |
@@ -193,7 +196,7 @@ Audit: [UX_Audit.md](./designs/UX_Audit.md).
 | Surface | As built | Target |
 | :--- | :--- | :--- |
 | My Bag | Notes field + Save on every card; chips ~48px tall including padding squeeze | Glance cards (name + min/avg/max). Notes open in a sheet. Category chips ≥48dp. Empty and loading states. |
-| On Course | One long form. Record and Finish are both large filled buttons. Course field eats the first viewport. | Sticky **Record Shot** dock. HUD card for hole/par/score. Course name compact. Penalties/mulligan/concede/finish are secondary. GPS denied and busy states explicit. |
+| On Course | One long form. Record and Finish are both large filled buttons. Course field eats the first viewport. | **Course mode:** map-first body, header distance chip, footer **plan shot** (club/lie/aim wedge), sticky **Record shot at ball**. **Simulator mode:** HUD-card layout, optional carry/note fields, no GPS ([Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md)). **Skill tier** (beginner / amateur / seasoned pro) thins or expands aim wedge, marker detail, and optional fields per [MGDV-202](../shards/MGDV/MGDV-202-golfer-profile-skill-tier.md). |
 | Scorecard | Six-column table, ~40dp rows, blue/orange fills | Out/In/Total banner, then **Front 9 / Back 9** hole tiles (≥48dp). Concede uses label `Gimme`, not color alone. |
 | Hole editor | Works; numbers not tabular; no live gross prominence | Stepper sheet with live **gross** and **vs par**. 56dp steppers. |
 | Range | Three cramped fields; counter beside a small button; no bag baseline | Two-stage flow: (1) On-mat club block capture (`Save Drill Session` updates club averages and adds to today's active visit); (2) Post-session sit-down card with a persistent **Session Note** (`range-session-note-field`), a live **This Visit's Summary** preview of clubs/drills logged, and **Save and Evaluate Session** (`range-save-evaluate-session-btn`) that compiles the session log and opens the Vertex AI Swing Diary evaluation. |

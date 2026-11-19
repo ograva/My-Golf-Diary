@@ -6,6 +6,8 @@ import 'package:golf_diary_app/screens/fairway_tracker_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
 
+import 'support/on_course_test_helpers.dart';
+
 void main() {
   setUp(() async {
     await LocalDatabaseService.debugClose();
@@ -71,30 +73,35 @@ void main() {
     ));
     await waitForBag(tester);
 
-    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
 
     const course = 'Villamor Golf Club';
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Course name'),
-      course,
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, course);
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
       if (find
-          .byKey(const ValueKey('oncourse-aim-center'))
+          .byKey(const ValueKey('oncourse-aim-summary'))
           .evaluate()
           .isNotEmpty) {
         break;
       }
     }
 
-    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsOneWidget);
     expect(find.text('Record shot at ball'), findsOneWidget);
 
+    await tester.tap(find.byKey(const ValueKey('oncourse-aim-summary')));
+    await settleSheet(tester);
+    expect(find.byKey(const ValueKey('oncourse-aim-sheet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('oncourse-aim-right')));
-    await tester.pump();
+    await settleSheet(tester);
+    expect(find.byKey(const ValueKey('oncourse-aim-sheet')), findsNothing);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('oncourse-aim-summary')),
+            matching: find.text('R ▶')),
+        findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('oncourse-record-shot-btn')));
     await tester.pump();
@@ -104,33 +111,29 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
+    await expandShotList(tester);
     expect(find.byKey(const ValueKey('oncourse-shot-row-2')), findsOneWidget);
+    expect(find.textContaining('Aim right'), findsWidgets);
     expect(find.textContaining('yds'), findsWidgets);
 
-    await tester.tap(find.text('Simulator'));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsNothing);
+    await selectSimulator(tester);
+    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
 
-    await tester.tap(find.text('Course'));
+    await selectFairway(tester);
     await tester.pump();
-    expect(find.byKey(const ValueKey('oncourse-aim-center')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsOneWidget);
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Course name'),
-      'My Backyard',
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await submitCourseName(tester, 'My Backyard');
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
       if (find
-          .byKey(const ValueKey('oncourse-aim-left'))
+          .byKey(const ValueKey('oncourse-aim-summary'))
           .evaluate()
           .isEmpty) {
         break;
       }
     }
-    expect(find.byKey(const ValueKey('oncourse-aim-left')), findsNothing);
+    expect(find.byKey(const ValueKey('oncourse-aim-summary')), findsNothing);
   });
 
   test('recordFairwayHit stores aim on mapped outdoor shots', () async {

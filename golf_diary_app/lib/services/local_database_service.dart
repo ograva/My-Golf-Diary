@@ -1086,11 +1086,12 @@ class LocalDatabaseService {
     await upsertHoleScore(updated);
   }
 
-  Future<void> incrementMulligans(String roundId, int holeNumber) async {
+  Future<void> incrementMulligans(String roundId, int holeNumber,
+      [int delta = 1]) async {
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole == null) return;
-    await upsertHoleScore(
-        hole.copyWith(mulligans: hole.mulligans + 1, isSynced: 0));
+    final mulligans = (hole.mulligans + delta).clamp(0, 99);
+    await upsertHoleScore(hole.copyWith(mulligans: mulligans, isSynced: 0));
   }
 
   Future<void> concedeHole(String roundId, int holeNumber) async {

@@ -128,7 +128,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('on-course-distance-to-hole')),
         findsOneWidget);
-    expect(find.text('$yards yds to pin'), findsOneWidget);
+    expect(find.text('$yards yds'), findsOneWidget);
     expect(client.live, 1);
 
     await selectSimulator(tester);
@@ -141,9 +141,9 @@ void main() {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
-      if (find.text('$yards yds to pin').evaluate().isNotEmpty) break;
+      if (find.text('$yards yds').evaluate().isNotEmpty) break;
     }
-    expect(find.text('$yards yds to pin'), findsOneWidget);
+    expect(find.text('$yards yds'), findsOneWidget);
 
     await submitCourseName(tester, 'My Backyard');
     for (var i = 0; i < 20; i++) {
@@ -159,12 +159,11 @@ void main() {
     }
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
-    expect(find.textContaining('yds to pin'), findsNothing);
-    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
-    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-standin-badge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-standin-yards')), findsOneWidget);
   });
 
-  testWidgets('unknown course shows tabular HUD without pin or map toggle',
+  testWidgets('unknown course shows the stand-in hole without pin yards',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -175,13 +174,15 @@ void main() {
         theme: buildGolfTheme(), home: const FairwayTrackerScreen()));
     await waitForBag(tester);
 
-    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-map-background')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-standin-badge')), findsOneWidget);
+    expect(find.text('≈ 380 yds'), findsOneWidget);
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
     expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
   });
 
-  testWidgets('Sherwood mapped hole gains toggle and unmapped hole hides it',
+  testWidgets('Sherwood mapped hole shows yards; unmapped hole is a stand-in',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1800);
     tester.view.devicePixelRatio = 1;
@@ -205,20 +206,19 @@ void main() {
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
       if (find
-          .byKey(const ValueKey('on-course-map-toggle'))
+          .byKey(const ValueKey('on-course-distance-to-hole'))
           .evaluate()
           .isNotEmpty) {
         break;
       }
     }
 
-    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsOneWidget);
     expect(find.byKey(const ValueKey('on-course-distance-to-hole')),
         findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-standin-badge')), findsNothing);
 
     for (var hole = 1; hole < 3; hole++) {
-      await tester.tap(find.text('Finish Hole'));
-      await tester.pump();
+      await finishHoleFromOverflow(tester);
       for (var i = 0; i < 20; i++) {
         await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 50)));
@@ -230,10 +230,9 @@ void main() {
     }
 
     expect(find.text('Hole 3'), findsOneWidget);
-    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
     expect(
         find.byKey(const ValueKey('on-course-distance-to-hole')), findsNothing);
-    expect(find.byKey(const ValueKey('oncourse-hud-tabular')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-standin-badge')), findsOneWidget);
   });
 
   testWidgets('simulator record saves yards note and shot row key',
@@ -273,9 +272,9 @@ void main() {
     expect(find.byIcon(Icons.notes_outlined), findsOneWidget);
   });
 
-  testWidgets('map pane without pack shows vector fallback and snackbar once',
+  testWidgets('mapped hole without a pack shows the Line only badge',
       (tester) async {
-    tester.view.physicalSize = const Size(800, 1900);
+    tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -297,40 +296,16 @@ void main() {
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
       if (find
-          .byKey(const ValueKey('on-course-map-toggle'))
+          .byKey(const ValueKey('oncourse-map-line-only-badge'))
           .evaluate()
           .isNotEmpty) {
         break;
       }
     }
 
-    await tester.tap(find.text('Map'));
-    for (var i = 0; i < 20; i++) {
-      await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 50)));
-      await tester.pump();
-      if (find
-          .byKey(const ValueKey('oncourse-map-vector'))
-          .evaluate()
-          .isNotEmpty) {
-        break;
-      }
-    }
-
-    expect(find.byKey(const ValueKey('oncourse-map-vector')), findsOneWidget);
-    await tester.pump();
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find
-          .text('Showing the hole line without the course photo.')
-          .evaluate()
-          .isNotEmpty) {
-        break;
-      }
-    }
-    expect(
-      find.text('Showing the hole line without the course photo.'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('oncourse-map-line-only-badge')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('oncourse-map-pack-image')), findsNothing);
+    expect(find.byKey(const ValueKey('on-course-map-toggle')), findsNothing);
   });
 }

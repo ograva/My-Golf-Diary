@@ -74,7 +74,7 @@ void main() {
     await tester.pump();
     expect(find.text('18 holes · Par 68'), findsOneWidget);
 
-    await finishAction(tester, find.text('Finish Hole'));
+    await finishHoleFromOverflow(tester);
     expect(find.text('Hole 2'), findsOneWidget);
     expect(parSummaryLabel(tester), 'Par 3');
 
@@ -108,7 +108,7 @@ void main() {
         tester.widget<IconButton>(find.byKey(const Key('on-course-hole-next')));
     expect(next.onPressed, isNull);
 
-    await finishAction(tester, find.text('Finish Hole'));
+    await finishHoleFromOverflow(tester);
     expect(find.text('Hole 2'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

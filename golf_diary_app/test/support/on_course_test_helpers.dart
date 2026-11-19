@@ -45,6 +45,24 @@ Future<void> selectSimulator(WidgetTester tester) =>
 Future<void> selectFairway(WidgetTester tester) =>
     _selectMode(tester, 'oncourse-mode-course');
 
+/// FWY: opens the header overflow and taps [itemKey] (Concede / Finish).
+Future<void> tapOverflowItem(WidgetTester tester, String itemKey) async {
+  await tester.tap(find.byKey(const Key('shell-header-overflow-btn')));
+  await settleSheet(tester);
+  await tester.tap(find.byKey(ValueKey(itemKey)));
+  await settleSheet(tester);
+}
+
+/// FWY Finish Hole / Finish Round: overflow, then Finish (two taps).
+Future<void> finishHoleFromOverflow(WidgetTester tester) async {
+  await tapOverflowItem(tester, 'oncourse-overflow-finish');
+  for (var i = 0; i < 4; i++) {
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump();
+  }
+}
+
 /// Scrolls the stroke log (below the Concede | Finish Hole row) into view.
 Future<void> expandShotList(WidgetTester tester) async {
   final expander = find.byKey(const ValueKey('oncourse-shots-list-expander'));

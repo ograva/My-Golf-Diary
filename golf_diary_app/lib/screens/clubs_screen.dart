@@ -7,8 +7,8 @@ import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
 import '../widgets/range_session_log.dart';
-import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/account_avatar_app_bar_menu.dart';
+import '../ui/header_action_policy.dart';
+import '../widgets/shared_header_actions.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key, this.onProfileSettingsChanged});
@@ -174,10 +174,7 @@ class ClubsScreenState extends State<ClubsScreen> {
         ),
         title: const Text('My Bag'),
         actions: [
-          GolferProfileAppBarMenu(
-            onProfileChanged: widget.onProfileSettingsChanged,
-          ),
-          const AccountAvatarAppBarMenu(),
+          const SharedHeaderActions(tab: HeaderTabContext.bag),
         ],
       ),
       body: Column(

@@ -10,10 +10,8 @@ import '../models/golf_models.dart';
 import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../services/pin_distance.dart';
-import '../widgets/diary_launcher.dart';
-import '../widgets/caddy_invite_sheet.dart';
-import '../widgets/golfer_profile_app_bar_menu.dart';
-import '../widgets/account_avatar_app_bar_menu.dart';
+import '../ui/header_action_policy.dart';
+import '../widgets/shared_header_actions.dart';
 import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
@@ -410,29 +408,15 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       appBar: AppBar(
         title: const Text('On Course'),
         actions: [
-          IconButton(
-            key: const ValueKey('on-course-invite-caddy'),
-            tooltip: 'Invite caddy',
-            onPressed: _roundId == null
-                ? null
-                : () async {
-                    await showCaddyInviteSheet(
-                      context,
-                      roundId: _roundId!,
-                      courseName: _appliedCourseName,
-                    );
-                  },
-            icon: const Icon(Icons.qr_code_2),
-          ),
-          DiaryEntryButton(
-            entryKey: 'diary-entry-on-course',
+          SharedHeaderActions(
+            tab: HeaderTabContext.onCourse,
+            roundId: _roundId,
+            courseName: _appliedCourseName,
             diary: widget.diary,
-            entrySource: DiaryContextSource.onCourse,
+            diaryEntryKey: 'diary-entry-on-course',
+            diarySource: DiaryContextSource.onCourse,
+            caddyInviteKey: 'on-course-invite-caddy',
           ),
-          GolferProfileAppBarMenu(
-            onProfileChanged: widget.onProfileSettingsChanged,
-          ),
-          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: SingleChildScrollView(

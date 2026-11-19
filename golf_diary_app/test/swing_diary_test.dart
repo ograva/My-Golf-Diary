@@ -14,6 +14,7 @@ import 'package:golf_diary_app/screens/scorecard_screen.dart';
 import 'package:golf_diary_app/screens/home_shell.dart';
 import 'package:golf_diary_app/services/diary_model.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
+import 'package:golf_diary_app/services/golfer_profile_store.dart';
 import 'package:golf_diary_app/services/swing_diary_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
 import 'package:golf_diary_app/widgets/swing_diary_sheet.dart';
@@ -102,10 +103,29 @@ void main() {
     LocalDatabaseService.debugSetFileName('golf_diary.db');
   }
 
+  Future<GolferProfileStore> _storeWithSkillTier(
+    WidgetTester tester,
+    String tier,
+  ) async {
+    final store = GolferProfileStore();
+    await tester.runAsync(() async {
+      await store.refresh();
+      await LocalDatabaseService.instance.saveGolferProfile(
+        store.profile.copyWith(skillTier: tier),
+      );
+      await store.refresh();
+    });
+    return store;
+  }
+
   Future<void> pumpRange(WidgetTester tester, FakeDiaryModel model) async {
+    final store = await _storeWithSkillTier(tester, GolferSkillTier.amateur);
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),
-      home: RangeDrillScreen(diary: model),
+      home: GolferProfileScope(
+        store: store,
+        child: RangeDrillScreen(diary: model),
+      ),
     ));
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
@@ -113,7 +133,13 @@ void main() {
   }
 
   Future<void> openDiary(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('range-swing-diary-btn')));
+    final pinned = find.byKey(const ValueKey('diary-entry-range'));
+    if (pinned.evaluate().isEmpty) {
+      await tester.tap(find.byKey(const Key('shell-header-overflow-btn')));
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(find.byKey(const ValueKey('diary-entry-range')));
+    await tester.tap(find.byKey(const ValueKey('diary-entry-range')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.runAsync(
@@ -562,15 +588,20 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
-    final store = SwingDiaryService();
-    await tester.runAsync(() => store.appendContextNote(
+    final diaryStore = SwingDiaryService();
+    await tester.runAsync(() => diaryStore.appendContextNote(
           content: 'Range legs felt heavy.',
           source: DiaryContextSource.range,
         ));
     final model = FakeDiaryModel();
+    final profileStore =
+        await _storeWithSkillTier(tester, GolferSkillTier.amateur);
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),
-      home: FairwayTrackerScreen(diary: model),
+      home: GolferProfileScope(
+        store: profileStore,
+        child: FairwayTrackerScreen(diary: model),
+      ),
     ));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('diary-entry-on-course')));
@@ -590,9 +621,14 @@ void main() {
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
     final model = FakeDiaryModel();
+    final profileStore =
+        await _storeWithSkillTier(tester, GolferSkillTier.amateur);
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),
-      home: ScorecardScreen(diary: model),
+      home: GolferProfileScope(
+        store: profileStore,
+        child: ScorecardScreen(diary: model),
+      ),
     ));
     await tester.pump();
     await tester.runAsync(

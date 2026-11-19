@@ -69,3 +69,4 @@ Next to build (V2 — MGDV-2):
 | MGDV-202 | Golfer profile & skill tier | MGDV | High | Not Started | S | MGDV-2 | [MGDV-202](../shards/MGDV/MGDV-202-golfer-profile-skill-tier.md) |
 | MGDV-203 | Range & Bag progressive disclosure | BAG + RNGE | High | Not Started | M | MGDV-2 | [MGDV-203](../shards/MGDV/MGDV-203-range-bag-progressive-disclosure.md) |
 | MGDV-205 | Swing diary chat area | RNGE + CRSE + SCOR | Medium | Not Started | L | MGDV-2b, RNGE-004 | [MGDV-205](../shards/MGDV/MGDV-205-swing-diary-chat-area.md) |
+| MGDV-206 | Header action consolidation (P0) | Shell | High | Ready for Review | M | MGDV-2, SYNC-005 | [MGDV-206](../shards/MGDV/MGDV-206-header-action-consolidation.md) |

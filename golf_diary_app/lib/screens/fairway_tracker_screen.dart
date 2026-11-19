@@ -9,8 +9,7 @@ import '../models/diary_context_note.dart';
 import '../on_course/on_course_aim.dart';
 import '../on_course/on_course_hud_gating.dart';
 import '../on_course/on_course_shot_segment.dart';
-import '../services/course_map_pack_local.dart';
-import '../widgets/oncourse_vector_hole_map.dart';
+import '../widgets/oncourse_map_pane.dart';
 import '../models/golfer_profile.dart';
 import '../models/golf_models.dart';
 import '../services/diary_model.dart';
@@ -82,13 +81,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   bool _simulator = false;
   String? _yardsError;
   int? _yardsToPin;
+  PinFix? _playerFix;
   bool _readingLocation = false;
   bool _screenVisible = true;
   int _pinToken = 0;
   String? _watchedKey;
   StreamSubscription<PinFix>? _pinSub;
   bool _showMapPane = false;
-  bool _offlineVectorSnackShown = false;
   String _aimDirection = kOnCourseAimCenter;
   bool _locationPermissionBlocked = false;
   bool _simOptionalFieldsExpanded = false;
@@ -176,6 +175,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _pinSub = null;
     _watchedKey = null;
     _yardsToPin = null;
+    _playerFix = null;
     _readingLocation = false;
   }
 
@@ -185,19 +185,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     }
   }
 
-  Future<void> _maybeShowVectorFallbackSnack() async {
-    if (!_showMapPane || !_mappedHoleFeatures) return;
-    if (_offlineVectorSnackShown) return;
-    final hasPack =
-        await CourseMapPackLocal.instance.hasPackForCourse(_appliedCourseName);
-    if (hasPack || !mounted) return;
-    _offlineVectorSnackShown = true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Showing the hole line without the course photo.'),
-      ),
-    );
-  }
 
   void _syncPinWatch() {
     _clampMapPane();
@@ -228,11 +215,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (fix == null) {
       setState(() {
         _yardsToPin = null;
+        _playerFix = null;
         _readingLocation = false;
       });
       return;
     }
     setState(() {
+      _playerFix = fix;
       _yardsToPin =
           yardsToHole(coords, fromLat: fix.latitude, fromLon: fix.longitude);
       _readingLocation = false;
@@ -241,6 +230,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       (next) {
         if (!mounted || token != _pinToken) return;
         setState(() {
+          _playerFix = next;
           _yardsToPin = yardsToHole(coords,
               fromLat: next.latitude, fromLon: next.longitude);
         });
@@ -674,42 +664,17 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 selected: {_showMapPane},
                 onSelectionChanged: (selection) {
                   setState(() => _showMapPane = selection.first);
-                  _maybeShowVectorFallbackSnack();
                 },
               ),
               const SizedBox(height: 12),
             ],
             if (_showMapPane && _activeCoords != null)
-              FutureBuilder<bool>(
-                future: CourseMapPackLocal.instance
-                    .hasPackForCourse(_appliedCourseName),
-                builder: (context, snapshot) {
-                  final hasPack = snapshot.data == true;
-                  if (hasPack) {
-                    return Semantics(
-                      label: 'Hole map',
-                      child: AspectRatio(
-                        aspectRatio: 4 / 3,
-                        child: DecoratedBox(
-                          key: const ValueKey('oncourse-hole-map'),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Center(
-                            child: Text('Course map pack ready'),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return OncourseVectorHoleMap(
-                    coords: _activeCoords!,
-                    shots: _shots,
-                  );
-                },
+              OncourseMapPane(
+                courseName: _appliedCourseName,
+                holeNumber: _holeNumber,
+                coords: _activeCoords!,
+                shots: _shots,
+                player: _playerFix,
               ),
             Card(
               key: const ValueKey('oncourse-hud-tabular'),

@@ -36,7 +36,7 @@ Planning IDs from the Project store **`docs/v2-roadmap.md`** (V2 decisions 2026-
 | CRSE-034 | Unmapped tabular HUD & map fallback | CRSE | High | Ready for Review | M | CRSE-011 | [CRSE-034](../shards/CRSE/CRSE-034-unmapped-tabular-map-fallback.md) |
 | CRSE-031 | Simulator post-shot logging | CRSE | High | Ready for Review | M | CRSE-007 | [CRSE-031](../shards/CRSE/CRSE-031-simulator-post-shot-logging.md) |
 | CRSE-032 | Course plan, aim & record at ball | CRSE | High | Completed | L | CRSE-008 | [CRSE-032](../shards/CRSE/CRSE-032-course-plan-aim-record.md) |
-| CRSE-033 | Map / satellite HUD & live markers | CRSE | Medium | Not Started | L | CRSE-009 | [CRSE-033](../shards/CRSE/CRSE-033-map-satellite-hud-markers.md) |
+| CRSE-033 | Map / satellite HUD & live markers | CRSE | Medium | Ready for Review | L | CRSE-009 | [CRSE-033](../shards/CRSE/CRSE-033-map-satellite-hud-markers.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Completed | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |
 | RNGE-025 | Range session store | RNGE | High | Completed | M | RNGE-005 | [RNGE-025](../shards/RNGE/RNGE-025-range-session-store.md) |

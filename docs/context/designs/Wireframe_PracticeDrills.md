@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `PracticeDrillSheet` (modal bottom sheet from `RangeDrillScreen`) |
-| **PRD** | RNGE-003 |
+| **Stories** | [RNGE-003](../../stories/RNGE/RNGE-003-practice-drill-catalog.md) |
 | **Reference** | [`Range_Drills.md`](../Range_Drills.md) |
 | **Persona** | Riley |
 | **Status** | Implemented (`practice_drill_sheet.dart`) |

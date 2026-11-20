@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `showScorecardHoleEditor` / `_HoleEditorSheet` |
-| **PRD** | SCOR-002, SCOR-003 |
+| **Stories** | [SCOR-002](../../stories/SCOR/SCOR-002-hole-editor.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md) |
 | **Persona** | Rory correcting a hole without GPS |
 | **Status** | Target v1.1 — sheet already exists; this tightens hierarchy and keys |
 

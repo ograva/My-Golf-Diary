@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `ScorecardScreen` / `ScorecardScreenState` |
-| **PRD** | SCOR-001, SCOR-003 |
+| **Stories** | [SCOR-001](../../stories/SCOR/SCOR-001-view-rounds-grid.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md) |
 | **Persona** | Rory verifying the card after the hole |
 | **Status** | Target v1.1 |
 

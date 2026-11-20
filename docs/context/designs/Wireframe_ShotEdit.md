@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `ShotEditDialog` in `fairway_tracker_screen.dart` |
-| **PRD** | CRSE-002 |
+| **Stories** | [CRSE-002](../../stories/CRSE/CRSE-002-shot-capture-dual-mode.md) |
 | **Status** | As built — this dialog had no wireframe |
 
 ## 1. Screen purpose

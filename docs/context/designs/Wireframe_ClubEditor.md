@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widgets** | `EditClubDialog`, `_AddClubDialog`, `SwingNotesDialog`, `ClubRangeLogSheet` |
-| **PRD** | BAG-001 … BAG-003 |
+| **Stories** | [BAG-001](../../stories/BAG/BAG-001-filter-by-category.md)–[003](../../stories/BAG/BAG-003-swing-notes.md) |
 | **Status** | As built — these dialogs had no wireframe |
 
 ## 1. Screen purpose

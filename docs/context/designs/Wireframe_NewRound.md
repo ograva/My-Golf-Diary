@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widgets** | `_NewRoundDialog`, `showSaveRoundBeforeNewDialog` |
-| **PRD** | SCOR-001, CRSE-001 |
+| **Stories** | [SCOR-001](../../stories/SCOR/SCOR-001-view-rounds-grid.md), [CRSE-001](../../stories/CRSE/CRSE-001-active-round-context.md) |
 | **Status** | As built — dialogs had no wireframe |
 
 ## 1. Screen purpose

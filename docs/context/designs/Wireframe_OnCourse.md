@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `FairwayTrackerScreen` (`_simulator == false`) |
-| **PRD** | CRSE-001 … CRSE-006, SYNC-002, MGDV-2-002 |
+| **Stories** | [CRSE-001](../../stories/CRSE/CRSE-001-active-round-context.md)–[006](../../stories/CRSE/CRSE-006-stylized-hole-map.md), [CRSE-009](../../stories/CRSE/CRSE-009-fwy-map-overlays.md), [CRSE-036](../../stories/CRSE/CRSE-036-fwy-map-shell.md), [CRSE-005](../../stories/CRSE/CRSE-005-live-pin-distance.md), [MGDV-202](../../stories/MGDV/MGDV-202-skill-tier-settings.md) |
 | **Persona** | Rory — log between swings, phone out for a few seconds |
-| **Status** | Target v1.3 — map-first Course HUD; Simulator split out |
+| **Status** | **Shipped** — FWY map-background shell (CRSE-036) |
 | **AppBar title** | **On Course** |
 | **Companion** | [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) · [Flow_OnCourse-Modes.md](./Flow_OnCourse-Modes.md) |
 
@@ -13,47 +13,32 @@
 
 Capture each **fairway stroke** with **club, lie, aim**, and **GPS at the ball** while a **satellite / cached map HUD** shows the hole line, **path markers**, and stroke polyline. **Yards to the next marker** (or **to pin** when only tee+green exist) stays readable in the header chip. Penalties, mulligans, concede, and finish-hole stay on this screen. **Simulator** logging is a separate layout — [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md).
 
-## 2. Mobile layout (map-first)
+## 2. Mobile layout (FWY map shell — as built)
 
-Chrome wraps the map: **header** = course + mode + hole + distance; **body** = map; **footer rail** = plan shot + secondary actions + sticky record.
+Full-bleed `FwyHoleMap` under scrim overlays. **Top gradient band** (`oncourse-top-overlay`) holds course, mode toggle, hole stepper, distance / GPS badges. **Side rail** (`oncourse-side-rail`) is vertical `FwyRailTile`s for Club, Lie, Aim (mapped holes), Penalty, Mulligan. **Bottom dock** (safe area): shots **peek** row + single **Record shot at ball** filled button.
 
 ```
 ┌─────────────────────────────┐
-│ On Course    [caddy][diary] │  AppBar — compact actions
-├─────────────────────────────┤  HEADER (fixed)
-│ Wack Wack East           ✎ │  VenueNameField · catalog pars
-│ [●Course ] [ Simulator ]  │
-│ ‹ H7 ›  Par 4  ·  Strokes 2│  tabular row
-│ ┌──────────┬──────────────┐ │
-│ │ 168 yds  │ to marker ▸  │ │  on-course-distance-to-hole /
-│ └──────────┴──────────────┘   oncourse-yards-to-marker
-├─────────────────────────────┤  MAP BODY (flex, ≥40vh)
-│ ┌─────────────────────────┐ │
-│ │    ○ tee                │ │
-│ │      ╲                  │ │  satellite or cached tile
-│ │   ○───•───○ flag       │ │  fairway markers + shot dots
-│ │         ▲ you           │ │  path to next marker (dashed)
-│ └─────────────────────────┘ │  oncourse-hole-map
-│ [Vector]  offline · no pack │  chip when tiles absent
-├─────────────────────────────┤  FOOTER RAIL (scroll if needed)
-│ CLUB  [7i·155] [9i] …  ›   │  chip lanes 48dp
-│ LIE   [Fairway] [Rough] …   │
-│ Aim   [ ◀ L ] [ ● ] [ R ▶ ] │  aim wedge · oncourse-aim-*
-│ ┌ Shot 2 · 7i · 156 yds  ┐ │  segment GPS yds · tap edit
-│ └─────────────────────────┘ │
-│ Pen +1  Pen +2  Mulligan    │  outlined · single row scroll
-│ Concede    Finish hole      │
+│ On Course        [acct][…] │  AppBar · diary edge-swipe
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│  top overlay (map scrim)
+│ Course · H7 · Par 4 · 168y  │  oncourse-top-overlay
+│ [Live][Manual]  badges…     │  oncourse-gps-live / manual
+│                    ┌─Club─┐ │
+│     MAP (full)     │ Lie  │ │  oncourse-side-rail
+│     FwyHoleMap     │ Aim  │ │
+│                    │ Pen++│ │
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│  bottom scrim gradient
+│ Shots this hole (3) ⌃       │  oncourse-shots-peek → sheet
+│ [ Record shot at ball    ]  │  oncourse-record-shot-btn
 ├─────────────────────────────┤
-│ [  Record shot at ball   ]  │  STICKY 64dp filled · above tab bar
-└─────────────────────────────┘
-│ ○ Bag  ○ Range  ● Course  ○ │
+│ Bag │ Range │ ● On Course │… │
 └─────────────────────────────┘
 ```
 
-- Map is **not** behind a HUD/Map segmented toggle for the default outdoor experience — the **map is the screen**. A **Vector** chip collapses satellite to the offline schematic ([Wireframe_HoleMap.md](./Wireframe_HoleMap.md)).
-- **Plan shot** = club + lie + **aim wedge** (left / center / right) stored with the stroke; GPS fires on **Record shot at ball** only (Architecture battery rule).
-- **Stroke list** shows **segment yards** from prior ball position to new fix (or "Distance pending").
-- Hole ends at **Finish hole**, **concede** (`2× par`), or **Holed** / **double par** prompt (tier-gated visibility).
+- **Map** is always the body in FWY mode (`oncourse-map-background`). Overlays use `fwyOverlayText` / `fwySurface` ([`fwy_overlays.dart`](../../../golf_diary_app/lib/widgets/fwy_overlays.dart)).
+- **Plan shot** via rail tiles → bottom sheets for club/lie/aim; GPS on Record only.
+- **Shots sheet** (`oncourse-shots-sheet`) lists `oncourse-shot-row-{n}`; overflow menu holds Concede / Finish ([CRSE-003](../../stories/CRSE/CRSE-003-penalties-mulligans-concede.md)).
+- Badges: stand-in yards, line-only, map download (`oncourse-map-download`).
 
 ### Skill tier density
 
@@ -70,22 +55,14 @@ Chrome wraps the map: **header** = course + mode + hole + distance; **body** = m
 
 Simulator tier table: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) § Skill tier density.
 
-### What changes vs current `fairway_tracker_screen.dart`
+### Implementation notes (`fairway_tracker_screen.dart`)
 
-| As built (`lib/screens/fairway_tracker_screen.dart`) | Target Course wireframe |
+| Area | Shipped behavior |
 | :--- | :--- |
-| `SingleChildScrollView` form; map not primary | Map **`Expanded`** body between header and footer rail |
-| Course `TextField` dominates first viewport | One-line venue row; tap expands `VenueNameField` |
-| Mode chips then optional distance text inline | Header **distance chip** + hole stepper on one band |
-| No aim direction | **Aim wedge** before record |
-| No marker / next-yard concept | **Yards to marker** when coords include waypoints; else CRSE-005 pin only |
-| Record + Finish both ~80dp filled `ElevatedButton` | Single filled **Record**; Finish **outlined** |
-| Club/lie lanes 44dp | **48dp** chips |
-| Simulator yards field in same column | Simulator UI only in [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) |
-| `CRSE-006` toggle not implemented | Map default; vector fallback chip instead of HUD/Map fork |
-| Keys: partial par/club/lie keys | Full Key map §7 + aim/marker keys |
-
-Behaviors **keep from code** until refactored: bootstrap round, `syncStrokeCountFromShots`, concede rule, pin watch gating when `!_simulator`, `ShotEditDialog`, hole stepper keys, invite caddy + diary buttons in AppBar.
+| Layout | `Stack`: map → scrims → overlay → rail → dock |
+| SIM branch | Separate scroll HUD — [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) |
+| Record CTA | Single filled green button; spinner when `_busy` |
+| Finish / concede | Overflow actions + double-par chip; not second filled primary |
 
 ### GPS and sync states (required)
 
@@ -163,8 +140,12 @@ flowchart TD
 | Hole stepper | `on-course-hole-previous` `on-course-hole-label` `on-course-hole-next` | `IconButton` / `Text` |
 | Yards to pin | `on-course-distance-to-hole` | `Text` (Roboto Mono) |
 | Yards to marker | `oncourse-yards-to-marker` | `Text` |
-| Map surface | `oncourse-hole-map` | Map / `CustomPaint` |
-| Vector fallback | `oncourse-map-vector` | `ChoiceChip` or toggle |
+| Map surface | `oncourse-map-background` | `FwyHoleMap` |
+| Top overlay | `oncourse-top-overlay` | `DecoratedBox` + gradient |
+| Side rail | `oncourse-side-rail` | Column of `FwyRailTile` |
+| Club / lie / aim on rail | `oncourse-club-summary` … `oncourse-aim-summary` | `FwyRailTile` |
+| Shots peek | `oncourse-shots-peek` | `InkWell` |
+| Shots sheet | `oncourse-shots-sheet` | Modal sheet |
 | Map download | `oncourse-map-download` | `LinearProgressIndicator` |
 | Aim left / center / right | `oncourse-aim-left` `oncourse-aim-center` `oncourse-aim-right` | `SegmentedButton` slots |
 | Par chips | `oncourse-par-chip-3` … `5` | `ChoiceChip` |

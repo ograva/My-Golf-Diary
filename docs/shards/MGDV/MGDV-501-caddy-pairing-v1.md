@@ -5,8 +5,9 @@
 | **Shard ID** | MGDV-501 |
 | **Epic** | MGDV-5 |
 | **Module** | CRSE + SCOR + SYNC |
+| **Story Ref** | MGDV-501 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | L |
 | **Depends On** | MGDV-4 (cart view), CRSE shot→score derivation |
 

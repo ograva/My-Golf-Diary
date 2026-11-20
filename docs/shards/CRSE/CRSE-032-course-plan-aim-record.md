@@ -6,7 +6,7 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-008 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | L |
 | **Depends On** | CRSE-020 |
 

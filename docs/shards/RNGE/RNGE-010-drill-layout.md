@@ -14,7 +14,7 @@
 
 Range already excludes putters, counts hits up to 10, saves a counter of 0 as 10 balls, names the club in the success snackbar, clears the yardage fields, and leaves the tempo note in place. The venue field and the session log (this club / all clubs) are on the screen and stay.
 
-Superseded on 2026-11-09. The current Range screen is the accepted baseline, including the title `Range Drill Instructor`, always-enabled save, and empty min or max stored as 0. Do not rebuild this layout. RNGE-021 adds the drill sheet on this screen.
+Superseded on 2026-11-09. RNGE-001 and RNGE-002 stay linked here: the club strip, shot counter, and block save described above are the shipped baseline. The layout rebuild was not scheduled. The current Range screen is the accepted baseline, including the title `Range Drill Instructor`, always-enabled save, and empty min or max stored as 0. Do not rebuild this layout. RNGE-021 adds the drill sheet on this screen.
 
 ## Acceptance Criteria
 

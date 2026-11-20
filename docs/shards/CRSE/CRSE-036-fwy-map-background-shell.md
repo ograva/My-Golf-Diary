@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | CRSE-036 |
 | **Module** | CRSE — On Course |
-| **Story Ref** | CRSE-006, CRSE-007, CRSE-009 |
+| **Story Ref** | CRSE-001, CRSE-002, CRSE-003, CRSE-004, CRSE-006, CRSE-009, CRSE-011, CRSE-036 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | L |
 | **Depends On** | CRSE-035, CRSE-041 (pack contract), CRSE-022 (cache service, #67) |
 | **Design** | Agent Store `docs/fwy-map-layout-plan.md` rev 5 (user-approved), §2 |

@@ -1,46 +1,39 @@
-# SYNC-005 — Account avatar, Google/email auth (MGDV-12)
+# SHARD-SYNC-005: Account avatar and durable sign-in
 
 | Field | Value |
 | :--- | :--- |
 | **Shard ID** | SYNC-005 |
-| **Tracker** | MGDV-12 |
-| **Status** | In Progress (vertical slice) |
-| **Depends On** | SYNC-001 anonymous sync, shell AppBar actions |
+| **Module** | SYNC — Cloud sync |
+| **Story Ref** | SYNC-005, SYNC-006 |
+| **Priority** | High |
+| **Status** | Completed |
+| **Complexity** | L |
+| **Depends On** | SYNC-001, SYNC-003 |
 
-## Shipped in this slice
+## Description
 
-- [x] **SYNC-005** — `AccountAvatarAppBarMenu` replaces `SyncCloudButton` on all four tabs; PRD menu keys and avatar key.
-- [x] **SYNC-006** — Login sheet: Google + email/password, create/sign-in toggle, forgot password; inline errors; email verification blocks **push** (pull-only until verified).
-- [x] **SYNC-009** (partial) — Account profile screen (Firebase identity only); signed-out explains local-only; sign-out keeps SQLite.
-- [x] **SYNC-010** (partial) — Settings: Firebase status, sign-in state, last pull, dirty row count, sync now, link to **local** golfer profile editor.
-- [x] Sign-out clears Firebase session; anonymous play still allowed via `initializeFirebase` + `SyncIdentity.ensureSignedIn()` for legacy/background use.
-- [x] Widget/unit tests with fakes (`debugSetSession`); `google_sign_in` dependency for Android/web path.
+`AccountAvatarAppBarMenu` replaces the legacy cloud icon on My Bag, Range, On Course, and Scorecard. The menu opens Login, Sync, Profile, and Settings. Google and email/password sign-in ship on the login sheet, including create-account, forgot-password email, and inline errors. An unverified email account cannot push; Google can. Anonymous play still works when Firebase is absent or the player never signs in.
 
-## Deferred (follow-up shards)
+Account delete, the replace-this-device conflict path, change-password, and the wider `syncFull` table set are **not** this shard. They are SYNC-007, SYNC-008, SYNC-009, and SYNC-010.
 
-- [ ] **SYNC-008** — Full `linkWithCredential` success path is implemented; **“Replace this device with the account”** and complete upload-then-download conflict flow.
-- [ ] **SYNC-009** — Delete account + optional “Erase diary on this device”.
-- [ ] **SYNC-010** — Change password UI for email accounts (reset email only today).
-- [ ] **SYNC-007** — Extend `kSyncTables` / `_columns` for `golf_rounds` (PK `round_id`), `practice_drills`, `range_sessions`, swing-diary tables (Architecture lists these as planned; merge layer only supports four tables today).
+## Acceptance Criteria
 
-## SYNC-007 gap note
+- [x] `account-avatar-button` is on every tab. Signed out it is a generic icon; signed in it can show initials.
+- [x] Menu keys `account-menu-login`, `account-menu-sync`, `account-menu-profile`, `account-menu-settings`. Signed-out Sync explains that sign-in is required and does not call `syncFull`.
+- [x] Login sheet: `account-login-google`, `account-login-email`, `account-login-password`, `account-login-submit`, create/sign-in toggle, and Forgot password.
+- [x] Email/password push waits on `isEmailVerified`. Google push does not. Failure leaves SQLite unchanged. Local play does not require an account.
 
-`syncFull` still syncs: `clubs`, `shots`, `round_scores`, `range_drills` only (`sync_constants.dart`). Adding `golf_rounds`, `practice_drills`, `range_sessions`, and diary tables requires `LocalDatabaseService._columns` entries and PK handling for `golf_rounds` before Firestore push/pull is safe.
+## Test coverage
 
-## Key paths
+- [x] **Unit/widget:** `test/account_avatar_menu_test.dart`, `test/account_login_sheet_test.dart`, `test/account_session_test.dart`. Forgot-password empty email is covered in `test/sync_account_shards_test.dart`.
+- [x] **Integration (if needed):** Not required. Live Google and Firebase Auth stay out of `flutter test`.
+- [x] **Keys:** `account-avatar-button`, `account-menu-login`, `account-menu-sync`, `account-menu-profile`, `account-menu-settings`, `account-login-google`, `account-login-email`, `account-login-password`, `account-login-submit` from `Wireframe_Settings.md` and the PRD SYNC-005 menu. Forgot password has no ValueKey yet.
 
-| Area | Path |
-| :--- | :--- |
-| Avatar menu | `golf_diary_app/lib/widgets/account_avatar_app_bar_menu.dart` |
-| Login sheet | `golf_diary_app/lib/widgets/account_login_sheet.dart` |
-| Auth | `golf_diary_app/lib/services/account_auth_controller.dart` |
-| Session model | `golf_diary_app/lib/services/account_session.dart` |
-| Sync runner | `golf_diary_app/lib/widgets/diary_sync_runner.dart` |
-| Account profile | `golf_diary_app/lib/screens/account_profile_screen.dart` |
-| Sync settings | `golf_diary_app/lib/screens/account_sync_settings_screen.dart` |
+## Dev notes
 
-## Tests
-
-- `golf_diary_app/test/account_session_test.dart`
-- `golf_diary_app/test/account_avatar_menu_test.dart`
-- `golf_diary_app/test/account_login_sheet_test.dart`
+- `golf_diary_app/lib/widgets/account_avatar_app_bar_menu.dart`
+- `golf_diary_app/lib/widgets/account_login_sheet.dart`
+- `golf_diary_app/lib/services/account_auth_controller.dart`
+- `golf_diary_app/lib/services/account_session.dart`
+- `golf_diary_app/lib/widgets/shared_header_actions.dart` (MGDV-206)
+- Passwords never go into SQLite. Architecture §9.8.

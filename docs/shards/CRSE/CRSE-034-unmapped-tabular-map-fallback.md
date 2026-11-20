@@ -6,11 +6,13 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-011 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | CRSE-020, CRSE-021 |
 
 ## Description
+
+Shipped for unmapped scoring. On FWY, CRSE-036 replaced the map toggle and embedded tabular card with a stand-in hole; SIM keeps the compact stack (CRSE-035).
 
 When the venue is custom or the active hole lacks surveyed tee/green coordinates, **Course** mode shows the full scoring HUD without pin distance, map toggle, or error placeholders. Partial catalog courses turn off map/pin only on unmapped holes; mapped holes on the same round still get CRSE-005/009 when selected. If the player is offline and the course map pack is missing, the UI falls back to tabular HUD or the vector schematic (`oncourse-map-vector`) per Architecture §5.5 offline rules—never a blocking error state.
 

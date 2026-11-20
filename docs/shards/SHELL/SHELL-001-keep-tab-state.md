@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Shard ID** | SHELL-001 |
 | **Module** | App shell (cross-cutting; no PRD prefix) |
-| **Story Ref** | None |
+| **Story Ref** | SHELL-001 |
 | **Priority** | High |
 | **Status** | Completed |
 | **Complexity** | S |

@@ -6,7 +6,7 @@
 | **Module** | RNGE + CRSE + SCOR (diary shell) |
 | **Story Ref** | MGDV-2b, RNGE-004 |
 | **Priority** | Medium |
-| **Status** | In Review |
+| **Status** | Completed |
 | **Complexity** | L |
 | **Depends On** | MGDV-201, RNGE-022 (completed) |
 
@@ -18,11 +18,11 @@ UI is **conversation-first** (composer + thread), not a form grid. Default compo
 
 ## Acceptance Criteria
 
-- [ ] User opens the diary from **Range**, **On Course**, and **Scorecard** and sees the **same** message thread and composer.
-- [ ] No fifth tab appears in `HomeShell`; diary is a modal route / full-screen sheet above the shell.
-- [ ] Adding a scorecard or on-course note (when those fields exist or via “Add note for today”) appends golfer text to SQLite in a table or column linkable in diary prompts (design: `diary_context_notes` or reuse session/round notes with `source` enum).
-- [ ] Opt-in, offline, and **Summarize today** rules from RNGE-022 remain; copy states diary is optional and local range data still saves offline.
-- [ ] Skill tier and demographics from `golfer_profile` inform system prompts only, not separate UI skins.
+- [x] User opens the diary from **Range**, **On Course**, and **Scorecard** and sees the **same** message thread and composer.
+- [x] No fifth tab appears in `HomeShell`; diary is a modal route / full-screen sheet above the shell.
+- [x] Adding a scorecard or on-course note (when those fields exist or via “Add note for today”) appends golfer text to SQLite in a table or column linkable in diary prompts (design: `diary_context_notes` or reuse session/round notes with `source` enum).
+- [x] Opt-in, offline, and **Summarize today** rules from RNGE-022 remain; copy states diary is optional and local range data still saves offline.
+- [x] Skill tier and demographics from `golfer_profile` inform system prompts only, not separate UI skins.
 
 ## Test coverage
 

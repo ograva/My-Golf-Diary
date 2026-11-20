@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | CRSE-035 |
 | **Module** | CRSE — On Course |
-| **Story Ref** | CRSE-007, CRSE-008 (visual economy refinement) |
+| **Story Ref** | CRSE-001, CRSE-002, CRSE-003, CRSE-007, CRSE-008, CRSE-035 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Revision** | r4 — course meta line under the name; Club + Lie as one full-width row of 56dp selectors; Penalty and Mulligan on their own full-width rows (r3: stroke log after Concede / Finish hole; r2: FWY/SIM toggle on course row, stats under hole row, Concede/Finish under Record) |
 | **Complexity** | L |
 | **Depends On** | CRSE-031, CRSE-032, CRSE-033 |

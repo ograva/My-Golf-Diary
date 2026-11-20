@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | MGDV-201 |
 | **Module** | MGDV — V2 profile & onboarding |
-| **Story Ref** | MGDV-2 |
+| **Story Ref** | MGDV-201 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | None |
 
@@ -18,18 +18,18 @@ All writes stay **local-first**; profile extensions remain outside `syncFull` pe
 
 ## Acceptance Criteria
 
-- [ ] On a fresh install (or `onboarding_completed = 0`), the app shows the wizard instead of `HomeShell` until the user completes or taps **Finish later**.
-- [ ] Steps collect **age** (integer, sensible clamp 8–99), **years playing** (integer, 0–80), and **gender** (enum or free-text bucket: prefer fixed choices plus **Prefer not to say**). Empty gender is allowed but wizard copy encourages an answer for AI baseline.
-- [ ] Final step requires **skill tier** ∈ {`beginner`, `amateur`, `seasoned_pro`} with one-line descriptions (neutral, non-gendered copy per UX audit).
-- [ ] **Complete** saves to `golfer_profile`, sets `onboarding_completed = 1`, and opens `HomeShell` (default tab unchanged unless MGDV-202 sets range-first preference).
-- [ ] **Finish later** saves partial answers if any, leaves `onboarding_completed = 0`, and opens `HomeShell`; wizard reappears on next cold start until completed.
-- [ ] No Firebase or network required to finish the wizard.
+- [x] On a fresh install (or `onboarding_completed = 0`), the app shows the wizard instead of `HomeShell` until the user completes or taps **Finish later**.
+- [x] Steps collect **age** (integer, sensible clamp 8–99), **years playing** (integer, 0–80), and **gender** (enum or free-text bucket: prefer fixed choices plus **Prefer not to say**). Empty gender is allowed but wizard copy encourages an answer for AI baseline.
+- [x] Final step requires **skill tier** ∈ {`beginner`, `amateur`, `seasoned_pro`} with one-line descriptions (neutral, non-gendered copy per UX audit).
+- [x] **Complete** saves to `golfer_profile`, sets `onboarding_completed = 1`, and opens `HomeShell` (default tab unchanged unless MGDV-202 sets range-first preference).
+- [x] **Finish later** saves partial answers if any, leaves `onboarding_completed = 0`, and opens `HomeShell`; wizard reappears on next cold start until completed.
+- [x] No Firebase or network required to finish the wizard.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Wizard appears when `onboarding_completed` is false; completing sets flag and shows `shell-nav-bar`. Invalid age/years show inline validation without crash.
-- [ ] **Integration (if needed):** Cold start after Complete does not show wizard again.
-- [ ] **Keys:** `onboarding-wizard-page-{n}`, `onboarding-age-field`, `onboarding-years-field`, `onboarding-gender-{option}`, `onboarding-skill-tier-{tier}`, `onboarding-complete-btn`, `onboarding-finish-later-btn` (add to settings wireframe when Eunice updates).
+- [x] **Unit/widget:** Wizard appears when `onboarding_completed` is false; completing sets flag and shows `shell-nav-bar`. Invalid age/years show inline validation without crash.
+- [x] **Integration (if needed):** Cold start after Complete does not show wizard again.
+- [x] **Keys:** `onboarding-wizard-page-{n}`, `onboarding-age-field`, `onboarding-years-field`, `onboarding-gender-{option}`, `onboarding-skill-tier-{tier}`, `onboarding-complete-btn`, `onboarding-finish-later-btn` (add to settings wireframe when Eunice updates).
 
 ## Dev notes
 

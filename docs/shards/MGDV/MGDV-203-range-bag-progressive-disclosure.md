@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | MGDV-203 |
 | **Module** | BAG + RNGE (cross-cutting) |
-| **Story Ref** | MGDV-2, BAG-010 (revive) |
+| **Story Ref** | MGDV-203, BAG-001, BAG-002, BAG-003, BAG-010 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | MGDV-202 |
 
@@ -22,17 +22,17 @@ Copy aligns with `docs/context/designs/UX_Audit.md` (neutral, non-jargon, 48dp t
 
 ## Acceptance Criteria
 
-- [ ] My Bag cards show shortest, usual (hero tile), best, trend, session count and the swing note on the card for every skill tier; there is no Details button or sheet. Beginner / **Match skill tier** labels read **Shortest · Usual · Best**; full display reads **Min · Avg · Max**. Card height ≤ 140dp at 360dp, text scale 1.0.
-- [ ] Range **simple** mode hides min/max inputs until user expands **More numbers** or toggles full mode in settings; save still writes valid `RangeDrillLog` (when only usual filled, min/max may mirror usual per Architecture blend rules — document in code comment).
-- [ ] AppBar titles: **Range**, **On Course**, **My Bag**, **Scorecard** — no “Fairway HUD” or “Range Drill Instructor” in production build.
-- [ ] Putter excluded from Range club strip unchanged; putting drills deferred to MGDV-3.
-- [ ] All existing ValueKeys used in production (`range-log-this-club`, etc.) remain; add keys only for new toggles.
+- [x] My Bag cards show shortest, usual (hero tile), best, trend, session count and the swing note on the card for every skill tier; there is no Details button or sheet. Beginner / **Match skill tier** labels read **Shortest · Usual · Best**; full display reads **Min · Avg · Max**. Card height ≤ 140dp at 360dp, text scale 1.0.
+- [x] Range **simple** mode hides min/max inputs until user expands **More numbers** or toggles full mode in settings; save still writes valid `RangeDrillLog` (when only usual filled, min/max may mirror usual per Architecture blend rules — document in code comment).
+- [x] AppBar titles: **Range**, **On Course**, **My Bag**, **Scorecard** — no “Fairway HUD” or “Range Drill Instructor” in production build.
+- [x] Putter excluded from Range club strip unchanged; putting drills deferred to MGDV-3.
+- [x] All existing ValueKeys used in production (`range-log-this-club`, etc.) remain; add keys only for new toggles.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Beginner profile hides min/max fields on Range until expand. Full mode shows three yardage fields. Bag title uses **Shortest · Usual · Best** for beginner.
-- [ ] **Integration (if needed):** Save range block in simple mode still updates club avg in SQLite.
-- [ ] **Keys:** `bag-club-card-{clubId}`, `bag-club-edit-{clubId}`, `bag-hero-yards-{clubId}`, `bag-min-yards-{clubId}`, `bag-max-yards-{clubId}`, `bag-trend-{clubId}`, `bag-notes-text-{clubId}`, `bag-notes-add-{clubId}`, `bag-range-logs-{clubId}` (`bag-details-btn-{clubId}` retired), `range-yardage-mode-expand`, `range-usual-yards-field`; retain `Wireframe_MyBag.md` / `Wireframe_Range.md` targets.
+- [x] **Unit/widget:** Beginner profile hides min/max fields on Range until expand. Full mode shows three yardage fields. Bag title uses **Shortest · Usual · Best** for beginner.
+- [x] **Integration (if needed):** Save range block in simple mode still updates club avg in SQLite.
+- [x] **Keys:** `bag-club-card-{clubId}`, `bag-club-edit-{clubId}`, `bag-hero-yards-{clubId}`, `bag-min-yards-{clubId}`, `bag-max-yards-{clubId}`, `bag-trend-{clubId}`, `bag-notes-text-{clubId}`, `bag-notes-add-{clubId}`, `bag-range-logs-{clubId}` (`bag-details-btn-{clubId}` retired), `range-yardage-mode-expand`, `range-usual-yards-field`; retain `Wireframe_MyBag.md` / `Wireframe_Range.md` targets.
 
 ## Dev notes
 

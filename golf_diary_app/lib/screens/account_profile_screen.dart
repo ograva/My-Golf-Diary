@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/account_auth_controller.dart';
 import '../widgets/account_login_sheet.dart';
+import '../widgets/golfer_avatar_circle.dart';
 
 class AccountProfileScreen extends StatefulWidget {
   const AccountProfileScreen({super.key});
@@ -63,6 +64,10 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
         padding: const EdgeInsets.all(24),
         children: [
           if (!session.isDurableAccount) ...[
+            Center(
+              child: GolferAvatarCircle(session: session, radius: 36),
+            ),
+            const SizedBox(height: 16),
             const Text(
               'Your diary is saved on this device only until you sign in.',
             ),
@@ -72,13 +77,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               child: const Text('Sign in'),
             ),
           ] else ...[
-            CircleAvatar(
-              radius: 36,
-              backgroundImage:
-                  session.photoUrl != null ? NetworkImage(session.photoUrl!) : null,
-              child: session.photoUrl == null
-                  ? Text(session.initials, style: const TextStyle(fontSize: 24))
-                  : null,
+            Center(
+              child: GolferAvatarCircle(session: session, radius: 36),
             ),
             const SizedBox(height: 16),
             Text(

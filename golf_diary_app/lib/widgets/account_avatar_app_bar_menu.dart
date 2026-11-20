@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../screens/account_profile_screen.dart';
 import '../screens/account_sync_settings_screen.dart';
 import '../services/account_auth_controller.dart';
+import '../services/golfer_profile_store.dart';
 import 'account_login_sheet.dart';
 import 'diary_sync_runner.dart';
+import 'golfer_avatar_circle.dart';
 
 /// Account avatar replacing the legacy cloud sync icon (SYNC-005).
 class AccountAvatarAppBarMenu extends StatefulWidget {
@@ -60,17 +62,22 @@ class _AccountAvatarAppBarMenuState extends State<AccountAvatarAppBarMenu> {
     await showAccountLoginSheet(context);
   }
 
-  void _openProfile() {
+  /// Pushed routes sit above the shell's [GolferProfileScope]; re-provide it.
+  void _pushWithProfileScope(Widget screen) {
+    final store = GolferProfileScope.maybeOf(context);
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AccountProfileScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => store == null
+            ? screen
+            : GolferProfileScope(store: store, child: screen),
+      ),
     );
   }
 
-  void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AccountSyncSettingsScreen()),
-    );
-  }
+  void _openProfile() => _pushWithProfileScope(const AccountProfileScreen());
+
+  void _openSettings() =>
+      _pushWithProfileScope(const AccountSyncSettingsScreen());
 
   Future<void> _sync() async {
     final session = AccountAuthController.instance.session;
@@ -81,16 +88,6 @@ class _AccountAvatarAppBarMenuState extends State<AccountAvatarAppBarMenu> {
   Widget build(BuildContext context) {
     final session = AccountAuthController.instance.session;
     final durable = session.isDurableAccount;
-    Widget avatarChild;
-    if (durable && session.photoUrl != null) {
-      avatarChild = CircleAvatar(
-        backgroundImage: NetworkImage(session.photoUrl!),
-      );
-    } else if (durable) {
-      avatarChild = CircleAvatar(child: Text(session.initials));
-    } else {
-      avatarChild = const CircleAvatar(child: Icon(Icons.person_outline));
-    }
 
     return PopupMenuButton<String>(
       tooltip: 'Account',
@@ -98,7 +95,7 @@ class _AccountAvatarAppBarMenuState extends State<AccountAvatarAppBarMenu> {
       child: Padding(
         key: const Key('account-avatar-button'),
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: avatarChild,
+        child: GolferAvatarCircle(session: session),
       ),
       onSelected: (value) async {
         switch (value) {

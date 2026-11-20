@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/golfer_avatar.dart';
 import '../models/golfer_profile.dart';
 import '../services/diary_model.dart';
 import '../services/golfer_profile_store.dart';
@@ -33,6 +34,7 @@ class _GolferProfileSettingsScreenState
   GolferProfile _base = const GolferProfile();
   String _gender = '';
   String _skillTier = '';
+  String _avatarChoice = '';
   String _yardageMode = YardageDisplayMode.defaultMode;
   String? _ageError;
   String? _yearsError;
@@ -59,6 +61,7 @@ class _GolferProfileSettingsScreenState
     _yearsController.text = profile.yearsPlaying?.toString() ?? '';
     _gender = profile.gender;
     _skillTier = profile.skillTier;
+    _avatarChoice = profile.avatarChoice;
     _yardageMode = profile.yardageDisplayMode.trim().isEmpty
         ? YardageDisplayMode.defaultMode
         : profile.yardageDisplayMode;
@@ -87,6 +90,7 @@ class _GolferProfileSettingsScreenState
           _yearsController.text.trim().isEmpty,
       gender: _gender,
       skillTier: _skillTier,
+      avatarChoice: _avatarChoice,
       yardageDisplayMode: _yardageMode,
     );
   }
@@ -246,6 +250,21 @@ class _GolferProfileSettingsScreenState
             ),
           ),
           const Divider(height: 32),
+          Text('Avatar', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            'Auto matches your gender and skill tier. A signed-in Google photo '
+            'still shows in the header.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          _AvatarPicker(
+            gender: _gender,
+            skillTier: _skillTier,
+            selected: _avatarChoice,
+            onSelected: (id) => setState(() => _avatarChoice = id),
+          ),
+          const Divider(height: 32),
           Text('Yardage display', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
@@ -300,6 +319,136 @@ class _GolferProfileSettingsScreenState
                 : const Text('Save profile'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AvatarPicker extends StatelessWidget {
+  const _AvatarPicker({
+    required this.gender,
+    required this.skillTier,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String gender;
+  final String skillTier;
+
+  /// Empty string = Auto.
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final auto = defaultGolferAvatar(gender: gender, skillTier: skillTier);
+    final explicit = GolferAvatar.fromId(selected);
+    return Wrap(
+      spacing: 12,
+      runSpacing: 16,
+      children: [
+        _AvatarOption(
+          key: const ValueKey('profile-avatar-auto'),
+          label: 'Auto',
+          avatar: auto,
+          selected: explicit == null,
+          isAuto: true,
+          onTap: () => onSelected(''),
+        ),
+        for (final avatar in golferAvatarPickerOrder(
+          gender: gender,
+          skillTier: skillTier,
+        ))
+          _AvatarOption(
+            key: ValueKey('profile-avatar-${avatar.id}'),
+            label: avatar.label,
+            avatar: avatar,
+            selected: explicit == avatar,
+            onTap: () => onSelected(avatar.id),
+          ),
+      ],
+    );
+  }
+}
+
+class _AvatarOption extends StatelessWidget {
+  const _AvatarOption({
+    super.key,
+    required this.label,
+    required this.avatar,
+    required this.selected,
+    required this.onTap,
+    this.isAuto = false,
+  });
+
+  final String label;
+  final GolferAvatar? avatar;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool isAuto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final image = avatar;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Tooltip(
+          message: label,
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? scheme.primary : Colors.transparent,
+                width: 3,
+              ),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: image == null
+                      ? scheme.surfaceContainerHighest
+                      : Colors.transparent,
+                  backgroundImage:
+                      image == null ? null : AssetImage(image.assetPath),
+                  child: image == null
+                      ? Icon(Icons.person_outline, color: scheme.onSurface)
+                      : null,
+                ),
+                if (isAuto)
+                  Positioned(
+                    bottom: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Auto',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: scheme.onPrimary),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -27,7 +27,7 @@ Future<void> showSwingDiarySheet(
   );
 }
 
-/// Header affordance for Range, On Course, and Scorecard.
+/// The one diary write control: a 48dp book icon in the AppBar.
 class DiaryEntryButton extends StatelessWidget {
   const DiaryEntryButton({
     super.key,

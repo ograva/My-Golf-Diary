@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/golfer_profile.dart';
 import '../services/golfer_profile_store.dart';
@@ -151,7 +152,11 @@ class ClubsScreenState extends State<ClubsScreen> {
         ),
         title: const Text('My Bag'),
         actions: [
-          const SharedHeaderActions(tab: HeaderTabContext.bag),
+          const SharedHeaderActions(
+            tab: HeaderTabContext.bag,
+            diaryEntryKey: 'diary-entry-bag',
+            diarySource: DiaryContextSource.diary,
+          ),
         ],
       ),
       body: Column(

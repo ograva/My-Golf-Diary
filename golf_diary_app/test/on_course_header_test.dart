@@ -92,81 +92,51 @@ void main() {
     GolferSkillTier.amateur,
     GolferSkillTier.seasonedPro,
   ]) {
-    testWidgets('$tier: settings menu sits left with Diary and Invite caddy',
+    testWidgets('$tier: book icon sits left of the avatar; menu has no Diary',
         (tester) async {
       await pumpOnCourse(tester, tier: tier);
 
-      expect(find.byIcon(Icons.auto_stories_outlined), findsNothing);
+      expect(key('oncourse-diary-edge-swipe'), findsNothing);
+      expect(find.byIcon(Icons.auto_stories_outlined), findsOneWidget);
+      expect(key('diary-entry-on-course'), findsOneWidget);
       expect(key('on-course-invite-caddy'), findsNothing);
       expect(menuButton, findsOneWidget);
+
       final menu = tester.getRect(menuButton);
-      expect(menu.right, lessThan(tester.getRect(find.text('On Course')).left));
+      final diary = tester.getRect(key('diary-entry-on-course'));
+      final avatar =
+          tester.getRect(find.byKey(const Key('account-avatar-button')));
       expect(menu.left, lessThan(24));
-      expect(
-          tester.getRect(find.byKey(const Key('account-avatar-button'))).left,
-          greaterThan(390 / 2));
+      expect(menu.right, lessThan(tester.getRect(find.text('On Course')).left));
+      expect(diary.center.dx, greaterThan(390 / 2));
+      expect(diary.right, lessThanOrEqualTo(avatar.left + 1));
+      expect(diary.width, greaterThanOrEqualTo(48));
+      expect(diary.height, greaterThanOrEqualTo(48));
+      expect(avatar.left, greaterThan(390 / 2));
 
       await tester.tap(menuButton);
       await settle(tester);
+      expect(find.text('Diary'), findsNothing);
+      expect(find.text('Swing diary'), findsNothing);
       expect(key('diary-entry-on-course'), findsOneWidget);
-      expect(find.text('Diary'), findsOneWidget);
       expect(key('on-course-invite-caddy'), findsOneWidget);
       expect(find.text('Invite caddy'), findsOneWidget);
     });
   }
 
-  testWidgets('Diary menu item opens the diary sheet', (tester) async {
+  testWidgets('header book icon opens the diary sheet', (tester) async {
     await pumpOnCourse(tester);
-    await tester.tap(menuButton);
-    await settle(tester);
     await tester.tap(key('diary-entry-on-course'));
     await settle(tester);
     expect(find.byType(SwingDiarySheet), findsOneWidget);
     await closeDiary(tester);
+    expect(find.byType(SwingDiarySheet), findsNothing);
   });
 
-  testWidgets('swiping in from the right edge opens the diary', (tester) async {
+  testWidgets('a right-edge swipe does not open the diary', (tester) async {
     await pumpOnCourse(tester);
-    expect(key('oncourse-diary-edge-swipe'), findsOneWidget);
-
     await tester.dragFrom(const Offset(388, 420), const Offset(-160, 0));
     await settle(tester);
-    expect(find.byType(SwingDiarySheet), findsOneWidget);
-    await closeDiary(tester);
     expect(find.byType(SwingDiarySheet), findsNothing);
-  });
-
-  testWidgets('swipes away from the edge and vertical edge drags do not',
-      (tester) async {
-    await pumpOnCourse(tester);
-
-    await tester.dragFrom(const Offset(250, 420), const Offset(-160, 0));
-    await settle(tester);
-    expect(find.byType(SwingDiarySheet), findsNothing);
-
-    await tester.dragFrom(const Offset(388, 500), const Offset(0, -200));
-    await settle(tester);
-    expect(find.byType(SwingDiarySheet), findsNothing);
-
-    await tester.dragFrom(const Offset(388, 420), const Offset(40, 0));
-    await settle(tester);
-    expect(find.byType(SwingDiarySheet), findsNothing);
-  });
-
-  testWidgets('edge strip lets taps reach controls under it', (tester) async {
-    await pumpOnCourse(tester);
-    await tester.tap(key('oncourse-mode-simulator'));
-    await tester.pump();
-    final plus = tester.getRect(key('oncourse-mulligan-step-up'));
-    final strip = tester.getRect(key('oncourse-diary-edge-swipe'));
-    await tester.tapAt(Offset(plus.right - 2, plus.center.dy));
-    for (var i = 0; i < 3; i++) {
-      await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 100)));
-      await tester.pump();
-    }
-    expect(tester.widget<Text>(key('oncourse-mulligan-count')).data, '1');
-    expect(find.byType(SwingDiarySheet), findsNothing);
-    expect(strip.width, lessThanOrEqualTo(16));
   });
 }

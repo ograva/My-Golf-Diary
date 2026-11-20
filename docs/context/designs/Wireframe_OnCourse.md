@@ -19,7 +19,7 @@ Full-bleed `FwyHoleMap` under scrim overlays. **Top gradient band** (`oncourse-t
 
 ```
 ┌─────────────────────────────┐
-│ On Course        [acct][…] │  AppBar · diary edge-swipe
+│ [⋮] On Course  [book][acct] │  book = diary-entry-on-course
 │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│  top overlay (map scrim)
 │ Course · H7 · Par 4 · 168y  │  oncourse-top-overlay
 │ [Live][Manual]  badges…     │  oncourse-gps-live / manual
@@ -35,6 +35,7 @@ Full-bleed `FwyHoleMap` under scrim overlays. **Top gradient band** (`oncourse-t
 └─────────────────────────────┘
 ```
 
+- **Write in the diary** with the header book icon only (`diary-entry-on-course`, `Icons.auto_stories_outlined`, 48dp, immediately left of the account avatar). The leading ⋮ is round tools (invite caddy, concede, finish, GPS, rail side). It does not list Diary. There is no right-edge swipe.
 - **Map** is always the body in FWY mode (`oncourse-map-background`). Overlays use `fwyOverlayText` / `fwySurface` ([`fwy_overlays.dart`](../../../golf_diary_app/lib/widgets/fwy_overlays.dart)).
 - **Plan shot** via rail tiles → bottom sheets for club/lie/aim; GPS on Record only.
 - **Shots sheet** (`oncourse-shots-sheet`) lists `oncourse-shot-row-{n}`; overflow menu holds Concede / Finish ([CRSE-003](../../stories/CRSE/CRSE-003-penalties-mulligans-concede.md)).
@@ -85,7 +86,7 @@ Simulator tier table: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Sim
 
 | Widget | Role |
 | :--- | :--- |
-| `AppBar` + actions | Title, caddy QR, diary, account |
+| `AppBar` + actions | Leading ⋮ for round tools; trailing book icon (`diary-entry-on-course`) then account avatar |
 | Header band | Venue, mode chips, hole stepper, distance chip |
 | Map surface | Satellite/cache/vector + markers (`oncourse-hole-map`) |
 | `ChoiceChip` | Mode, par, club, lie |
@@ -111,6 +112,7 @@ Simulator tier table: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Sim
 | Finish round (final hole) | Snackbar "Round saved on this device" |
 | Vector chip | Swap satellite off; keep markers + shots |
 | New shot saved | Map overlay updates without navigation |
+| Diary book icon | Opens `SwingDiarySheet`. Only write entry on this screen |
 
 ## 6. UX flow
 
@@ -135,6 +137,7 @@ flowchart TD
 | Element | ValueKey | Widget |
 | :--- | :--- | :--- |
 | Sync (legacy) / account | `oncourse-sync-btn` / account menu keys | `IconButton` |
+| Swing diary | `diary-entry-on-course` | `IconButton` (`Icons.auto_stories_outlined`) |
 | Course row | `oncourse-course-name-field` | `VenueNameField` |
 | Mode | `oncourse-mode-course` `oncourse-mode-simulator` | `ChoiceChip` |
 | Hole stepper | `on-course-hole-previous` `on-course-hole-label` `on-course-hole-next` | `IconButton` / `Text` |

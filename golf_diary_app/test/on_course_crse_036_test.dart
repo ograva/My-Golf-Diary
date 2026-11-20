@@ -244,10 +244,8 @@ void main() {
     expect(key('oncourse-finish-hole-btn'), findsNothing);
     expect(key('on-course-map-toggle'), findsNothing);
     expect(key('oncourse-sim-yards-field'), findsNothing);
-
-    final edge = tester.getRect(key('oncourse-diary-edge-swipe'));
-    expect(edge.width, 16);
-    expect(edge.left, greaterThanOrEqualTo(rail.right));
+    expect(key('oncourse-diary-edge-swipe'), findsNothing);
+    expect(key('diary-entry-on-course'), findsOneWidget);
   });
 
   testWidgets('FWY 360x640: rail fits between the top rows and the dock',
@@ -411,11 +409,6 @@ void main() {
     await settleDb(tester);
     expect(find.text('Shots this hole (1) ⌃'), findsOneWidget);
     expect(record().onPressed, isNull, reason: 'pin is stale after Record');
-
-    // Taps in the diary swipe strip never move the pin.
-    await tester.tapAt(const Offset(388, 400));
-    await tester.pump();
-    expect(record().onPressed, isNull);
 
     final pin = tester.getCenter(key('oncourse-manual-pin'));
     await tester.tapAt(pin);

@@ -17,7 +17,7 @@ Amended 2026-11-20: **Option B, stat tiles** (Project store `docs/bag-card-compa
 
 ```
 ┌─────────────────────────────┐
-│ My Bag              [ + ]   │  add club, key add-club-button (as built)
+│ [+] My Bag      [book][acct]│  + add-club-button · book diary-entry-bag
 ├─────────────────────────────┤
 │ [Wood] Hybrid Iron Wedge …  │  horizontal chips, height 48
 ├─────────────────────────────┤
@@ -123,7 +123,8 @@ Range saves update club min/avg/max in SQLite. My Bag must reload when the tab i
 | Add swing note (empty) | `bag-notes-add-{clubId}` | `InkWell` |
 | Range logs / sessions chip | `bag-range-logs-{clubId}` | `ActionChip` |
 | Empty state | `bag-empty-category` | `Text` |
-| Add club | `add-club-button` | `IconButton` (as built) |
+| Add club | `add-club-button` | `IconButton` (leading) |
+| Swing diary | `diary-entry-bag` | `IconButton` (`Icons.auto_stories_outlined`, left of the avatar) |
 | ~~Details~~ | ~~`bag-details-btn-{clubId}`~~ | Retired 2026-11-20 |
 
 ## 8. As built dialogs

@@ -8,18 +8,18 @@ enum HeaderTabContext {
   scorecard,
 }
 
-/// Tier-aware visibility for diary and caddy affordances (MGDV-206 / audit P0).
+/// Tier-aware visibility for the caddy invite. The diary write icon is
+/// always pinned; it is never moved into the overflow (one affordance).
 class HeaderActionPolicy {
   const HeaderActionPolicy({
-    this.showDiaryPinned = false,
-    this.showDiaryInOverflow = false,
+    this.showDiaryPinned = true,
     this.showCaddyPinned = false,
     this.showCaddyInOverflow = false,
     this.usePlayOverflow = false,
   });
 
+  /// Book icon in the AppBar, immediately left of the account avatar.
   final bool showDiaryPinned;
-  final bool showDiaryInOverflow;
   final bool showCaddyPinned;
   final bool showCaddyInOverflow;
   final bool usePlayOverflow;
@@ -30,40 +30,18 @@ class HeaderActionPolicy {
     required bool roundActive,
   }) {
     final tier = profile.skillTier.trim();
-    final beginner =
-        tier.isEmpty || tier == GolferSkillTier.beginner;
     final pro = tier == GolferSkillTier.seasonedPro;
 
     switch (tab) {
       case HeaderTabContext.bag:
-        return const HeaderActionPolicy();
       case HeaderTabContext.range:
-        if (beginner) {
-          return const HeaderActionPolicy(
-            showDiaryInOverflow: true,
-            usePlayOverflow: true,
-          );
-        }
-        return const HeaderActionPolicy(showDiaryPinned: true);
+        return const HeaderActionPolicy();
       case HeaderTabContext.onCourse:
       case HeaderTabContext.scorecard:
-        if (beginner) {
-          return HeaderActionPolicy(
-            showDiaryInOverflow: true,
-            showCaddyInOverflow: roundActive,
-            usePlayOverflow: true,
-          );
-        }
         if (pro) {
-          return HeaderActionPolicy(
-            showDiaryPinned: true,
-            showCaddyPinned: roundActive,
-          );
+          return HeaderActionPolicy(showCaddyPinned: roundActive);
         }
-        return HeaderActionPolicy(
-          showDiaryPinned: true,
-          showCaddyInOverflow: roundActive,
-        );
+        return HeaderActionPolicy(showCaddyInOverflow: roundActive);
     }
   }
 }

@@ -80,7 +80,7 @@ Support the two distinct moments of a real range visit:
 | Widget | Role |
 | :--- | :--- |
 | `IconButton` leading (`range-header-drills-btn`) | Opens `PracticeDrillSheet` (`RNGE-003`) |
-| `IconButton` trailing (`range-swing-diary-btn`) | Opens `SwingDiarySheet` (`RNGE-004`) |
+| `IconButton` trailing (`diary-entry-range`) | Opens `SwingDiarySheet` (`RNGE-004`). Always shown, left of the account avatar |
 | `VenueNameField` | Driving range or simulator autocomplete |
 | Horizontal `ChoiceChip` | Non-putter clubs |
 | `Card` (amber tint) + `TextField` | Per-club **Swing Cue & Mechanics Note** (`_notesController`) |
@@ -129,7 +129,7 @@ flowchart TD
 | Element | ValueKey / Key | Widget |
 | :--- | :--- | :--- |
 | Drills button | `range-header-drills-btn` | `IconButton` leading |
-| Swing diary button | `range-swing-diary-btn` | `IconButton` trailing |
+| Swing diary button | `diary-entry-range` | `IconButton` trailing (`Icons.auto_stories_outlined`, left of the avatar). Always visible. Not in an overflow |
 | Active drill clear | `range-active-drill-clear` | `TextButton` |
 | Wrap-up card | `range-visit-wrapup-card` | `Card` |
 | Visit summary preview | `range-visit-summary-preview` | `Column` / `Widget` |

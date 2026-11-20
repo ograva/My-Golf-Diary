@@ -11,7 +11,7 @@ import 'caddy_invite_app_bar_button.dart';
 import 'caddy_invite_sheet.dart';
 import 'diary_launcher.dart';
 
-/// Trailing AppBar cluster: tier-aware diary/QR + account avatar (SYNC-005).
+/// Trailing AppBar cluster: tier-aware caddy invite, pinned diary icon, account avatar.
 class SharedHeaderActions extends StatelessWidget {
   const SharedHeaderActions({
     super.key,
@@ -60,28 +60,10 @@ class SharedHeaderActions extends StatelessWidget {
       );
     }
 
-    if (policy.showDiaryPinned &&
-        diaryEntryKey != null &&
-        diarySource != null) {
-      actions.add(
-        DiaryEntryButton(
-          entryKey: diaryEntryKey!,
-          diary: diary,
-          store: diaryStore,
-          entrySource: diarySource,
-        ),
-      );
-    }
-
     if (policy.usePlayOverflow) {
       actions.add(
         PlayHeaderOverflowButton(
-          showDiary: policy.showDiaryInOverflow,
           showCaddy: policy.showCaddyInOverflow && roundActive,
-          diaryEntryKey: diaryEntryKey,
-          diary: diary,
-          diaryStore: diaryStore,
-          diarySource: diarySource,
           roundId: roundActive ? roundId : null,
           courseName: courseName ?? '',
           caddyInviteKey: caddyInviteKey,
@@ -119,6 +101,19 @@ class SharedHeaderActions extends StatelessWidget {
       );
     }
 
+    if (policy.showDiaryPinned &&
+        diaryEntryKey != null &&
+        diarySource != null) {
+      actions.add(
+        DiaryEntryButton(
+          entryKey: diaryEntryKey!,
+          diary: diary,
+          store: diaryStore,
+          entrySource: diarySource,
+        ),
+      );
+    }
+
     actions.add(const AccountAvatarAppBarMenu());
 
     return Row(mainAxisSize: MainAxisSize.min, children: actions);
@@ -144,31 +139,20 @@ class PlayHeaderMenuAction {
   final bool dividerBefore;
 }
 
-/// Play-tab overflow menu holding the diary and caddy invite entries.
+/// Play-tab overflow for round utilities (caddy invite, concede, finish).
+/// Diary is not a menu item — the header book icon is the only write entry.
 class PlayHeaderOverflowButton extends StatelessWidget {
   const PlayHeaderOverflowButton({
     super.key,
-    required this.showDiary,
     required this.showCaddy,
-    required this.diaryEntryKey,
-    required this.diary,
-    required this.diaryStore,
-    required this.diarySource,
     required this.roundId,
     required this.courseName,
     required this.caddyInviteKey,
-    this.diaryLabel = 'Swing diary',
     this.extraActions = const [],
   });
 
-  final String diaryLabel;
   final List<PlayHeaderMenuAction> extraActions;
-  final bool showDiary;
   final bool showCaddy;
-  final String? diaryEntryKey;
-  final DiaryModel? diary;
-  final SwingDiaryService? diaryStore;
-  final DiaryContextSource? diarySource;
   final String? roundId;
   final String courseName;
   final String caddyInviteKey;
@@ -186,22 +170,13 @@ class PlayHeaderOverflowButton extends StatelessWidget {
             return;
           }
         }
-        switch (value) {
-          case 'caddy':
-            if (roundId == null) return;
-            await showCaddyInviteSheet(
-              context,
-              roundId: roundId!,
-              courseName: courseName,
-            );
-          case 'diary':
-            if (diarySource == null) return;
-            await showSwingDiarySheet(
-              context,
-              diary: diary,
-              store: diaryStore,
-              entrySource: diarySource,
-            );
+        if (value == 'caddy') {
+          if (roundId == null) return;
+          await showCaddyInviteSheet(
+            context,
+            roundId: roundId!,
+            courseName: courseName,
+          );
         }
       },
       itemBuilder: (context) {
@@ -214,19 +189,6 @@ class PlayHeaderOverflowButton extends StatelessWidget {
                 key: ValueKey(caddyInviteKey),
                 leading: const Icon(Icons.qr_code_2),
                 title: const Text('Invite caddy'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          );
-        }
-        if (showDiary && diaryEntryKey != null) {
-          items.add(
-            PopupMenuItem<String>(
-              value: 'diary',
-              child: ListTile(
-                key: ValueKey<String>(diaryEntryKey!),
-                leading: const Icon(Icons.auto_stories_outlined),
-                title: Text(diaryLabel),
                 contentPadding: EdgeInsets.zero,
               ),
             ),

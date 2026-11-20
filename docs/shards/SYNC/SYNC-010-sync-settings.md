@@ -12,7 +12,7 @@
 
 ## Description
 
-Settings opens from the avatar menu. It shows whether Firebase is configured, the signed-in email or “Not signed in”, the last successful pull, and how many local rows in `kSyncTables` have not uploaded. **Sync now** is the same action as the menu Sync item. An unverified email account can send a verification email from this screen. Change password is not on the screen (reset email is on the login sheet). The golfer skill profile link stays local SQLite and is separate from the Firebase account. There is no units toggle, handicap, or social control.
+Settings opens from the avatar menu. It shows whether Firebase is configured, the signed-in email or “Not signed in”, the last successful pull, and how many local rows in `kSyncTables` have not uploaded. **Sync now** is the same action as the menu Sync item. An unverified email account can send a verification email from this screen. Change password is not on the screen (reset email is on the login sheet). The golfer skill profile link, including the illustrated avatar choice, stays local SQLite and is separate from the Firebase account. There is no units toggle, handicap, or social control.
 
 ## Acceptance Criteria
 

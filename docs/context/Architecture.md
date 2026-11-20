@@ -12,7 +12,7 @@
 
 ## 1. System Overview
 
-**My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v15**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
+**My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v16**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
 
 **Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **Range** ships compiled **`range_sessions`** (`RNGE-005`) and partial **Vertex AI** swing diary (`RNGE-004`). **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`; no Details sheet). Optional **Firebase**: Firestore **`my-golf-diary`** LWW sync for core tables; **Firebase Storage** `course_maps/` for hole packs; **`AccountAvatarAppBarMenu`** (`SYNC-005`) + partial durable sign-in (`SYNC-006`). Web uses the same code path with `sqflite_common_ffi_web` (IndexedDB).
 
@@ -22,7 +22,7 @@ flowchart LR
     UI[Flutter_UI_PWA_and_mobile]
     CAT["Catalogs Venues Coords Drills"]
     LDS[LocalDatabaseService]
-    DB[(SQLite_v15)]
+    DB[(SQLite_v16)]
     PACK[(course_maps_cache)]
     GPS[Geolocator]
     UI --> CAT
@@ -95,7 +95,7 @@ My-Golf-Diary/
     ├── pwa/                          # build ID, update host, published-build probe
     ├── range/                        # club chip helpers
     ├── screens/                      # clubs, fairway_tracker (FWY/SIM), range, scorecard, home_shell, onboarding, account/caddy shells
-    ├── services/                     # local_database_service (v15), course_map_cache_service, account_auth_controller, swing_diary_*, …
+    ├── services/                     # local_database_service (v16), course_map_cache_service, account_auth_controller, swing_diary_*, …
     ├── ui/                           # header_action_policy, yardage_display_copy
     ├── widgets/                      # fwy_hole_map, fwy_overlays, shared_header_actions, account_avatar_app_bar_menu, …
     └── theme/app_theme.dart
@@ -109,6 +109,7 @@ golf_diary_app/ios/Runner/Info.plist
 - **`HomeShell`:** four-tab `NavigationBar` — **My Bag**, **Range**, **On Course** (default index), **Scorecard** — `IndexedStack` preserves tab state (`SHELL-001`).
 - **`OnboardingGate`:** starter wizard (`onboarding_starter_wizard.dart`) until `golfer_profile.onboarding_completed`; PWA `?mode=caddy` bypasses to `CaddyShell`.
 - **Trailing header:** every tab uses **`SharedHeaderActions`** → **`AccountAvatarAppBarMenu`** (`account-avatar-button`: Login, Sync, Profile, Settings — `SYNC-005` shipped). Legacy `sync_cloud_button.dart` remains for tests/reference; production UI is the avatar menu.
+- **Golfer avatar** (`golfer_avatar.dart`, `golfer_avatar_circle.dart`): bundled portraits in `assets/avatars/` (512px PNG, transparent corners). One **`GolferAvatarCircle`** renders the header button, Account profile, Settings, and the diary sheet's "You" rows. **Precedence:** a signed-in Google `photoUrl` wins, as `SYNC-005` already specified. Next comes the illustrated avatar: `golfer_profile.avatar_choice` when set, otherwise female/male × tier (`seasoned_pro` → *seasoned*). Then initials for a signed-in account with no avatar, then the generic icon. Non-binary and prefer-not-to-say golfers get no gendered default and can pick any portrait. The menu re-provides `GolferProfileScope` to the Profile and Settings routes it pushes, so edits refresh the header.
 - **Leading header:** **Bag** — add-club; **Range** — drills icon; **On Course FWY** — `PlayHeaderOverflowButton` (⋯: diary, caddy invite, Concede/Finish, on-course settings); **On Course SIM** — same overflow pattern; **Scorecard** — tier-aware diary/caddy per `HeaderActionPolicy`.
 - **Diary access:** `SwingDiarySheet` via pinned diary button or overflow; **On Course** adds right-edge swipe (`oncourse-diary-edge-swipe`) — must not steal rail/map gutters (`CRSE-036`).
 - **MGDV-203 Bag:** one stat-tile card per club (~136dp); **Details sheet retired**; session count chip → range log sheet.
@@ -130,7 +131,7 @@ golf_diary_app/ios/Runner/Info.plist
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 15** (`LocalDatabaseService._initDB`). Migration chain: v2 club identity + range venue; v3 sync metadata; v4 `golf_rounds`; v5 `practice_drills` + `drill_id`; v6 **`range_sessions`** + `session_id` (`RNGE-005` **shipped**); v7 diary tables + `diary_settings`; v8 `golfer_profile`; v13 scorecard view prefs on profile; v14 caddy session/queue; **v15** `shots.aim_direction` (default `center`), `shots.sim_carry_yards`, `shots.sim_distance_to_hole_yards` (`CRSE-007`/`008` partial).
+**DB:** `golf_diary.db`, currently **version 16** (`LocalDatabaseService._initDB`). Migration chain: v2 club identity + range venue; v3 sync metadata; v4 `golf_rounds`; v5 `practice_drills` + `drill_id`; v6 **`range_sessions`** + `session_id` (`RNGE-005` **shipped**); v7 diary tables + `diary_settings`; v8 `golfer_profile`; v13 scorecard view prefs on profile; v14 caddy session/queue; **v15** `shots.aim_direction` (default `center`), `shots.sim_carry_yards`, `shots.sim_distance_to_hole_yards` (`CRSE-007`/`008` partial); **v16** `golfer_profile.avatar_choice` (`''` = auto).
 
 **Still outside `syncFull` today:** `practice_drills`, `range_sessions`, swing-diary tables, `golfer_profile`, caddy queue — expand when `SYNC-007` lands (PRD).
 
@@ -487,3 +488,4 @@ Background location **not** required for current flows.
 | 1.14 | 2026-11-15 | Athena | MGDV-5 caddy pairing: Firestore `caddy_round_channels`, PWA `mode=caddy`, DB v14 session/queue tables, `recordCaddyStroke`, **`qr_flutter`** for invite QR |
 | 1.15 | 2026-11-19 | Watson | `CRSE-006` map provider decision: Google **Maps Static API** (server-side cache builder) → Firebase Storage → on-device WebP; reject runtime `google_maps_flutter`/Mapbox/OSM/Esri/MapKit for v1; document Reuben GCP enablement and key isolation |
 | 1.16 | 2026-11-20 | Watson | Align with **PRD v1.9**: **supersede 1.15** with **CRSE-041 OSM** packs + `CourseMapCacheService`; **CRSE-036/035** FWY/SIM shells; holing stroke §5.2.1; DB **v15**; `SYNC-005` avatar; MGDV-203 stat tiles; PWA gh-pages workflow; graphify agent rule; known gaps table §8 |
+| 1.17 | 2026-11-20 | Athena | Illustrated golfer avatars: `assets/avatars/`, DB **v16** `golfer_profile.avatar_choice`, `GolferAvatarCircle` precedence (Google photo → illustrated → initials → icon), Settings picker with amateur alternates |

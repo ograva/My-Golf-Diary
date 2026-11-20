@@ -217,7 +217,7 @@ void main() {
       );
       expect(
         find.text(
-          'Skill tier and coaching baseline stay in SQLite and are not part of cloud account profile.',
+          'Skill tier, avatar, and coaching baseline stay in SQLite and are not part of cloud account profile.',
         ),
         findsOneWidget,
       );

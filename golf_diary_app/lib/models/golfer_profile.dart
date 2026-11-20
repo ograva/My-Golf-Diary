@@ -113,6 +113,7 @@ class GolferProfile {
     this.bagNickname = '',
     this.scorecardViewMode = ScorecardViewMode.defaultMode,
     this.scorecardCartHighContrast = 0,
+    this.avatarChoice = '',
     this.isSynced = 0,
     this.updatedAtMs = 0,
   });
@@ -134,6 +135,9 @@ class GolferProfile {
   final String bagNickname;
   final String scorecardViewMode;
   final int scorecardCartHighContrast;
+
+  /// [GolferAvatar.id] picked in Settings; empty = match gender × tier.
+  final String avatarChoice;
   final int isSynced;
   final int updatedAtMs;
 
@@ -169,6 +173,7 @@ class GolferProfile {
     String? bagNickname,
     String? scorecardViewMode,
     int? scorecardCartHighContrast,
+    String? avatarChoice,
     int? isSynced,
     int? updatedAtMs,
   }) {
@@ -190,6 +195,7 @@ class GolferProfile {
       scorecardViewMode: scorecardViewMode ?? this.scorecardViewMode,
       scorecardCartHighContrast:
           scorecardCartHighContrast ?? this.scorecardCartHighContrast,
+      avatarChoice: avatarChoice ?? this.avatarChoice,
       isSynced: isSynced ?? this.isSynced,
       updatedAtMs: updatedAtMs ?? this.updatedAtMs,
     );
@@ -212,6 +218,7 @@ class GolferProfile {
         'bag_nickname': bagNickname,
         'scorecard_view_mode': scorecardViewMode,
         'scorecard_cart_high_contrast': scorecardCartHighContrast,
+        'avatar_choice': avatarChoice,
         'is_synced': isSynced,
         'updated_at_ms': updatedAtMs,
         'deleted': 0,
@@ -241,6 +248,7 @@ class GolferProfile {
           ScorecardViewMode.defaultMode,
       scorecardCartHighContrast:
           map['scorecard_cart_high_contrast'] as int? ?? 0,
+      avatarChoice: map['avatar_choice'] as String? ?? '',
       isSynced: map['is_synced'] as int? ?? 0,
       updatedAtMs: map['updated_at_ms'] as int? ?? 0,
     );

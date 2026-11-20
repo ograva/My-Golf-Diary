@@ -11,7 +11,7 @@ File-per-story product narratives for **Eunice** wireframe coverage and **Poe** 
 | **BAG** | [BAG/](BAG/) | 4 | My Bag categories, stat tiles, notes |
 | **CRSE** | [CRSE/](CRSE/) | 13 | On Course FWY/SIM, map packs, holing stroke |
 | **SCOR** | [SCOR/](SCOR/) | 4 | Grid, editor, cart view |
-| **RNGE** | [RNGE/](RNGE/) | 5 | Drills, blocks, session log, swing diary |
+| **RNGE** | [RNGE/](RNGE/) | 5 | Drills, blocks, session log, diary thread |
 | **SYNC** | [SYNC/](SYNC/) | 10 | Auth, sync, avatar menu |
 | **MGDV** | [MGDV/](MGDV/) | 5 | Onboarding, disclosure, cart epic, caddy |
 | **SHELL** | [SHELL/](SHELL/) | 1 | Tab state |

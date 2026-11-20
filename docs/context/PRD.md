@@ -4,10 +4,13 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
+| 1.11 | Approved (diary thread) | 2026-11-20 | Jason (PM cohort) |
 | 1.9 | Approved (shipped-features audit) | 2026-11-20 | Jason (PM cohort) |
 | 1.8 | Approved (On Course dual-mode) | 2026-11-19 | Jason (PM cohort) |
 | 1.7 | Approved | 2026-11-15 | Jason (PM cohort) |
 | 1.6 | Approved (V2 epics additive) | 2026-11-15 | Jason (PM cohort) |
+
+**PRD revision note (1.11):** `RNGE-004` is one ongoing diary thread: a personal log and an AI sounding board. The existing coach prompt stays and reads diary entries as context. A saved range club block, and a **FWY** or **SIM** round that is finished or left, each write an entry and do not call the model. **Feedback** in the diary submits recent entries and saves the analysis in the thread. A note typed in the diary is saved, then the model replies in that same thread. `RNGE-005` still compiles the range session log and does not start a model call. Architecture §5.7 still describes the previous auto-evaluate path; Watson owns that alignment (§7).
 
 **PRD revision note (1.9):** Aligned with `golf_diary_app/` and `docs/shards/` as of 2026-11-20. Documents shipped **CRSE-035/036** On Course layouts (SIM compact stack; **FWY** full-bleed map shell), **CRSE-041** OSM stylized hole **map packs** via Firebase Storage, **Finish Hole holing stroke**, header **account avatar** (**SYNC-005**, partial **SYNC-006** sign-in), **MGDV-201/202/203** onboarding + skill-tier Bag stat-tile cards and Range yardage disclosure, **MGDV-401** scorecard cart view, partial **RNGE-004** Vertex swing diary, tier-aware **diary** entry + On Course edge swipe, **PWA** GitHub Pages deploy (`.github/workflows/publish-pwa.yml`). Map imagery matches **Architecture v1.16** (OSM-produced packs via `tools/map_pack/`).
 
@@ -19,7 +22,7 @@
 
 ## 1. Executive Summary
 
-My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub Pages): **My Bag** (skill-tier **stat-tile** club cards—shortest / usual / best / trend, swing notes, range session history—no Details sheet), **Range** (drill catalog, tier-aware yardage entry, block saves, session note, **Save and evaluate session** → compiled session log), **On Course** (**FWY** vs **SIM** dual mode—SIM uses a compact scroll + bottom sheets [`CRSE-035`]; **FWY** uses a full-bleed stylized hole map with side rail, Live/Manual GPS, aim ring, and stand-in holes when unsurveyed [`CRSE-036`]), and **Scorecard** (classic grid or **cart** scoring for sun-friendly use). **Vertex AI swing diary** (`RNGE-004`) is opt-in and partially wired (evaluation, readable log, cross-tab diary entry). **Account avatar** in every tab AppBar (`SYNC-005`) replaces the legacy cloud icon; Google and email/password sign-in (`SYNC-006`) ship for durable accounts, with linking behavior per `SYNC-008`. Anonymous Firestore sync remains the default until the player signs in. V2 epics **MGDV-2…7** extend the same core (onboarding wizard, caddy PWA pairing, tournaments). Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
+My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub Pages): **My Bag** (skill-tier **stat-tile** club cards—shortest / usual / best / trend, swing notes, range session history—no Details sheet), **Range** (drill catalog, tier-aware yardage entry, block saves, session note, **Save and evaluate session** → compiled session log), **On Course** (**FWY** vs **SIM** dual mode—SIM uses a compact scroll + bottom sheets [`CRSE-035`]; **FWY** uses a full-bleed stylized hole map with side rail, Live/Manual GPS, aim ring, and stand-in holes when unsurveyed [`CRSE-036`]), and **Scorecard** (classic grid or **cart** scoring for sun-friendly use). **Diary** (`RNGE-004`) is one ongoing thread: a personal log and an AI sounding board. Range blocks and finished or left **FWY**/**SIM** rounds write entries without a model call. **Feedback** and notes typed in the diary use the existing coach prompt, with those entries as context, and save the reply in the same thread. **Account avatar** in every tab AppBar (`SYNC-005`) replaces the legacy cloud icon; Google and email/password sign-in (`SYNC-006`) ship for durable accounts, with linking behavior per `SYNC-008`. Anonymous Firestore sync remains the default until the player signs in. V2 epics **MGDV-2…7** extend the same core (onboarding wizard, caddy PWA pairing, tournaments). Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
 
 ---
 
@@ -28,7 +31,7 @@ My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub
 | Persona | Job | Design implication |
 | :--- | :--- | :--- |
 | **Rounds-first Rory** | Log shots + honest score between swings, with live distance to the pin and visual stroke tracking when course coordinates exist | CRSE + SCOR consistency; zero clutter on unmapped courses |
-| **Range-first Riley** | Pick structured practice drills, log block aggregates across several clubs, jot a session review, compile a session log, and review Vertex AI swing diary takeaways | RNGE drill catalog + RNGE → BAG path + compiled session log (`RNGE-005`) + future AI Swing Diary (`RNGE-004`) |
+| **Range-first Riley** | Pick structured practice drills, log block aggregates across several clubs, jot a session review, compile a session log, and keep one diary that records those blocks and answers when asked | RNGE drill catalog + RNGE → BAG path + compiled session log (`RNGE-005`) + diary thread (`RNGE-004`) |
 | **Bag-first Blake** | Pre-round yardages + cues | BAG clarity + persistence |
 
 Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA. **Account avatar and sign-in** (`SYNC-005`/`SYNC-006`) ship today; **full multi-device diary parity** (compiled sessions, drills, diary rows) tracks `SYNC-007`–`SYNC-010`. It does not add a fourth persona, and it does not require an account before local play.
@@ -66,7 +69,7 @@ As a **beginner-tier** player, I want **one trusted carry number** and **Balls h
 
 **MGDV-2-003 — Swing diary as chat area (not a tab)** *(partial — RNGE-004)*  
 As **Riley/Rory**, I want **one diary thread** reachable from Range, On Course, and Scorecard so notes and AI evaluation stay continuous.  
-**AC:** (1) No fifth bottom tab. (2) `SharedHeaderActions` + `PlayHeaderOverflowButton` open `SwingDiarySheet`; On Course adds right-edge swipe (`oncourse-diary-edge-swipe`). (3) Thread persists in `swing_diary_messages`, `range_evaluations`, `diary_context_notes`. (4) Tier-aware policy hides or overflows diary/caddy affordances (`HeaderActionPolicy`). (5) Full RNGE-004 token ceiling and periodic summary behavior remain as specified below.
+**AC:** (1) No fifth bottom tab. (2) `SharedHeaderActions` + `PlayHeaderOverflowButton` open `SwingDiarySheet`; On Course adds right-edge swipe (`oncourse-diary-edge-swipe`). (3) One thread holds golfer notes, triggered range and round entries, and model replies. (4) Tier-aware policy hides or overflows diary/caddy affordances (`HeaderActionPolicy`). (5) Triggered entries do not call the model. **Feedback** and typed notes do, under the RNGE-004 token ceiling below.
 
 ### BAG — My Bag
 
@@ -90,7 +93,7 @@ As **Riley**, I want **per-club notes** so **cues travel to the round**.
 
 ### CRSE — On Course
 
-**Overview:** One **On Course** screen (`fairway_tracker_screen.dart`) with **FWY** (fairway / outdoor) vs **SIM** (simulator) toggle (`oncourse-mode-toggle`; segment keys `oncourse-mode-course` / `oncourse-mode-simulator`, labels **FWY** / **SIM**). Shared: active round, course summary sheets, hole picker, par chips, penalties, mulligans, concede, **Finish hole** with **holing stroke** (see `CRSE-004`), tier-aware header (**diary**, **caddy QR**, **account avatar**). **SIM** [`CRSE-035` shipped]: single-scroll compact stack + modal bottom sheets for club/lie/course/hole/par; Record / Concede / Finish dock on first viewport; optional carry / to-hole / notes via chips. **FWY** [`CRSE-036` shipped]: full-bleed `FwyHoleMap` background (OSM stylized pack from Firebase Storage when available, else vector line or **stand-in** hole); top overlay scrim; side **rail** (club / lie / aim / pen / mul); **Record shot at ball** only in dock; shots sheet; Live vs **Manual GPS**; aim ring; double-par prompt; Concede/Finish in overflow + hole sheet — **no** legacy `on-course-map-toggle` or embedded tabular HUD card on FWY.
+**Overview:** One **On Course** screen (`fairway_tracker_screen.dart`) with **FWY** (fairway / outdoor) vs **SIM** (simulator) toggle (`oncourse-mode-toggle`; segment keys `oncourse-mode-course` / `oncourse-mode-simulator`, labels **FWY** / **SIM**). Shared: active round, course summary sheets, hole picker, par chips, penalties, mulligans, concede, **Finish hole** with **holing stroke** (see `CRSE-004`), tier-aware header (**diary**, **caddy QR**, **account avatar**). **SIM** [`CRSE-035` shipped]: single-scroll compact stack + modal bottom sheets for club/lie/course/hole/par; Record / Concede / Finish dock on first viewport; optional carry / to-hole / notes via chips. **FWY** [`CRSE-036` shipped]: full-bleed `FwyHoleMap` background (OSM stylized pack from Firebase Storage when available, else vector line or **stand-in** hole); top overlay scrim; side **rail** (club / lie / aim / pen / mul); **Record shot at ball** only in dock; shots sheet; Live vs **Manual GPS**; aim ring; double-par prompt; Concede/Finish in overflow + hole sheet — **no** legacy `on-course-map-toggle` or embedded tabular HUD card on FWY. Finishing the round, or leaving it, in **FWY** or **SIM** writes one diary entry (course, mode, score, short shot summary) and does not call the model (`RNGE-004`).
 
 | Concern | FWY (fairway) mode | SIM (simulator) mode |
 | :--- | :--- | :--- |
@@ -170,7 +173,7 @@ As **Rory**, I want **large tap targets for riding in a cart** so **I can update
 
 ### RNGE — Range
 
-**Overview:** Header left-side drill selector drawer/sheet, non-putter club, **shot count**, min/max/avg fields, per-club notes, **save** `RangeDrillLog`, an overall **session note**, and a **Save and evaluate session** action that compiles the visit’s clubs, yardages, drills, per-club notes, and session note into a persisted **session log** that feeds the future Vertex AI Golf Swing Diary (`RNGE-004`).
+**Overview:** Header left-side drill selector drawer/sheet, non-putter club, **shot count**, min/max/avg fields, per-club notes, **save** `RangeDrillLog`, an overall **session note**, and a **Save and evaluate session** action that compiles the visit’s clubs, yardages, drills, per-club notes, and session note into a persisted **session log** (`RNGE-005`). Each saved club block also writes a diary entry without calling the model (`RNGE-004`).
 
 **RNGE-001 — Club + shot block**  
 As **Riley**, I want **club + shot counter** so **the drill matches my ball count**.  
@@ -178,41 +181,43 @@ As **Riley**, I want **club + shot counter** so **the drill matches my ball coun
 
 **RNGE-002 — Enter aggregates + save**  
 As **Riley**, I want **min/max/avg + notes + save** so **each club block is recorded**.  
-**AC:** (1) Fields parse to `RangeDrillLog` with club, counts, venue name, timestamp. (2) Default shot count 10 if counter zero per code. (3) Success snackbar. (4) Bad/non-numeric input fails safely (no crash). (5) After save, counter clears / reload per implemented UX so the player can switch clubs and record additional blocks during the same range visit.
+**AC:** (1) Fields parse to `RangeDrillLog` with club, counts, venue name, timestamp. (2) Default shot count 10 if counter zero per code. (3) Success snackbar. (4) Bad/non-numeric input fails safely (no crash). (5) After save, counter clears / reload per implemented UX so the player can switch clubs and record additional blocks during the same range visit. (6) Saving the block writes one diary entry for that club (`RNGE-004`) and does not call the model.
 
 **RNGE-003 — Structured practice drill catalog & custom drill manager**  
 As **Riley**, I want **a list of practice drills accessible from a small icon on the left side of the Range header—with a short description, step-by-step instructions, and the ability to add my own drills or delete ones I don't like** so **my range sessions have clear structure**.  
 **AC:** (1) A compact icon button on the left side of the Range AppBar (`ValueKey('range-header-drills-btn')`) opens the Practice Drills sheet/drawer. (2) The list is pre-populated from [`Range_Drills.md`](./Range_Drills.md), displaying each drill's title, category, and short description, and expanding on tap to show the numbered step-by-step instructions. (3) Selecting a drill links or copies the drill title/cue into the active Range session so the user can follow the steps and log their block. (4) Users can **add a custom drill** (title, category, short description, step-by-step instructions) and **delete any drill** (custom or seeded) they do not like, with changes persisted locally in SQLite (and sync-ready via tombstones/flags).
 
 **RNGE-005 — Session note & compiled range session log (Save and evaluate)**  
-As **Riley**, I want **to jot down a personal session note and compile all the clubs, yardages, drills, and per-club cues from my range visit into one session log when I tap Save and evaluate** so **I have a complete record of how the session went and a structured input ready for Vertex AI evaluation**.  
-**AC:** (1) **Session note field:** Range provides a dedicated session-level note input (`ValueKey('range-session-note-field')`) distinct from the per-club Swing Cue & Mechanics Note, allowing the golfer to write overall thoughts and a personal review of the range visit; draft text survives switching between club chips during the active visit. (2) **Multi-club & drill compilation:** Tapping **Save and evaluate session** (`ValueKey('range-save-evaluate-session-btn')`) compiles the active range visit into a persisted **Range Session Log** entry containing: timestamp/date, venue name, the session note, and the list of recorded `RangeDrillLog` blocks from that visit (each with club name/id, shot count, min/max/avg yards, per-club tempo/mechanics note, and linked practice drill title/steps when used). If the user has unsaved block inputs or only a session note, the action either flushes the pending block first or saves a note-only session log safely without losing data. (3) **Session log view:** Compiled session logs are persisted locally in SQLite (and sync-ready) and displayed in the Range session log (`ValueKey('range-session-log-list')`) so the golfer can review the session note alongside the clubs and drills hit in that session. (4) **Vertex AI evaluation handoff:** The compiled session log serves as the primary "today's session" payload for `RNGE-004`; when Vertex AI evaluation is wired and online, **Save and evaluate session** passes the compiled session log directly into the evaluation flow, and when offline or before `RNGE-004` is enabled, it saves the compiled session log locally and confirms that the session is stored for later evaluation.
+As **Riley**, I want **to jot down a personal session note and compile all the clubs, yardages, drills, and per-club cues from my range visit into one session log when I tap Save and evaluate** so **I have a complete record of how the session went**.  
+**AC:** (1) **Session note field:** Range provides a dedicated session-level note input (`ValueKey('range-session-note-field')`) distinct from the per-club Swing Cue & Mechanics Note, allowing the golfer to write overall thoughts and a personal review of the range visit; draft text survives switching between club chips during the active visit. (2) **Multi-club & drill compilation:** Tapping **Save and evaluate session** (`ValueKey('range-save-evaluate-session-btn')`) compiles the active range visit into a persisted **Range Session Log** entry containing: timestamp/date, venue name, the session note, and the list of recorded `RangeDrillLog` blocks from that visit (each with club name/id, shot count, min/max/avg yards, per-club tempo/mechanics note, and linked practice drill title/steps when used). If the user has unsaved block inputs or only a session note, the action either flushes the pending block first or saves a note-only session log safely without losing data. (3) **Session log view:** Compiled session logs are persisted locally in SQLite (and sync-ready) and displayed in the Range session log (`ValueKey('range-session-log-list')`) so the golfer can review the session note alongside the clubs and drills hit in that session. (4) **Diary handoff:** Compiling the session log does not call the model. Per-club diary entries are already written when each block is saved (`RNGE-004`). Online and offline, the action confirms the session log is stored on this device.
 
-**RNGE-004 — Vertex AI range evaluation and Golf Swing Diary** *(partial — shipped core, polish ongoing)*  
-As **Riley**, I want **my range sessions and notes assessed in a continuous diary** so **I can see whether cues and yardages are moving**.  
-**AC (shipped):** (1) Opt-in via `diary_settings`; `SwingDiarySheet` + `VertexDiaryModel` (`FirebaseAI.agentPlatform()`) when Firebase/App Check available. (2) Entry from Range, On Course (overflow + edge swipe), Scorecard via `SharedHeaderActions`; not a fifth tab. (3) **Save and evaluate session** may trigger evaluation when online; offline stores `range_sessions` and confirms. (4) Evaluations and chat in `range_evaluations` / `swing_diary_messages`; **evaluation log** readable in-sheet (`diary-evaluation-log`). (5) Golfer profile pillars feed `systemInstruction`; distill baseline from golfer notes. **Still open:** full 250k-token compaction policy in production prompts, navigation polish, and cost gate at ~1,000 users (see §7).
+**RNGE-004 — One diary thread (personal log and AI sounding board)** *(partial — thread model agreed; coach prompt already shipped)*  
+As **Riley** (and **Rory** on the course), I want **one ongoing diary** that keeps **my notes and an AI sounding board in the same thread** so **practice and rounds are logged as I go, and coaching shows up when I ask**.  
+**AC:** (1) **One thread.** Personal notes, triggered entries, and model replies are entries in a single diary. The thread opens from Range, On Course (overflow and edge swipe), and Scorecard. It is not a fifth tab. Entries stay on device and can be re-read offline. (2) **Existing prompt, plus diary context.** Model calls keep the current coach system instruction (biomechanics / physio / caddie method, golfer profile pillars, bag, venues) via `VertexDiaryModel` (`FirebaseAI.agentPlatform()`) when Firebase and App Check are available. They do not add a second persona or a player API key. Each call includes diary entries as context, inside the existing ~250,000-token ceiling and periodic-summary rule. Opt-in stays a local `diary_settings` choice. Vertex stays project-billed. (3) **Triggered entries do not call the model.** Saving a range drill block for one club writes one entry whether or not the golfer wrote a note. The entry holds club, drill, result (shot count and yardages), and the note when one was written. Finishing a **FWY** or **SIM** round, or leaving that round, writes one entry with course, mode, score, and a short shot summary. Neither write calls Vertex. **Save and evaluate session** (`RNGE-005`) still only compiles the range session log. (4) **Feedback.** A **Feedback** button in the diary (`diary-feedback-btn`) submits recent entries, within the token ceiling. The model returns an analysis. That analysis is saved as an entry in the same thread. Feedback is how a run of triggered entries is sent for coaching. (5) **Direct entries.** Text the golfer types in the diary (`diary-composer-field`, `diary-send-btn`) is saved as an entry first. The model then reads the thread, including that entry, and the reply is saved in the same thread on that turn. Offline, or before opt-in, the typed entry remains and no model call is made until Vertex can run. **Still with Watson (§7):** Architecture §5.7 still starts a model call from **Save and evaluate session**. Live-prompt compaction and the ~1,000-user cost gate are unchanged.
 
 ```mermaid
 flowchart LR
-  subgraph Range_Tab [Range Tab]
-    Blocks["Club blocks + per-club cues + drills"]
-    SessionNote["Personal session note"]
-    SessionLog["Compiled Session Log (RNGE-005)"]
-    History["Earlier sessions, raw while the prompt fits"]
-    Brief["Progress brief and per-club tally, after the ceiling"]
-    Blocks --> SessionLog
-    SessionNote --> SessionLog
+  subgraph Writes [Logged without a model call]
+    Block["Range block saved\nclub, drill, result, note"]
+    Round["FWY or SIM round\nfinished or left"]
   end
-  subgraph Vertex [Vertex AI, project billed]
-    Eval["Evaluation of session against past focus"]
+  subgraph Thread [One diary thread]
+    Entries["Personal log and replies"]
   end
-  subgraph Log [Readable log]
-    Rows["Saved evaluations and periodic summaries"]
+  subgraph Ask [Model calls]
+    Feedback["Feedback button"]
+    Typed["Typed diary note"]
+    Coach["Existing coach prompt\nplus diary entries"]
+    Reply["Analysis or reply\nsaved in the thread"]
   end
-  SessionLog --> Eval
-  History --> Eval
-  Brief --> Eval
-  Eval --> Rows
+  Block --> Entries
+  Round --> Entries
+  Entries --> Feedback
+  Feedback --> Coach
+  Typed --> Entries
+  Typed --> Coach
+  Coach --> Reply
+  Reply --> Entries
 ```
 
 ### SYNC — Cloud sync (optional)
@@ -270,9 +275,9 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 4. **Adjust** → penalties / mulligans / concede (SIM dock or FWY rail/overflow); **Finish Hole** adds holing stroke when appropriate and advances par.  
 5. **Verify** → Scorecard: **Classic** grid or **Cart** scoring; tap hole to edit.  
 6. **Range — Select Drill** → tap the left header icon on Range to open the **Practice Drills** list ([`Range_Drills.md`](./Range_Drills.md)), read the step-by-step explainer (or add/delete custom drills), and apply a drill to the session.  
-7. **Range — Log Club Blocks** → pick a club, count swings, enter min/max/avg and per-club cue notes, and save the block; repeat across several clubs and drills during the range visit.  
-8. **Range — Session Note & Save and Evaluate** → jot down an overall **session note** (personal review of how the session went) and tap **Save and evaluate session** to compile all club blocks, drill info, per-club notes, and the session note into a single **session log** (`RNGE-005`).  
-9. **Range — Swing Diary** → open diary from header or (On Course) edge swipe; opt in; evaluate session or ask follow-ups; read **evaluation log** offline.  
+7. **Range — Log Club Blocks** → pick a club, count swings, enter min/max/avg and per-club cue notes, and save the block. Each save writes a diary entry (club, drill, result, and the note when present) and does not call the AI. Repeat across clubs and drills during the visit.  
+8. **Range — Session note and compile** → jot an overall **session note** and tap **Save and evaluate session** to compile the visit into one **session log** (`RNGE-005`). The compile stores the log and does not call the model.  
+9. **Diary** → open the one thread from the header or, on On Course, the edge swipe. Read triggered entries offline. Tap **Feedback** to send recent entries and keep the analysis in the thread. Type a note to save it and receive a reply in the same thread.  
 10. **Account & backup** → **Account avatar** on any tab: sign in (Google/email), Sync, Profile, Settings; anonymous play still works. Map packs download from Firebase Storage when online. **PWA** at `https://<owner>.github.io/My-Golf-Diary/` via CI publish.  
 11. **Caddy (pilot)** → golfer invites caddy QR; caddy opens PWA `?mode=caddy` (On Course + Scorecard tabs).  
 12. **Next round** → new round from scorecard or active round on On Course.
@@ -287,7 +292,7 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 | **Web / PWA** | Flutter web build publishes to **gh-pages** (workflow `publish-pwa.yml` on `golf_diary_app/**` changes); base href `/My-Golf-Diary/`; sqflite FFI web assets required. Service worker prompts on update (`pwa/`). |
 | **Security / privacy** | No keys in source; on-device SQLite; Firestore and Firebase Storage rules before production sync. Swing-diary calls use Vertex AI billed to the project. Players do not supply a Gemini key. Future accounts (`SYNC-006`) use Firebase Auth only: passwords never sit in SQLite or logs, email/password accounts verify before the first cloud push, and rules stay `request.auth.uid == userId`. |
 | **Accessibility** | Primary taps ≥48dp where feasible; theme contrast; respect OS font scale on core screens. |
-| **Offline** | Bag, fairway, scorecard, range, and seeded/custom drill catalog fully usable offline; distance-to-hole works offline via device GPS + bundled coordinates; **downloaded** OSM map packs render offline on FWY; vector/stand-in fallback without packs; Vertex diary requires connectivity. Sign-in, sync, and map pack **first download** need a network. |
+| **Offline** | Bag, fairway, scorecard, range, and seeded/custom drill catalog fully usable offline; distance-to-hole works offline via device GPS + bundled coordinates; **downloaded** OSM map packs render offline on FWY; vector/stand-in fallback without packs; triggered diary entries (range block, finished or left round) save with no network. **Feedback** and typed-note replies need Vertex connectivity; the entries themselves stay on device. Sign-in, sync, and map pack **first download** need a network. |
 | **Location** | Request when recording or showing live hole distance; handle denied/deniedForever; automatically hide distance-to-hole on unmapped courses or Simulator mode. |
 | **Battery** | Single position read per shot by default; live distance-to-hole uses a throttled/distance-filtered location stream (`distanceFilter` ≥ 2–5m) active only while On Course is visible on a mapped hole in Course mode. |
 
@@ -320,7 +325,7 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 | Map pack coverage (% courses with OSM packs), manifest versioning, and Storage layout (`CRSE-041`); reconcile PRD OSM packs vs Architecture §5.5 Google Static | Watson |
 | Simulator shot optional columns (carry, distance-to-hole, stroke note) vs JSON payload on `ShotRecord` (`CRSE-007`) | Watson |
 | Aim-bearing UX and persistence on `ShotRecord` (`CRSE-008`) | Eunice + Watson |
-| Where the saved evaluation and periodic-summary log appears in navigation (`RNGE-004`) | Jason + Eunice |
+| Align Architecture §5.7 with PRD 1.11: diary writes on a range block and on a finished or left FWY/SIM round do not call the model; the existing coach prompt takes diary-thread entries as context; **Feedback** and typed notes are the model calls, and each reply is an entry in that thread (`RNGE-004`) | Watson |
 | What replaces project-billed Vertex AI if the diary reaches about 1,000 people | Jason + Watson |
 | iOS **Info.plist** location strings | Watson |
 | If iOS App Store review requires Sign in with Apple whenever Google sign-in is offered, add it before the iOS ship of `SYNC-006`. Product decision until then: Google and email/password only | Jason + Watson |
@@ -347,7 +352,7 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 | Shots per 18-equivalent | Local query / research |
 | Complete 18-hole rounds | `round_scores` completion stats |
 | RNGE saves / user / month | `range_drills` club blocks + compiled range session logs (`RNGE-005`) + % of sessions using a structured drill (`RNGE-003`) |
-| Swing diary use (future) | Share of compiled range session logs (`RNGE-005`) that produce a saved evaluation, and whether players reopen the evaluation log (`RNGE-004`) |
+| Diary thread use | Local count of thread entries by kind (range block, FWY/SIM round, golfer note, model reply) and the share of days with a **Feedback** analysis (`RNGE-004`) |
 | Diary recovered on a second device (future) | Among players who create a Google or email account, share who complete a successful Sync on a second install within 30 days. Count Firebase Auth users against distinct installs; no new analytics SDK in this story (`SYNC-007`) |
 
 Interim: **5+ interviews** on “log at cart/bag” and “card matches round.”
@@ -369,3 +374,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.8 | 2026-11-19 | **On Course dual-mode enhancement (Reuben):** refine `CRSE-001`/`CRSE-002`/`CRSE-004` for Course vs Simulator chips; add `CRSE-007` simulator post-shot logging (optional carry, distance-to-hole, stroke notes), `CRSE-008` plan + record-at-ball + stroke segments, `CRSE-009` map/satellite HUD markers, `CRSE-011` unmapped tabular fallback; tie map stack to **MGDV-18**; wireframe `ValueKey`s from `Wireframe_OnCourse.md` |
 | 1.9 | 2026-11-20 | **Shipped-features audit (Jason):** document **CRSE-035/036** layouts, **CRSE-041** OSM map packs, holing stroke, **BAG-010** stat tiles, **SCOR-004** cart, **SYNC-005/006** avatar + sign-in, partial **RNGE-004**, **MGDV-201/203**, PWA publish; FWY/SIM naming; flag Architecture map-provider drift |
 | 1.10 | 2026-11-20 | `SYNC-005` AC(1): illustrated golfer avatars (gender × tier, amateur alternates, Settings picker); Google photo keeps precedence |
+| 1.11 | 2026-11-20 | **Diary thread (`RNGE-004`):** one ongoing personal log and AI sounding board. Triggered entries on each range club block and when a FWY or SIM round is finished or left, with no model call. **Feedback** and typed notes use the existing coach prompt with diary entries as context, and the reply is saved in the same thread. `RNGE-005` compile does not start evaluation |

@@ -4,47 +4,48 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.15 | Active | 2026-11-19 | Watson |
+| 1.16 | Active | 2026-11-20 | Watson |
 
-**Inputs:** [`PRD.md`](./PRD.md) v1.5 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md).
+**Inputs:** [`PRD.md`](./PRD.md) v1.9 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · shards **`CRSE-035`–`036`**, **`CRSE-041`**.
 
 ---
 
 ## 1. System Overview
 
-**My Golf Diary** is a **local-first** Flutter app under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`). **On Course** uses **GPS** (`geolocator`): each **`ShotRecord`** stores ball position; segment distance is **Haversine** via `Geolocator.distanceBetween` (meters) converted to **yards** before save. When the selected course and hole have surveyed coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) and the HUD is in `Course` mode, a distance-filtered GPS stream computes live yards to the green (`CRSE-005`).
+**My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v15**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
 
-**Scoring** is **`round_scores`** (per hole), paired with **`golf_rounds`** metadata (DB v4). **Range** combines a seeded + user-editable **Practice Drills** catalog (`RNGE-003`, [`Range_Drills.md`](./Range_Drills.md)) with 10-ball club block logging (`range_drills`), a visit-level **session note**, and a compiled **Range Session Log** (`RNGE-005`, `range_sessions`) created when the golfer taps **Save and evaluate session**. Optional **Firebase** syncs dirty rows with Firestore database **`my-golf-diary`** under **`users/{uid}/{table}/{docId}`**. Sync is pull-then-push, last-write-wins on `updatedAtMs`. Web SQLite (IndexedDB) uses the same path.
-
-Future roadmap capabilities (`CRSE-006` cached hole map view and `RNGE-004` Vertex AI swing diary) layer onto this local-first core without breaking offline play; compiled `range_sessions` entries serve as the structured payload handed off to `RNGE-004`.
+**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **Range** ships compiled **`range_sessions`** (`RNGE-005`) and partial **Vertex AI** swing diary (`RNGE-004`). **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`; no Details sheet). Optional **Firebase**: Firestore **`my-golf-diary`** LWW sync for core tables; **Firebase Storage** `course_maps/` for hole packs; **`AccountAvatarAppBarMenu`** (`SYNC-005`) + partial durable sign-in (`SYNC-006`). Web uses the same code path with `sqflite_common_ffi_web` (IndexedDB).
 
 ```mermaid
 flowchart LR
   subgraph device [Device_Local_First]
-    UI[Flutter_UI]
-    CAT["Catalogs (Venues, Coords, Drills)"]
+    UI[Flutter_UI_PWA_and_mobile]
+    CAT["Catalogs Venues Coords Drills"]
     LDS[LocalDatabaseService]
-    DB[(SQLite_v7)]
-    CACHE[(Local_Map_Cache)]
+    DB[(SQLite_v15)]
+    PACK[(course_maps_cache)]
     GPS[Geolocator]
     UI --> CAT
     UI --> LDS
     LDS --> DB
-    GPS -->|"Single read (Shot) / Filtered stream (CRSE-005)"| UI
-    CACHE -->|"Offline hole map (CRSE-006)"| UI
+    GPS -->|"Shot read + CRSE-005 stream"| UI
+    PACK -->|"FwyHoleMap offline CRSE-006"| UI
+  end
+  subgraph build [Owner_only_not_in_app]
+    MP[tools_map_pack_OSMPNG]
   end
   subgraph cloud [Optional_Cloud_and_AI]
     FS[(Firestore_my_golf_diary)]
-    FST[(Firebase_Storage_Course_Maps)]
-    GMAPS[Google_Maps_API]
-    GEMINI["Vertex_AI_Gemini (RNGE-004)"]
+    FST[(Firebase_Storage_course_maps)]
+    GEMINI["Vertex_AI RNGE-004"]
   end
+  MP -->|admin_upload| FST
   CS[CloudSyncService] --> FS
   UI --> CS
-  GMAPS -->|"Fetch & cache per course"| FST
-  FST -->|"Sync course map pack"| CACHE
-  DB -->|"Compiled range_sessions + drill blocks (RNGE-005)"| GEMINI
-  GEMINI -->|"Session evaluation & Swing Diary chat"| UI
+  FST -->|"Auth getData pack download"| PACK
+  DB -->|"range_sessions RNGE-005"| GEMINI
+  GEMINI --> SwingDiarySheet
+  SwingDiarySheet --> UI
 ```
 
 ---
@@ -58,49 +59,59 @@ flowchart LR
 | path | `^1.9.0` | DB & local cache paths |
 | geolocator | `^14.1.2` | Single-shot GPS capture, live distance-to-hole stream (`CRSE-005`), & `distanceBetween` |
 | firebase_core | `^5.1.0` | Optional Firebase initialization |
-| firebase_auth | `^7.0.1` | Anonymous Auth (`SyncIdentity`) |
+| firebase_auth | `^7.0.1` | Anonymous Auth + partial Google/email (`AccountAuthController`, `SYNC-006`) |
+| firebase_storage | `^14.1.0` | Authenticated `getData` download of OSM hole packs (`course_maps/`) |
 | cloud_firestore | `^7.1.0` | Optional pull/push LWW sync on named DB `my-golf-diary` |
+| firebase_ai | `^5.1.0` | Vertex AI (`FirebaseAI.agentPlatform()`) swing diary — owner-billed, no player API keys |
+| firebase_app_check | `^0.5.1` | Web reCAPTCHA Enterprise before diary calls |
+| google_sign_in | `^6.2.2` | Google durable sign-in (`SYNC-006`) |
+| path_provider | `^2.1.5` | Native `course_maps/{courseId}/` disk cache |
 | provider | `^6.1.2` | State management where needed |
 | google_fonts | `^9.0.0` | Playfair Display, Inter, Roboto Mono |
-| *Planned (`CRSE-006`)* | `firebase_storage` + Flutter `Image` / `CustomPainter` overlay (no runtime Maps SDK in v1) | Download per-course map packs from Firebase Storage; render satellite hole imagery offline with GPS stroke overlay |
-| *Planned (`CRSE-006` server)* | Cloud Function or admin script + **Maps Static API** | One-time (per version) satellite image fetch per hole; writes packs to Firebase Storage — **not** called from the Flutter client |
-| `RNGE-004` | `firebase_ai` (`FirebaseAI.agentPlatform()`) | Vertex AI Gemini for the swing diary. `firebase_ai` 5.1 renamed `vertexAI()` to `agentPlatform()`. The project owner pays. No player API keys |
+| wakelock_plus | `^1.3.2` | Optional cart scoring keep-awake (`MGDV-401`) |
+| qr_flutter | `^4.1.0` | Caddy invite QR (`MGDV-5`) |
+| http | `^1.1.0` | Abort in-flight Vertex streams |
+| *Map packs (server)* | Python `tools/map_pack/` + Overpass | OSM → stylized PNG + `manifest.json`; owner uploads — **no Maps SDK in Flutter** |
+| *PWA publish* | [`.github/workflows/publish-pwa.yml`](../../.github/workflows/publish-pwa.yml) | Push to `main` touching `golf_diary_app/**` builds web and force-pushes orphan `gh-pages` |
+| *Agent tooling* | [`.cursor/rules/graphify.mdc`](../../.cursor/rules/graphify.mdc) | Mandatory `graphify query` before code exploration (`AGENTS.md` / `CLAUDE.md`) |
 
 ---
 
 ## 3. Repository & App Layout
 
 ```
-golf_diary_app/lib/
-├── main.dart                         # initializeFirebase, MaterialApp, HomeShell 4-tab nav
-├── data/
-│   ├── ph_golf_catalog.dart          # Course par cards, ranges, sims (from PH_Golf_Venues.md)
-│   ├── ph_golf_hole_coords.dart      # Tee & Green LatLon lookup (CRSE-005/006)
-│   └── practice_drill_seed.dart      # Seeded drills from Range_Drills.md (RNGE-003)
-├── models/
-│   ├── golf_models.dart              # Club, ShotRecord, RoundScore, RangeDrillLog (+ RangeSessionLogEntry planned for RNGE-005)
-│   ├── practice_drill.dart           # PracticeDrill model (RNGE-003)
-│   └── round_summary.dart            # RoundSummary, RoundTotals
-├── pwa/                              # Web build ID & service-worker update prompt
-├── screens/                          # clubs, fairway_tracker, scorecard, scorecard_hole_editor, range_drill
-├── services/
-│   ├── local_database_service.dart   # SQLite v5 (v6 planned for range_sessions & AI diary)
-│   ├── pin_distance.dart             # Live GPS distance-to-hole client (CRSE-005)
-│   ├── cloud_sync_service.dart       # Pull-then-push LWW Firestore sync
-│   ├── diary_remote.dart             # Firestore adapter
-│   ├── sync_identity.dart            # Firebase Anonymous Auth uid
-│   └── sync_merge.dart               # LWW timestamp & tombstone merge helpers
-├── widgets/
-│   ├── venue_name_field.dart         # Shared course/range autocomplete
-│   ├── practice_drill_sheet.dart     # Practice drills picker, add, & delete sheet (RNGE-003)
-│   ├── range_session_log.dart        # Chronological range club blocks & compiled session logs (RNGE-005)
-│   ├── save_round_before_new_dialog.dart
-│   └── sync_cloud_button.dart
-└── theme/app_theme.dart
+My-Golf-Diary/
+├── tools/map_pack/                   # CRSE-041 pipeline (Python, not Flutter)
+├── storage.rules                     # course_maps/** read if auth; write deny clients
+├── storage.cors.json                 # GET for PWA + localhost web origins
+├── firebase.json                     # Storage rules target
+├── .github/workflows/publish-pwa.yml
+├── graphify-out/                     # Knowledge graph (graphify mandatory before code exploration)
+└── golf_diary_app/lib/
+    ├── main.dart                     # Firebase init, OnboardingGate, HomeShell (default tab On Course)
+    ├── data/                         # ph_golf_catalog, ph_golf_hole_coords, practice_drill_seed
+    ├── models/                       # golf_models, course_map_manifest, golfer_profile, range_session, caddy_session, …
+    ├── on_course/                    # hole_projection, fwy_aim, on_course_shot_segment, hud gating
+    ├── pwa/                          # build ID, update host, published-build probe
+    ├── range/                        # club chip helpers
+    ├── screens/                      # clubs, fairway_tracker (FWY/SIM), range, scorecard, home_shell, onboarding, account/caddy shells
+    ├── services/                     # local_database_service (v15), course_map_cache_service, account_auth_controller, swing_diary_*, …
+    ├── ui/                           # header_action_policy, yardage_display_copy
+    ├── widgets/                      # fwy_hole_map, fwy_overlays, shared_header_actions, account_avatar_app_bar_menu, …
+    └── theme/app_theme.dart
 
-golf_diary_app/android/app/src/main/AndroidManifest.xml   # location permissions
-golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsageDescription
+golf_diary_app/android/app/src/main/AndroidManifest.xml
+golf_diary_app/ios/Runner/Info.plist
 ```
+
+### 3.1 App shell, headers & navigation
+
+- **`HomeShell`:** four-tab `NavigationBar` — **My Bag**, **Range**, **On Course** (default index), **Scorecard** — `IndexedStack` preserves tab state (`SHELL-001`).
+- **`OnboardingGate`:** starter wizard (`onboarding_starter_wizard.dart`) until `golfer_profile.onboarding_completed`; PWA `?mode=caddy` bypasses to `CaddyShell`.
+- **Trailing header:** every tab uses **`SharedHeaderActions`** → **`AccountAvatarAppBarMenu`** (`account-avatar-button`: Login, Sync, Profile, Settings — `SYNC-005` shipped). Legacy `sync_cloud_button.dart` remains for tests/reference; production UI is the avatar menu.
+- **Leading header:** **Bag** — add-club; **Range** — drills icon; **On Course FWY** — `PlayHeaderOverflowButton` (⋯: diary, caddy invite, Concede/Finish, on-course settings); **On Course SIM** — same overflow pattern; **Scorecard** — tier-aware diary/caddy per `HeaderActionPolicy`.
+- **Diary access:** `SwingDiarySheet` via pinned diary button or overflow; **On Course** adds right-edge swipe (`oncourse-diary-edge-swipe`) — must not steal rail/map gutters (`CRSE-036`).
+- **MGDV-203 Bag:** one stat-tile card per club (~136dp); **Details sheet retired**; session count chip → range log sheet.
 
 ---
 
@@ -108,33 +119,31 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 | Prefix | UI & Widgets | Data & Persistence |
 | :--- | :--- | :--- |
-| `BAG` | `clubs_screen.dart` | `clubs` |
-| `CRSE` | `fairway_tracker_screen.dart`, `venue_name_field.dart` | `shots`, `round_scores`, `golf_rounds`, `ph_golf_catalog.dart`, `ph_golf_hole_coords.dart` (`CRSE-005`), local map cache (`CRSE-006`) |
-| `SCOR` | `scorecard_screen.dart`, `scorecard_hole_editor.dart`, `venue_name_field.dart` | `round_scores`, `golf_rounds`, `ph_golf_catalog.dart` |
-| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart` (`RNGE-003`), session note & **Save and evaluate session** compiler (`RNGE-005`), AI diary sheet (`RNGE-004`) | `range_drills` → updates `clubs`; `practice_drills` (`RNGE-003`); `range_sessions` + `range_drills.session_id` (`RNGE-005`); `swing_diary_messages` and `range_evaluations` (`RNGE-004`) |
-| `SYNC` | `sync_cloud_button.dart` | `CloudSyncService` → Firestore (`my-golf-diary`) & Firebase Storage (`CRSE-006` map packs) |
+| `BAG` | `clubs_screen.dart` stat-tile cards (`MGDV-203`) | `clubs`; reads `golfer_profile` for yardage labels |
+| `CRSE` | `fairway_tracker_screen.dart`, `fwy_hole_map.dart`, `fwy_overlays.dart`, `venue_name_field.dart` | `shots` (+ `aim_direction`, sim optional cols v15), `round_scores`, `golf_rounds`; `CourseMapCacheService` + `course_map_manifest.dart`; coords catalog `CRSE-005`; FWY `CRSE-036` / SIM `CRSE-035` |
+| `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart` (`MGDV-401`), `scorecard_hole_editor.dart` | `round_scores`, `golf_rounds`; `golfer_profile.scorecard_view_mode`, `scorecard_cart_high_contrast` |
+| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart`, `SwingDiarySheet` (`RNGE-004` partial) | `range_drills` → `clubs`; `practice_drills`; shipped `range_sessions`; diary tables |
+| `SYNC` | `account_avatar_app_bar_menu.dart`, `account_auth_controller.dart`, `diary_sync_runner.dart` | `CloudSyncService` → Firestore; `SyncIdentity`; Storage pack reads; `google_sign_in` |
+| `MGDV` | `onboarding_starter_wizard.dart`, `golfer_profile_settings_screen.dart`, caddy widgets | `golfer_profile` (skill tier, onboarding, scorecard prefs); caddy Firestore + SQLite v14 tables |
 
 ---
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 8** (`LocalDatabaseService._initDB`). Version 5 adds `practice_drills` and nullable `range_drills.drill_id`. Version 6 adds `range_sessions` and nullable `range_drills.session_id` so multi-club blocks, per-club notes, drill info, and an overall session note compile into one Range Session Log. Version 7 adds `swing_diary_messages`, `range_evaluations`, and a local `diary_settings` opt-in row. Version 8 adds one `golfer_profile` row: equipment notes, swing anchors, physical constraints, training environment, dismissed lead-in prompts, and `distilled_through_ms`. `range_sessions`, the diary tables, `golfer_profile`, and `practice_drills` stay out of `syncFull`.
-- Version 2 added `clubs.brand`, `clubs.model`, and `range_drills.venue_name`.
-- Version 3 added `updated_at_ms`, `deleted`, and `sync_state` for Firestore merge.
-- Version 4 added `golf_rounds` to track round lifecycle (`started_at_ms`, `completed_at_ms`).
-- Version 5 (`RNGE-003`) adds `practice_drills` (seeded + user-created drills with tombstone support so users can delete seeded or custom drills) and optional `drill_id` on `range_drills`.
-- **Planned Version 6 (`RNGE-005`):** adds `range_sessions` (compiled range visit log with `session_note`, `venue_name`, and `compiled_summary_json`) and nullable `session_id` on `range_drills` to link each club block in the visit to its compiled session log.
+**DB:** `golf_diary.db`, currently **version 15** (`LocalDatabaseService._initDB`). Migration chain: v2 club identity + range venue; v3 sync metadata; v4 `golf_rounds`; v5 `practice_drills` + `drill_id`; v6 **`range_sessions`** + `session_id` (`RNGE-005` **shipped**); v7 diary tables + `diary_settings`; v8 `golfer_profile`; v13 scorecard view prefs on profile; v14 caddy session/queue; **v15** `shots.aim_direction` (default `center`), `shots.sim_carry_yards`, `shots.sim_distance_to_hole_yards` (`CRSE-007`/`008` partial).
 
-### Tables (current & planned)
+**Still outside `syncFull` today:** `practice_drills`, `range_sessions`, swing-diary tables, `golfer_profile`, caddy queue — expand when `SYNC-007` lands (PRD).
+
+### Tables (current)
 
 - **`clubs`** — `id`, `name`, `category`, `brand`, `model`, `min_distance`, `max_distance`, `avg_distance` (yards), `swing_notes`, `is_synced`, `updated_at_ms`, `deleted`. Starter bag seeded on create.
-- **`shots`** — `id`, `round_id`, `hole_number`, `stroke_number`, `club_id`, `lie_type`, `start_lat/lon`, `end_lat/lon` (set when next shot lands), `distance_yards`, `notes`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`.
+- **`shots`** — above plus **`aim_direction`** (`left`/`center`/`right`, v15); optional **`sim_carry_yards`**, **`sim_distance_to_hole_yards`** (simulator, v15). **`isHoled`** is derived: `notes == 'Holed'` (`kHoledShotNote`). Holed strokes use putter + `lie_type` green (`finishHole` / `_recordHoledStroke`).
 - **`round_scores`** — `id`, `round_id`, `course_name`, `hole_number`, `par`, **`strokes`**, `penalties`, `mulligans`, `conceded`, **`final_score`**, `is_synced`, `updated_at_ms`, `deleted`.
 - **`golf_rounds`** — `round_id`, `course_name`, `started_at_ms`, `completed_at_ms`, `is_synced`, `updated_at_ms`, `deleted`.
-- **`range_drills`** — `id`, `club_id`, `shot_count`, `min_yards`, `max_yards`, `avg_yards`, `tempo_notes`, `venue_name`, `timestamp`, `is_synced`, `updated_at_ms`, `deleted`, `drill_id` (nullable `practice_drills.id`), and *(Planned v6 — `RNGE-005`)* `session_id TEXT` (nullable foreign key to `range_sessions.id`; `NULL` while a block belongs to the active uncompiled range visit or came from a legacy pre-v6 save).
+- **`range_drills`** — same columns including nullable **`session_id`** → `range_sessions.id` (NULL = active visit block or legacy row).
 - **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 12 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
-- **`range_sessions` *(Planned v6 — `RNGE-005`)*** — `id TEXT PRIMARY KEY`, `venue_name TEXT NOT NULL DEFAULT ''`, `session_note TEXT NOT NULL DEFAULT ''`, `compiled_summary_json TEXT NOT NULL DEFAULT '[]'`, `timestamp INTEGER NOT NULL`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
+- **`range_sessions` *(v6 — `RNGE-005` shipped)*** — `id TEXT PRIMARY KEY`, `venue_name TEXT NOT NULL DEFAULT ''`, `session_note TEXT NOT NULL DEFAULT ''`, `compiled_summary_json TEXT NOT NULL DEFAULT '[]'`, `timestamp INTEGER NOT NULL`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - `compiled_summary_json` snapshots the ordered list of club blocks at compile time (`clubId`, `clubName`, `shotCount`, `minYards`, `avgYards`, `maxYards`, `tempoNotes`, `drillId`, `drillTitle`, `drillSteps`) so the compiled session log remains self-contained for UI rendering and Vertex AI (`RNGE-004`) evaluation even if a club or custom drill is later edited or deleted.
 
 **Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — **mulligans** stored but **not** in gross formula (display/practice).
@@ -160,6 +169,16 @@ golf_diary_app/ios/Runner/Info.plist                    # NSLocationWhenInUseUsa
 
 **Architectural stance:** `round_scores` is the **scorecard row**; `shots` is the **GPS audit**. Precedence for `strokes` after fairway capture is **syncStrokeCountFromShots** until product adds “manual lock” or merge rules.
 
+#### 5.2.1 Finish hole & holing stroke (`CRSE-004` — shipped)
+
+`LocalDatabaseService.finishHole`:
+
+1. **`syncStrokeCountFromShots`** on the active hole.
+2. **`_recordHoledStroke`** unless: hole **conceded**; **pickup at double par** (`strokes + penalties ≥ 2 × par`); or the last shot is already **`isHoled`**. Otherwise appends one **putter / green** shot with note **`Holed`**, then syncs strokes again.
+3. Recomputes **`final_score`** for non-conceded holes; advances hole or **`completeRound`** on last hole.
+
+**Concede:** `concedeHole` sets `conceded = 1`, `strokes = par × 2`, updates `final_score` — **no** holing stroke on subsequent `finishHole` (see `finish_hole_holing_stroke_test.dart`). **Known gap:** concede then manual scorecard edit vs shot-sync precedence — same class of conflict as §5.2 / caddy merge (PRD §7).
+
 ### 5.3 RNGE → club (`saveRangeDrill`)
 
 After inserting **`range_drills`**, updates **`clubs`** for `log.clubId`:
@@ -172,7 +191,7 @@ After inserting **`range_drills`**, updates **`clubs`** for `log.clubId`:
 
 Changing this math requires **Version History** + migration if schema changes.
 
-### 5.3.1 Session Note & Compiled Range Session Log (`RNGE-005` — Planned v6)
+### 5.3.1 Session Note & Compiled Range Session Log (`RNGE-005` — shipped v6)
 
 A range visit often spans several clubs and drills before the golfer wraps up with personal takeaways. `RNGE-005` separates **per-club block capture** from **visit-level session compilation**:
 
@@ -228,88 +247,56 @@ flowchart TD
   - Remaining yardage is `((Geolocator.distanceBetween(pos.latitude, pos.longitude, greenLat, greenLon)) * 1.09361).round()`, rendered in `ValueKey('on-course-distance-to-hole')`.
   - The stream subscription is **cancelled immediately** on `dispose()`, when switching to `Simulator` mode, when changing to an unmapped course/hole, or when app lifecycle pauses.
 
-### 5.5 On-Course Hole Map View & Cached Course Maps (`CRSE-006` — Future Architecture)
+### 5.5 OSM hole map packs & offline cache (`CRSE-006` / `CRSE-041` — shipped client; packs in progress)
+
+**Decision (supersedes Architecture 1.15 Google Static path):** Hole imagery is **stylized OpenStreetMap** golf features rendered offline — **not** Google Maps satellite tiles. Google Maps Static/Tile APIs are **out of scope** for v1 (licensing forbids redistributing cached satellite; see shard [`CRSE-041`](../../docs/shards/CRSE/CRSE-041-map-pack-pipeline.md)). Architecture **1.15** remains in Version History for audit only.
 
 ```mermaid
 flowchart TD
-  Toggle["User taps Map View (CRSE-006)"] --> HasCoords{"Hole coords in PH_Golf_Course_Hole_Coordinates?"}
-  HasCoords -->|No| HideToggle["Map toggle hidden / disabled"]
-  HasCoords -->|Yes| CheckLocal{"Course map pack in local disk / IndexedDB?"}
-  CheckLocal -->|Yes| RenderMap["Render cached hole map + Tee/Green pins + ShotRecord polylines"]
-  CheckLocal -->|No| CheckFB{"Map pack in Firebase Storage (/course_maps/{courseId})?"}
-  CheckFB -->|Yes| DownloadFB["Download pack to local cache"] --> RenderMap
-  CheckFB -->|No| FetchGMaps["Fetch static satellite image/tiles via Google Maps API"]
-  FetchGMaps --> UploadFB["Cache in Firebase Storage + save locally"] --> RenderMap
+  FWY["FWY mode FwyHoleMap"] --> Local{"Pack on disk or web memory cache?"}
+  Local -->|Yes| RenderPNG["hole_N.png + manifest frame + markers overlay"]
+  Local -->|No| Remote{"course_maps in Storage + auth?"}
+  Remote -->|Yes| DL["CourseMapCacheService getData"] --> RenderPNG
+  Remote -->|No coords| Standin["StandinHole from par CRSE-036"]
+  Remote -->|Coords no pack| Vector["Vector tee-green line badge"]
 ```
 
-- **Eligibility:** Toggle (`ValueKey('on-course-map-toggle')`) is visible only when `hasHoleCoordinates(courseName, holeNumber)` is true.
-- **Course Map Pack Format:** Each mapped course (`courseId`, e.g., `ph-crse-wack-wack-east`) has a pre-computed bounding box covering its holes (or per-hole bounding boxes derived from `teeLat/Lon` and `greenLat/Lon` padded by ~60 yards) plus zoom/projection metadata (`course_map_manifest.json` + high-DPI satellite WebP/PNG imagery).
-- **Two-Tier Cache (Firebase Storage → Device):**
-  1. **Cloud Cache (Firebase Storage):** Stored under `gs://<bucket>/course_maps/{courseId}/manifest.json` and `hole_{n}.webp` (or course-wide stitched tile pack). Populated once via a Cloud Function / admin script or first-client fetch using the Google Maps Static/Tile API so subsequent golfers download directly from Firebase Storage without hitting Google Maps API quotas.
-  2. **Local Cache:** Stored on device under `<appDocDir>/course_maps/{courseId}/` (or Cache API / IndexedDB on web) and tracked in SQLite `course_map_cache(course_id, version, local_path, downloaded_at_ms)`.
-- **Stroke Plotting Overlay:** Overlays a custom `CustomPainter` / marker layer transforming WGS84 `(lat, lon)` into the cached image's Mercator pixel coordinates:
-  - Draws Tee box marker, Green/Pin flag, and a dashed centerline.
-  - Plots each `ShotRecord` for the active hole (`start_lat/lon` → `end_lat/lon`) with club labels and yardage badges.
-- **Offline Fallback:** If a golfer is on the course with no cellular data and the course pack was not pre-downloaded, the view still renders a clean 2D vector fairway schematic (scaled from Tee-to-Green coordinates and `ShotRecord` GPS points) without failing.
+**Build pipeline (owner, not Flutter):** [`tools/map_pack/`](../../tools/map_pack/) — Overpass → normalize to surveyed tee/green → flat-colour PNG (720×1280, tee at bottom) + per-hole **`markers[]`** (target/layup) in `manifest.json`. Upload via `upload_packs.py` to **`course_maps/{courseId}/`** and merge **`course_maps/index.json`** versions. Contract: shard CRSE-041 + `tools/map_pack/README.md`.
 
-#### On Course map provider (v1 decision — `CRSE-006`)
+**Client (`CourseMapCacheService`):**
 
-**Primary provider:** **Google Maps Platform** — **Maps Static API** (`maptype=satellite`) for *cache construction only*. **Runtimes (PWA, Android, iOS) do not embed `google_maps_flutter` or live map tiles in v1.** The hole map is a **pre-rendered, locally stored image** plus a **Mercator pixel overlay** for the live player pin (`CRSE-005` stream), tee/green markers, stroke polylines, and optional fairway aim bearing. That matches ship order (PWA → Android → iOS), the offline non-negotiable, and the existing Firebase Storage pattern in the PRD.
+- **`courseId`:** `ph-crse-*` map in `kCourseMapPackIds` (must match `courses.py`).
+- **Fetch:** `SyncIdentity.ensureSignedIn()` then `FirebaseStorage.instance.ref(path).getData()` (10 MB cap); reads `index.json` once per session, compares versions, downloads manifest + hole PNGs.
+- **Native cache:** `<appDocDir>/course_maps/{courseId}/`.
+- **Web PWA:** in-memory `_memoryPacks` for the session; repeat fetches rely on browser HTTP cache (`Cache-Control` at upload) — **no** per-hole SQLite `course_map_cache` table today.
+- **Manifest:** `CourseMapManifest` / `HoleMapFrame` with `frame.centerLat/Lon`, `bearingDeg`, `metersPerPixel`, `holes[].markers[]` for aim snap (`CRSE-039`).
+- **Attribution:** `oncourse-map-attribution` — **© OpenStreetMap contributors (ODbL)** when pack image visible.
 
-| Option | Satellite quality (PH golf) | Mobile + PWA licensing | Offline / cache fit | Cost & ops | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Google Static API → Storage → device** (chosen) | Strong aerial coverage on Luzon/Visayas courses | Static API server-side; clients display owned packs with [Maps attribution](https://developers.google.com/maps/documentation/maps-static/policies) | Full offline after pack download; no per-round Maps calls | ~17 PHP courses × ≤18 holes ≈ few hundred static requests **once per pack version**; ongoing cost is Storage egress + occasional rebuilds | **v1 primary** |
-| **Google `google_maps_flutter` / Map Tiles API** | Excellent interactive satellite | SDK keys in app; tile loads per pan/zoom session | Tiles require network unless proprietary offline tile DB (not in scope) | Scales with active users and session length on the fairway | **Reject for v1** — conflicts with local-first map pane in [`Wireframe_HoleMap.md`](./designs/Wireframe_HoleMap.md) |
-| **Mapbox Satellite** | Good; separate account | Mapbox ToS; offline requires Mapbox Offline Manager | Achievable but second vendor + billing | Per-MAU tile loads if interactive | **Reject** — duplicates GCP/Firebase stack user already funds |
-| **Apple MapKit** (`MKMapView`) | Good on iOS | iOS only | No PWA path | N/A for first ship target | **Reject** until a native-only experiment; not v1 |
-| **OpenStreetMap “satellite”** | No canonical global satellite layer; third-party XYZ often blocks redistribution | Provider-specific; many prohibit Firebase redistribution | Unreliable for caching | Legal/quality risk in PH | **Reject** |
-| **Esri World Imagery** | Enterprise GIS-grade | ArcGIS licensing & attribution rules | Offline bundles possible | Higher minimum commit / GIS workflow | **Reject** — overkill for a diary HUD |
-
-**Why Static + pack, not dynamic SDK**
-
-1. **Local-first:** Constraint §9 requires on-course map render **without** repeated live API calls; golfers download `course_maps/{courseId}/` once (Wi‑Fi or cellular) and play offline.
-2. **PWA-first:** The map pane is an `Image` + `CustomPainter` stack — same code on web (`sqflite_common_ffi_web` + device/IndexedDB paths) and mobile, without Maps JavaScript or Flutter web plugin constraints.
-3. **Key security:** Maps **API keys stay server-side** (Cloud Function / admin cache builder in Secret Manager). Flutter ships **no** Maps secret — only public Firebase config (existing App Check pattern for other services). Storage reads use **Authenticated** + optional App Check; **writes** to `course_maps/` are **admin/cache-builder only** (see §7), not every golfer client.
-4. **Firebase alignment:** Packs live beside Firestore sync in the same project; anonymous auth already gates Storage reads.
-
-**Maps Static API parameters (per hole)**
-
-- Bounding box from `ph_golf_hole_coords.dart`: center on tee–green midpoint; pad **~60 yards** (and min width so long par‑5s fit).
-- `maptype=satellite`, `scale=2` (retina), size up to **640×640** logical (1280×1280 px) — sufficient for HUD framing; if a layout exceeds limits, v1.1 may stitch **two** static requests or lower zoom with wider crop (document in pack `manifest.json`).
-- `manifest.json` per course: `version`, `courseId`, per-hole `holeNumber`, `imagePath`, `bbox` (NE/SW), `center`, `zoom`, `widthPx`, `heightPx`, and **affine coefficients** (or anchor points) for WGS84 → image pixels used by overlay code shared with Haversine shot plotting.
-
-**Caching tiers (canonical)**
+**Caching tiers**
 
 | Tier | Location | Writer | Reader |
 | :--- | :--- | :--- | :--- |
-| 1 | Google Maps Static API | Cache builder (CF/admin) | Builder only |
-| 2 | `gs://<bucket>/course_maps/{courseId}/manifest.json`, `hole_{n}.webp` | Cache builder | Authenticated app download |
-| 3 | `<appDocDir>/course_maps/{courseId}/` (web: Cache API / IndexedDB + SQLite `course_map_cache`) | App after Storage fetch | `FairwayTrackerScreen` map pane offline |
+| 1 | OSM Overpass + `build_pack.py` | Owner laptop/CI | — |
+| 2 | `gs://…/course_maps/{courseId}/manifest.json`, `hole_{n}.png` | `upload_packs.py` (service account) | Authenticated app `getData` |
+| 3 | App doc dir or web memory | App after download | `FwyHoleMap` / `fwy_hole_map.dart` |
 
-**Attribution & compliance:** Show the Google Maps logo / attribution line on the map pane when satellite imagery is visible (hide on vector fallback only). Rebuild packs when Google imagery updates materially (bump `manifest.version`; clients refresh when local version < remote).
+**Coverage gap:** Pipeline exists; not every catalog course has a published pack yet — FWY falls back to vector or stand-in without error (PRD `CRSE-011`).
 
-**`CRSE-006` / CRSE-022 implementation path**
+### 5.6 FWY map-background shell & SIM compact layout (`CRSE-036` / `CRSE-035` — shipped)
 
-1. **Athena — no new Maps packages in app until shard start** (per CRSE-022); first add `firebase_storage` for pack download.
-2. **Server:** `buildCourseMapPack(courseId)` — reads coordinate catalog, calls Static API with server key, writes WebP + manifest to Storage; idempotent per `(courseId, packVersion)`.
-3. **Client:** `CourseMapCacheService` — check SQLite + disk → else Storage → populate local cache; expose `HoleMapFrame` for one hole.
-4. **UI:** `on-course-map-toggle` → `oncourse-hole-map` (`Image` + overlay); offline miss → `oncourse-map-vector`; live pin updates from existing `CRSE-005` position stream projected to pixels.
-5. **v2 optional:** Interactive pan/zoom via Maps SDK on native only, still **prefer** showing cached hole frame by default to control cost — not v1.
+| Mode | UI shell | Map |
+| :--- | :--- | :--- |
+| **FWY** (`!_simulator`) | Full-bleed **`FwyHoleMap`**; top scrim overlay (`oncourse-top-overlay`); side **rail** (club / lie / aim / pen / mul); shots peek sheet; **Record shot at ball** only in dock | Pack PNG, vector line, or **stand-in** (`StandinHole.forPar`) |
+| **SIM** (`_simulator`) | Single-scroll compact stack + bottom sheets (`CRSE-035`); Record / Concede / Finish dock | **No** map pane |
 
-**Google Cloud / Firebase — enable for Reuben (project owner)**
+**FWY specifics (see shard CRSE-036):**
 
-On the **same GCP project** linked to Firebase (`novusinc-8df79` / My Golf Diary):
+- **Live vs Manual GPS** (`oncourse-gps-badge`, `OnCourseSettings`): Manual pin with stale-fix gate; diary edge swipe (`oncourse-diary-edge-swipe`) ignores rail gutters.
+- **Aim ring** (`fwy_aim.dart`, `on_course_aim.dart`): snap to ring or manifest markers; persists **`shots.aim_direction`** L/C/R (v15); full bearing columns deferred.
+- **Double par:** banner `oncourse-double-par-banner` — never auto-finishes; pairs with §5.2.1 holing-stroke skip.
+- **Header:** leading overflow (diary, caddy, settings entries); trailing account avatar — legacy **`on-course-map-toggle`** / tabular FWY card **removed**.
 
-1. **Billing** enabled on the project (Static API is pay-as-you-go after monthly credit).
-2. **APIs & Services → Enable:** **Maps Static API** only for v1 cache builder (do **not** enable Maps SDK for Android/iOS or Maps JavaScript API until an interactive v2 is scoped).
-3. **Credentials:** Create an API key restricted to **Maps Static API** + **Application restriction: IP addresses** (Cloud Function egress) *or* use a **server key** stored in **Secret Manager** (`MAPS_STATIC_API_KEY`) referenced by the cache builder — **do not** paste this key into `firebase_options.dart` or Flutter env.
-4. **Firebase Storage:** Default bucket (or dedicated bucket) with rules: `course_maps/{courseId}/{file}` **read** if `request.auth != null`; **write** deny for clients (`request.auth != null` is insufficient — use custom claim `cacheAdmin` or Functions-only service account writes).
-5. **Optional:** Deploy cache builder as **2nd gen Cloud Function** (scheduler or manual HTTP trigger guarded by IAM) — keeps quota predictable vs. ad-hoc laptop scripts.
-6. **Budget alert** on Maps Static API + Storage egress (e.g. notify at 50% / 90% of monthly budget).
-
-No golfer-facing Google Maps API key is required for v1.
-
-### 5.6 Vertex AI swing diary and range-evaluation log (`RNGE-004`)
+### 5.7 Vertex AI swing diary and range-evaluation log (`RNGE-004` — partial ship)
 
 The diary comments on **the compiled range session log (`RNGE-005`) and today’s drills in the context of earlier practice**: what the player has been focusing on, how they felt about the session (`session_note`), and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
 
@@ -375,7 +362,9 @@ Do not add an embedding index in this phase. A question about a specific older d
 
 - **Init:** `initializeFirebase()` in `main.dart` / `cloud_sync_service.dart` uses [`firebase_options.dart`](../../golf_diary_app/lib/firebase_options.dart). Failure is soft; the app stays local-only.
 - **Database:** named Firestore database `my-golf-diary` via `FirebaseFirestore.instanceFor(databaseId: ...)`. Do not write the `(default)` database.
-- **Identity:** Firebase **Anonymous Auth**. `SyncIdentity.ensureSignedIn()` supplies `users/{uid}`. Enable Anonymous sign-in in the Firebase console before the first sync.
+- **Identity:** Firebase **Anonymous Auth** by default; **`AccountAuthController`** adds Google / email-password (`SYNC-006` partial). `SyncIdentity.ensureSignedIn()` and map-pack reads require **some** Firebase Auth session (anonymous OK). Enable Anonymous (+ Google/Email when testing durable accounts) in console.
+- **Map packs:** Storage paths under `course_maps/`; same anonymous gate as sync. Deploy [`storage.rules`](../../storage.rules): read if `request.auth != null`; **write: false** for clients. CORS: [`storage.cors.json`](../../storage.cors.json) for PWA + `localhost` (GET only).
+- **PWA:** [`.github/workflows/publish-pwa.yml`](../../.github/workflows/publish-pwa.yml) on `main` → `flutter build web` with `APP_BUILD_ID` = git SHA → orphan **`gh-pages`**. `PwaUpdateHost` prompts when published build is newer.
 - **Client config:** `firebase_options.dart` holds the public web client config (API key is not a server secret). Re-run `flutterfire configure` when Android or iOS apps are registered.
 
 **CloudSyncService.syncFull**
@@ -420,9 +409,9 @@ service cloud.firestore {
 ## 7. Security & Privacy
 
 - SQLite at rest = OS defaults; no app-level encryption in v1.
-- `firebase_options.dart` is public client config. Do not commit server credentials, Google Maps private signing keys, or Google AI (Gemini) API keys in repository source.
+- `firebase_options.dart` is public client config. Do not commit **service account keys**, **Maps API keys**, or **Gemini API keys** in repository source. Map-pack upload uses owner credentials outside the app (`GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT_JSON` in `tools/map_pack/` only).
 - Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
-- **Firebase Storage (`CRSE-006`):** Shared course map packs under `/course_maps/{courseId}/**` allow authenticated read (`request.auth != null`) and restrict writes to authenticated cache builders / admin functions.
+- **Firebase Storage (`CRSE-041`):** `course_maps/**` — authenticated read only; all writes via admin upload scripts (`allow write: if false` in [`storage.rules`](../../storage.rules)).
 - **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()` on this Firebase project (`firebase_ai` 5.1 renamed `vertexAI()`). The owner pays while the diary stays under about 1,000 people. Players do not supply Gemini keys. No model key in the client.
 
 ---
@@ -431,8 +420,9 @@ service cloud.firestore {
 
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
-  - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in `Course` mode, and on a hole with verified coordinates in [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md). Immediately cancelled when off-screen, in `Simulator` mode, or on an unmapped course/hole.
-- **DB:** version 14 (`golf_rounds` in v4; `practice_drills` and `range_drills.drill_id` in v5; `range_sessions` and `range_drills.session_id` in v6; diary tables in v7; `golfer_profile` in v8; scorecard prefs v13; **`caddy_sessions` / `caddy_pending_events` in v14**).
+  - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in **FWY** mode, and on a hole with verified coordinates. Cancelled off-screen, in **SIM** mode, or on unmapped hole.
+- **DB:** version **15** (see §5 migration chain).
+- **PWA / web:** `sqflite_common_ffi_web` + `PwaUpdateHost`; map packs session-cached in memory on web.
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -445,7 +435,17 @@ service cloud.firestore {
 
 Background location **not** required for current flows.
 
-**Testing:** `flutter test`; inject fakes/streams for DB and GPS where possible; verify `CRSE-005` visibility gating (shown on mapped hole in Course mode, hidden in Simulator mode or unmapped course), `RNGE-003` drill seeding, custom creation, and deletion, and `RNGE-005` session note persistence across club switches + multi-club session compilation; `ValueKey` for interactive widgets (Eunice).
+**Testing:** `flutter test`; coverage includes `on_course_crse_036_test.dart`, `finish_hole_holing_stroke_test.dart`, `course_map_cache_service_test.dart`, `mgdv_203_progressive_disclosure_test.dart`, `header_action_policy_test.dart`. **Code exploration:** agents run **`graphify query`** before grep/read (`.cursor/rules/graphify.mdc`, `AGENTS.md`).
+
+**Known implementation gaps (documented; do not paper over in code via Architecture):**
+
+| Gap | Notes |
+| :--- | :--- |
+| Manual scorecard strokes vs `syncStrokeCountFromShots` | GPS/caddy/holing path can overwrite manual entry (§5.2) |
+| `SYNC-007` table expansion | `range_sessions`, diary tables, profile still local-only in `syncFull` |
+| Pack catalog coverage | CRSE-041 pipeline shipped; not all PH courses uploaded |
+| RNGE-004 production ceiling | 250k-token compaction policy partial in live prompts |
+| CRSE-038/040 deferrals | Manual pin on stand-in; full aim lat/lon columns |
 
 ---
 
@@ -454,13 +454,13 @@ Background location **not** required for current flows.
 1. **Stack:** Flutter/Dart under `golf_diary_app/lib/`.
 2. **Local-first:** works offline without Firebase or AI connectivity.
 3. **Units:** Yards in persistence and HUD distance-to-hole (`meters * 1.09361`); document metric UX in PRD before changing.
-4. **Live GPS Gating (`CRSE-005` & `CRSE-006`):** Never fabricate hole coordinates. Turn off the distance-to-hole readout and map toggle whenever a course or hole lacks verified Tee and Green coordinates or when `Simulator` mode is selected.
+4. **Live GPS Gating (`CRSE-005` & FWY map):** Never fabricate surveyed tee/green coordinates. Turn off live yards-to-pin on unmapped holes and in **SIM** mode. FWY may show **stand-in** geometry (not survey) when coords or packs are missing — label with `oncourse-standin-badge`.
 5. **Strokes vs shots:** any change to `syncStrokeCountFromShots` updates §5.2 + PRD.
 6. **RNGE blend:** changes require Version History + migration if schema changes.
 7. **Seeded vs Custom Drills (`RNGE-003`):** deleting a seeded drill must persist via tombstone/flag (`deleted = 1`) so it does not reappear on app restart.
-8. **Firestore & Secrets:** no wide-open production rules on user data; no raw Google Maps or Gemini API keys committed to git. Swing-diary calls use Vertex AI billed to the project. Do not add a player-supplied API key.
+8. **Firestore, Storage & Secrets:** no wide-open production rules on user data; **no Google Maps keys** in the Flutter repo; **no Gemini API keys** in the client. Hole maps are **OSM-produced packs** only (CRSE-041). Swing-diary uses Vertex AI billed to the project. Do not add player-supplied API keys. **No runtime `google_maps_flutter` / Mapbox SDK** for v1.
 9. **Compiled Range Session Log & Diary prompt (`RNGE-005` & `RNGE-004`):** Session-level notes (`range-session-note-field`) must stay separate from per-club swing cues so switching club chips never erases the visit note. **Save and evaluate session** (`range-save-evaluate-session-btn`) must always persist the compiled `range_sessions` row locally first (flushing any unsaved club block input) before attempting Vertex AI evaluation so offline sessions never lose data. Send raw session/drill history while the prompt is under about 250,000 tokens; past that, persist a periodic summary and keep today's compiled session log plus a recent raw window. Store every evaluation and periodic summary for a later read-only log.
-10. **Theme/keys:** `app_theme.dart`; wireframe Keys per `cohorts/eunice.agent.md` (`on-course-distance-to-hole`, `on-course-map-toggle`, `range-header-drills-btn`, `range-session-note-field`, `range-save-evaluate-session-btn`, `range-session-log-list`).
+10. **Theme/keys:** `app_theme.dart`; FWY keys include `oncourse-map-background`, `oncourse-diary-edge-swipe`, `oncourse-double-par-banner`, `oncourse-map-attribution`; Bag `bag-club-card-{clubId}`; account `account-avatar-button`; see PRD 1.9 and Eunice wireframes.
 11. **Dependencies:** justify in Version History when adding packages.
 
 ---
@@ -486,3 +486,4 @@ Background location **not** required for current flows.
 | 1.13 | 2026-11-15 | Athena | MGDV-401 cart scoring on Scorecard tab. DB v13 adds `scorecard_view_mode` and `scorecard_cart_high_contrast` on `golfer_profile`. **`wakelock_plus`** keeps the screen awake during cart scoring on an in-progress round only (optional UX; no GPS change on CRSE). |
 | 1.14 | 2026-11-15 | Athena | MGDV-5 caddy pairing: Firestore `caddy_round_channels`, PWA `mode=caddy`, DB v14 session/queue tables, `recordCaddyStroke`, **`qr_flutter`** for invite QR |
 | 1.15 | 2026-11-19 | Watson | `CRSE-006` map provider decision: Google **Maps Static API** (server-side cache builder) → Firebase Storage → on-device WebP; reject runtime `google_maps_flutter`/Mapbox/OSM/Esri/MapKit for v1; document Reuben GCP enablement and key isolation |
+| 1.16 | 2026-11-20 | Watson | Align with **PRD v1.9**: **supersede 1.15** with **CRSE-041 OSM** packs + `CourseMapCacheService`; **CRSE-036/035** FWY/SIM shells; holing stroke §5.2.1; DB **v15**; `SYNC-005` avatar; MGDV-203 stat tiles; PWA gh-pages workflow; graphify agent rule; known gaps table §8 |

@@ -147,6 +147,20 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> askDiary(WidgetTester tester,
+      [String text = 'Summarize today']) async {
+    final field = find.byKey(const ValueKey('diary-composer-field'));
+    await tester.ensureVisible(field);
+    await tester.enterText(field, text);
+    await tester.pump();
+    final send = find.byKey(const ValueKey('diary-send-btn'));
+    await tester.ensureVisible(send);
+    await tester.tap(send);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+  }
+
   testWidgets('opt-in dismiss does not call the model', (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -211,12 +225,16 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump();
 
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    expect(find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
+    expect(find.byKey(const ValueKey('diary-save-note-btn')), findsNothing);
+    expect(find.byKey(const ValueKey('diary-eval-debug')), findsNothing);
+    final composer = tester.widget<TextField>(
+        find.byKey(const ValueKey('diary-composer-field')));
+    expect(composer.minLines, 1);
+    expect(composer.maxLines, greaterThan(1));
+    expect(composer.keyboardType, TextInputType.multiline);
+
+    await askDiary(tester);
 
     expect(model.calls, 1);
     expect(model.lastSystemInstruction, contains('Golf Biomechanics Coach'));
@@ -226,11 +244,7 @@ void main() {
     expect(model.lastPrompt, contains('TODAY CUE'));
     expect(model.lastPrompt, contains('3:1 Tour Tempo Rhythm'));
     expect(find.text('Solid contact.'), findsOneWidget);
-    expect(find.textContaining('saved'), findsOneWidget);
-    expect(find.textContaining('phase=done'), findsOneWidget);
-    final summarizeButton = tester.widget<OutlinedButton>(
-        find.byKey(const ValueKey('diary-summarize-today-btn')));
-    expect(summarizeButton.onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('diary-eval-debug')), findsNothing);
     final evaluations =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
     expect(evaluations!.where((row) => row.kind == 'evaluation').length, 1);
@@ -238,12 +252,7 @@ void main() {
         'Solid contact.');
     expect(evaluations.where((row) => row.kind == 'periodic_summary'), isEmpty);
 
-    await tester.enterText(find.byKey(const ValueKey('diary-composer-field')),
-        'How was the face?');
-    await tester.tap(find.byKey(const ValueKey('diary-send-btn')));
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester, 'How was the face?');
     expect(model.calls, 2);
     expect(find.text('How was the face?'), findsOneWidget);
     Navigator.of(tester.element(find.byType(SwingDiarySheet))).pop();
@@ -332,11 +341,10 @@ void main() {
       findsOneWidget,
     );
     final send = tester
-        .widget<ElevatedButton>(find.byKey(const ValueKey('diary-send-btn')));
+        .widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNull);
-    final summarize = tester.widget<OutlinedButton>(
-        find.byKey(const ValueKey('diary-summarize-today-btn')));
-    expect(summarize.onPressed, isNull);
+    expect(find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
+    expect(find.byKey(const ValueKey('diary-save-note-btn')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('diary-evaluation-log-btn')));
     await tester.pump();
@@ -377,7 +385,7 @@ void main() {
     ));
   }
 
-  testWidgets('cancel leaves no evaluation and shows the debug line',
+  testWidgets('cancel leaves no evaluation while the send button shows a loader',
       (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -390,18 +398,10 @@ void main() {
     await pumpRange(tester, model);
     await openDiary(tester);
 
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('diary-eval-status')), findsOneWidget);
-    expect(find.text('Waiting for Vertex'), findsOneWidget);
-    expect(find.byKey(const ValueKey('diary-eval-debug')), findsOneWidget);
-    expect(find.textContaining('phase=request'), findsOneWidget);
-    expect(find.textContaining('model=gemini-3.8-flash'), findsOneWidget);
-    expect(find.textContaining('appCheck=missing'), findsOneWidget);
+    await askDiary(tester);
+    expect(find.byKey(const ValueKey('diary-send-busy')), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-eval-debug')), findsNothing);
+    expect(find.text('Waiting for Vertex'), findsNothing);
     expect(find.byKey(const ValueKey('diary-eval-cancel')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('diary-eval-cancel')));
@@ -410,14 +410,14 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
-    expect(find.text('Evaluation cancelled'), findsOneWidget);
-    expect(find.textContaining('cancelled by user'), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-send-busy')), findsNothing);
+    expect(find.textContaining('phase='), findsNothing);
     final evaluations =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
     expect(evaluations!.where((row) => row.kind == 'evaluation'), isEmpty);
-    final summarizeButton = tester.widget<OutlinedButton>(
-        find.byKey(const ValueKey('diary-summarize-today-btn')));
-    expect(summarizeButton.onPressed, isNotNull);
+    final send = tester
+        .widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
+    expect(send.onPressed, isNotNull);
   });
 
   testWidgets('a failed evaluation can be tried again', (tester) async {
@@ -432,15 +432,10 @@ void main() {
     await pumpRange(tester, model);
     await openDiary(tester);
 
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester);
 
-    expect(find.textContaining('StateError'), findsOneWidget);
-    expect(find.textContaining('phase=failed'), findsOneWidget);
+    expect(find.text("Couldn't get a reply."), findsOneWidget);
+    expect(find.textContaining('phase='), findsNothing);
     expect(find.byKey(const ValueKey('diary-eval-retry')), findsOneWidget);
     final evaluations =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
@@ -454,14 +449,12 @@ void main() {
 
     expect(model.calls, 2);
     expect(find.text('Solid contact.'), findsOneWidget);
-    expect(find.textContaining('phase=done'), findsOneWidget);
-    expect(find.textContaining('saved'), findsOneWidget);
+    expect(find.textContaining('phase='), findsNothing);
     final saved =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
     expect(saved!.where((row) => row.kind == 'evaluation').length, 1);
-    final summarizeButton = tester.widget<OutlinedButton>(
-        find.byKey(const ValueKey('diary-summarize-today-btn')));
-    expect(summarizeButton.onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('diary-send-busy')), findsNothing);
+    expect(find.byKey(const ValueKey('diary-eval-retry')), findsNothing);
   });
 
   testWidgets('renders structured Markdown tables, headings, and flow diagrams',
@@ -488,12 +481,7 @@ void main() {
     await pumpRange(tester, model);
     await openDiary(tester);
 
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester);
 
     expect(find.text('Diary Anchor Blueprint'), findsOneWidget);
     expect(find.textContaining('──►'), findsOneWidget);
@@ -541,12 +529,7 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester);
     expect(model.lastSystemInstruction, contains('Heel pain on hard turf'));
     expect(model.lastSystemInstruction, isNot(contains('physical constraints')));
   });
@@ -566,12 +549,7 @@ void main() {
     );
     await pumpRange(tester, model);
     await openDiary(tester);
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester);
 
     expect(find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
     expect(find.text('Kept the tempo cue'), findsOneWidget);
@@ -663,12 +641,7 @@ void main() {
     final model = FakeDiaryModel();
     await pumpRange(tester, model);
     await openDiary(tester);
-    final summarize = find.byKey(const ValueKey('diary-summarize-today-btn'));
-    await tester.ensureVisible(summarize);
-    await tester.tap(summarize);
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
+    await askDiary(tester);
     expect(model.lastPrompt, contains('Back nine felt loose.'));
   });
 

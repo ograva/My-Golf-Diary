@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `FairwayTrackerScreen` (`_simulator == true`) |
-| **PRD** | CRSE-001 … CRSE-004 (GPS off for capture), MGDV-2-002 |
+| **Stories** | [CRSE-002](../../stories/CRSE/CRSE-002-shot-capture-dual-mode.md), [CRSE-007](../../stories/CRSE/CRSE-007-sim-post-shot-fields.md), [CRSE-035](../../stories/CRSE/CRSE-035-sim-compact-layout.md), [MGDV-202](../../stories/MGDV/MGDV-202-skill-tier-settings.md) |
 | **Persona** | Riley — sim bay, phone on table, eyes on the screen |
-| **Status** | Target v1.3 — shard-ready with Course map mode |
+| **Status** | Shipped — scroll HUD branch in `FairwayTrackerScreen` |
 | **Parent wireframe** | [Wireframe_OnCourse.md](./Wireframe_OnCourse.md) (Course / map-first) |
 | **Flow** | [Flow_OnCourse-Modes.md](./Flow_OnCourse-Modes.md) §3 |
 

@@ -15,6 +15,7 @@
 | 1.2 | 2026-11-09 | Eunice (`/wireframe`, `/audit-ux`) | New-feature wireframes, as-built dialogs that were missing, UX audit |
 | 1.3 | 2026-11-11 | Eunice (`/wireframe`, `/flow`) | Post-range sit-down flow (`RNGE-005` → `RNGE-004`): session note card, active visit summary, **Save and evaluate session** compilation, compiled session log cards, and seamless handoff to the Vertex AI Swing Diary sheet (`Flow_RangeSessionAndEvaluation.md`) |
 | 1.4 | 2026-11-19 | Eunice (`/wireframe`, `/flow`) | On Course **dual-mode** sharding: map-first **Course** HUD (header/footer rail, aim wedge, markers, sticky record), **Simulator** table layout (`Wireframe_OnCourse-Simulator.md`), end-to-end mode flow (`Flow_OnCourse-Modes.md`); skill-tier field density cross-ref MGDV-202/203 |
+| 1.5 | 2026-11-20 | Eunice (`/audit-ux all`, `/design-system`) | **As-built capture:** stat-tile My Bag (BAG-010), FWY map shell (CRSE-036), onboarding/settings wireframes; story links on all major wireframes; [Design_Audit.md](./designs/Design_Audit.md) + [designs/README.md](./designs/README.md) |
 
 ---
 
@@ -62,6 +63,7 @@ Design references: *Augusta Design System* (Wolf Golf), *HoleRecord* (outdoor co
 | `negative` | `#8B2E2E` | Bogey / over par / error | Muted burgundy, not alarming red |
 | `negativeLight` | `#CF8484` | Error text on dark bg | |
 | `warning` | `#A67B2E` | Penalty, soft rate-limit | |
+| `mapFairway` … `mapScrim` | see `GolfPalette` in `app_theme.dart` | Hole map / FWY overlays (pack render parity) |
 
 **Usage rules:**
 - Never use `Colors.white` or `Colors.black` directly — use cream / inkPrimary.
@@ -118,11 +120,7 @@ Three families in strict roles:
 ### 4. Iconography
 
 - **Library:** Material Icons (`Icons.*`) — always filled variant for primary actions; outlined for secondary / inactive tab.
-- **Tab icons:**
-  - My Bag → `Icons.golf_course`
-  - On Course → `Icons.my_location`
-  - Scorecard → `Icons.scoreboard_outlined` (selected: `Icons.scoreboard`)
-  - Range → `Icons.fitness_center`
+- **Tab icons** (index 0→3): My Bag `Icons.golf_course` · Range `Icons.fitness_center` · On Course `Icons.my_location` · Scorecard `Icons.scoreboard` (filled when selected).
 - **Action icons:** `Icons.cloud_upload_outlined` (sync), `Icons.add`, `Icons.refresh`.
 - **Size:** 24dp interactive, 20dp decorative inline.
 - **Color:** selected = `colorScheme.onPrimaryContainer` on indicator; unselected = `colorScheme.onSurfaceVariant`.
@@ -143,7 +141,17 @@ Three families in strict roles:
 
 **Grid:** single-column mobile-first, 16dp horizontal gutter. No explicit column grid for v1; content width is screen − 32dp padding.
 
-**Touch targets:** minimum **48 × 48dp** for all interactive controls. Primary CTA buttons: `Size.fromHeight(56)`. Chip touch area ≥48dp tall.
+**Touch targets:** minimum **48 × 48dp** for interactive controls. Primary CTA buttons: `Size.fromHeight(56)` (On Course FWY record dock uses **64dp** height). **Stat tiles** on My Bag are **44dp** tall (visual density); tap targets on card rows use `minHeight: 48` on identity and notes `InkWell`s.
+
+### Component density (shipped)
+
+| Component | Size / token | File |
+| :--- | :--- | :--- |
+| Bag stat tile | 44dp height, 8dp radius, hero on `primaryContainer` | `clubs_screen.dart` `_StatTile` |
+| FWY rail tile | square `FwyRailTile`, `fwySurface` 12dp radius | `fwy_overlays.dart` |
+| FWY overlay text | white w600 + shadow on map | `fwyOverlayText` |
+| Category chips | 48dp strip height | `ClubsScreen` filter row |
+| NavigationBar | Material 3 default | `home_shell.dart` |
 
 ---
 
@@ -168,38 +176,32 @@ See [`docs/context/designs/DesignSystem.md`](./designs/DesignSystem.md) for the 
 
 ## Wireframes
 
-Target layouts (v1.1). These replace the as-built form stacks. Implementation stays in `golf_diary_app/lib/screens/` and must keep PRD behavior (yards, strokes-from-shots, mulligans excluded from gross, concede = 2× par).
+**As-built layouts** aligned with `golf_diary_app/lib/screens/` (2026-11-20). Index with story IDs: [designs/README.md](./designs/README.md). Fresh audit: [Design_Audit.md](./designs/Design_Audit.md).
 
-| Screen | Widget | File |
-| :--- | :--- | :--- |
-| App shell | `HomeShell` | [Wireframe_HomeShell.md](./designs/Wireframe_HomeShell.md) |
-| My Bag | `ClubsScreen` | [Wireframe_MyBag.md](./designs/Wireframe_MyBag.md) |
-| On Course (Course · map HUD) | `FairwayTrackerScreen` | [Wireframe_OnCourse.md](./designs/Wireframe_OnCourse.md) |
-| On Course (Simulator) | `FairwayTrackerScreen` | [Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md) |
-| On Course mode flow | Simulator ↔ Course loops | [Flow_OnCourse-Modes.md](./designs/Flow_OnCourse-Modes.md) |
-| Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md) |
-| Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) |
-| Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) |
-| Practice drills | Range sheet | [Wireframe_PracticeDrills.md](./designs/Wireframe_PracticeDrills.md) |
-| Range session & evaluation flow | Range → Compiled Summary → Vertex AI Diary | [Flow_RangeSessionAndEvaluation.md](./designs/Flow_RangeSessionAndEvaluation.md) |
-| Hole map | On Course map pane | [Wireframe_HoleMap.md](./designs/Wireframe_HoleMap.md) |
-| Swing diary | Range evaluation & coaching sheet | [Wireframe_SwingDiary.md](./designs/Wireframe_SwingDiary.md) |
-| Shot edit | `ShotEditDialog` | [Wireframe_ShotEdit.md](./designs/Wireframe_ShotEdit.md) |
-| New round | Scorecard dialogs | [Wireframe_NewRound.md](./designs/Wireframe_NewRound.md) |
-| Club editor | Bag dialogs | [Wireframe_ClubEditor.md](./designs/Wireframe_ClubEditor.md) |
-| PWA update | `PwaUpdateDialog` | [Wireframe_PwaUpdate.md](./designs/Wireframe_PwaUpdate.md) |
+| Screen | Widget | File | Stories (examples) |
+| :--- | :--- | :--- | :--- |
+| App shell | `HomeShell` | [Wireframe_HomeShell.md](./designs/Wireframe_HomeShell.md) | SHELL-001 |
+| Onboarding | `OnboardingStarterWizard` | [Wireframe_Onboarding.md](./designs/Wireframe_Onboarding.md) | MGDV-201 |
+| Settings | Profile + sync routes | [Wireframe_Settings.md](./designs/Wireframe_Settings.md) | MGDV-202, SYNC-010 |
+| My Bag | `ClubsScreen` | [Wireframe_MyBag.md](./designs/Wireframe_MyBag.md) | BAG-010 |
+| On Course (FWY) | `FairwayTrackerScreen` | [Wireframe_OnCourse.md](./designs/Wireframe_OnCourse.md) | CRSE-036 |
+| On Course (SIM) | `FairwayTrackerScreen` | [Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md) | CRSE-035 |
+| On Course flows | Mode loops | [Flow_OnCourse-Modes.md](./designs/Flow_OnCourse-Modes.md) | CRSE-* |
+| Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md) | SCOR-001 |
+| Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) | SCOR-002 |
+| Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) | RNGE-005 |
+| Practice drills | Range sheet | [Wireframe_PracticeDrills.md](./designs/Wireframe_PracticeDrills.md) | RNGE-003 |
+| Range → diary flow | Compiled session | [Flow_RangeSessionAndEvaluation.md](./designs/Flow_RangeSessionAndEvaluation.md) | RNGE-004 |
+| Hole map | `FwyHoleMap` | [Wireframe_HoleMap.md](./designs/Wireframe_HoleMap.md) | CRSE-006 |
+| Swing diary | `SwingDiarySheet` | [Wireframe_SwingDiary.md](./designs/Wireframe_SwingDiary.md) | RNGE-004 |
+| Shot edit | `ShotEditDialog` | [Wireframe_ShotEdit.md](./designs/Wireframe_ShotEdit.md) | CRSE-002 |
+| New round | Scorecard dialogs | [Wireframe_NewRound.md](./designs/Wireframe_NewRound.md) | SCOR-001 |
+| Club editor | Bag dialogs | [Wireframe_ClubEditor.md](./designs/Wireframe_ClubEditor.md) | BAG-001 |
+| PWA update | `PwaUpdateHost` | [Wireframe_PwaUpdate.md](./designs/Wireframe_PwaUpdate.md) | PWA-001 |
 
-Audit: [UX_Audit.md](./designs/UX_Audit.md).
+### Optional improvements (not redesign)
 
-### Planned improvements (why the wireframes differ from the code)
-
-| Surface | As built | Target |
-| :--- | :--- | :--- |
-| My Bag | Notes field + Save on every card; chips ~48px tall including padding squeeze | Glance cards (name + min/avg/max). Notes open in a sheet. Category chips ≥48dp. Empty and loading states. |
-| On Course | One long form. Record and Finish are both large filled buttons. Course field eats the first viewport. | **Course mode:** map-first body, header distance chip, footer **plan shot** (club/lie/aim wedge), sticky **Record shot at ball**. **Simulator mode:** HUD-card layout, optional carry/note fields, no GPS ([Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md)). **Skill tier** (beginner / amateur / seasoned pro) thins or expands aim wedge, marker detail, and optional fields per [MGDV-202](../shards/MGDV/MGDV-202-golfer-profile-skill-tier.md). |
-| Scorecard | Six-column table, ~40dp rows, blue/orange fills | Out/In/Total banner, then **Front 9 / Back 9** hole tiles (≥48dp). Concede uses label `Gimme`, not color alone. |
-| Hole editor | Works; numbers not tabular; no live gross prominence | Stepper sheet with live **gross** and **vs par**. 56dp steppers. |
-| Range | Three cramped fields; counter beside a small button; no bag baseline | Two-stage flow: (1) On-mat club block capture (`Save Drill Session` updates club averages and adds to today's active visit); (2) Post-session sit-down card with a persistent **Session Note** (`range-session-note-field`), a live **This Visit's Summary** preview of clubs/drills logged, and **Save and Evaluate Session** (`range-save-evaluate-session-btn`) that compiles the session log and opens the Vertex AI Swing Diary evaluation. |
+See [Design_Audit.md](./designs/Design_Audit.md) § Optional improvements. Examples: `ValueKey` on bag category chips; formalize `onMapOverlay` token for FWY text; caddy wireframes for MGDV-501.
 
 **Global rules for every wireframe**
 

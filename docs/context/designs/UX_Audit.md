@@ -1,11 +1,11 @@
-# UX audit — My Golf Diary
+# UX audit — My Golf Diary (historical)
 
 | Field | Value |
 | :--- | :--- |
 | **Command** | `/audit-ux all` |
 | **Date** | 2026-11-09 |
 | **Author** | Eunice |
-| **Compared to** | `UI_UX_Design_Guide.md`, `DesignSystem.md`, `app_theme.dart`, PRD v1.3, current `golf_diary_app/lib/screens/` |
+| **Superseded by** | [Design_Audit.md](./Design_Audit.md) (2026-11-20, as-built + story links) |
 
 Wireframes now exist for every screen and dialog in the app, plus the four planned surfaces. This audit is the compliance check. It does not change Flutter code.
 

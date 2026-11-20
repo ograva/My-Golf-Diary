@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `ClubsScreen` |
-| **PRD** | BAG-001, BAG-002, BAG-003 |
+| **Stories** | [BAG-001](../../stories/BAG/BAG-001-filter-by-category.md), [BAG-002](../../stories/BAG/BAG-002-distance-stats.md), [BAG-003](../../stories/BAG/BAG-003-swing-notes.md), [BAG-010](../../stories/BAG/BAG-010-stat-tile-cards.md) |
 | **Persona** | Blake (glance), Riley (notes) |
-| **Status** | Target v1.1 |
+| **Status** | **Shipped** — stat-tile cards (BAG-010) |
 
 ## 1. Screen purpose
 
@@ -46,15 +46,12 @@ Amended 2026-11-20: **Option B, stat tiles** (Project store `docs/bag-card-compa
 
 **Notes dialog** (tap note row): `SwingNotesDialog`, 3–6 line `TextField`, **Save notes**. Save is explicit (BAG-003).
 
-### What changes vs current code
+### As-built implementation (`clubs_screen.dart`)
 
-- Remove the **Details** button and `ClubBagDetailsSheet`. Every field from the sheet is on the card.
-- Remove the separate Range logs / Edit notes TextButtons; the sessions chip and the note row are the targets.
-- Remove the 48dp sparkline and its caption; the trend is a tile.
-- Card padding 12 horizontal, 8dp between cards. Tap targets stay ≥ 48dp.
-- All-zero stats render `—`, not `0 yds`, so a starter bag does not look measured.
-- Empty category: centered text "No clubs in this category" — no crash (BAG-001).
-- Category selection is session-only (not persisted). Documented here so resume returns to **Wood**.
+- `_ClubBagCard`: 12dp horizontal padding, 8dp bottom margin, 44dp stat tiles, `ActionChip` sessions row.
+- Category chips: **no `ValueKey` yet** — see [Design_Audit.md](./Design_Audit.md) optional P1.
+- `add-club-button`: `Key('add-club-button')` on AppBar icon.
+- Category selection is session-only (not persisted).
 
 ## 3. Larger screens
 

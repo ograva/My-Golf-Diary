@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `PwaUpdateDialog` |
-| **PRD** | Web publish / installed PWA |
+| **Stories** | [PWA-001](../../stories/PWA/PWA-001-github-pages-publish.md) |
 | **Status** | As built — web only |
 
 ## 1. Screen purpose

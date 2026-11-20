@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | Map pane inside `FairwayTrackerScreen` |
-| **PRD** | CRSE-006 (future) |
+| **Stories** | [CRSE-006](../../stories/CRSE/CRSE-006-stylized-hole-map.md), [CRSE-041](../../stories/CRSE/CRSE-041-map-pack-pipeline.md) |
 | **Persona** | Rory |
 | **Status** | Future — map layer is default in Course mode ([Wireframe_OnCourse.md](./Wireframe_OnCourse.md)); this doc defines markers, cache, and vector fallback |
 

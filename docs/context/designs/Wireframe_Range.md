@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `RangeDrillScreen` |
-| **PRD** | RNGE-001 … RNGE-005 |
+| **Stories** | [RNGE-001](../../stories/RNGE/RNGE-001-club-shot-block.md)–[005](../../stories/RNGE/RNGE-005-session-log-compile.md) |
 | **Persona** | Riley — hits several clubs & drills on the mat, then sits down to jot a session note, review the compiled summary, and read Vertex AI's evaluation |
 | **Status** | Target v1.3 (aligned with as-built Range Drill Instructor + `RNGE-005` / `RNGE-004`) |
 | **AppBar title** | **Range Drill Instructor** (as built) |

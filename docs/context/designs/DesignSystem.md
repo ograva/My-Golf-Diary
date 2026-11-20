@@ -2,8 +2,8 @@
 
 | Field | Value |
 | :--- | :--- |
-| **Version** | 1.0 |
-| **Date** | 2026-11-06 |
+| **Version** | 1.1 |
+| **Date** | 2026-11-20 |
 | **Author** | Eunice (UI/UX Designer cohort) |
 | **Implements** | `golf_diary_app/lib/theme/app_theme.dart` |
 
@@ -12,6 +12,43 @@
 | Version | Date | Summary |
 | :--- | :--- | :--- |
 | 1.0 | 2026-11-06 | Initial design system — palette, typography, component recipes, Do/Don't |
+| 1.1 | 2026-11-20 | Shipped components: map palette tokens, bag stat tile, FWY rail/overlays; Key conventions cross-ref |
+
+---
+
+## Shipped components (v1.1)
+
+Reference implementations — do not duplicate literals outside `app_theme.dart` / shared widgets.
+
+### Map palette (`GolfPalette.map*`)
+
+Tokens in `app_theme.dart` match `tools/map_pack/render.py`. Use for `FwyHoleMap`, vector fallbacks, and pack tooling only — not form surfaces.
+
+### Bag stat tile (`_StatTile`)
+
+| Property | Value |
+| :--- | :--- |
+| Height | 44dp |
+| Radius | 8dp |
+| Hero tile | `primaryContainer` / `onPrimaryContainer` |
+| Labels | `YardageStatLabels.forDensity` (tier-driven) |
+| Numbers | `GolfTextStyles.tabularNum`, 16sp |
+| Zero yards | Em dash `—` |
+| Keys | `bag-min-yards-{id}`, `bag-hero-yards-{id}`, `bag-max-yards-{id}`, `bag-trend-{id}` |
+
+### FWY overlay kit (`fwy_overlays.dart`)
+
+| API | Use |
+| :--- | :--- |
+| `fwyOverlayText` | White w600 + shadow on map scrim |
+| `fwySurface` | Rail tile / badge fill; `selected` → `fairwayGreen` |
+| `FwyRailTile` | Club, lie, aim, penalty, mulligan on `oncourse-side-rail` |
+
+**Do:** keep one filled **Record** in the FWY dock. **Don't:** add second filled CTAs on the map layer.
+
+### Flutter `Key` convention
+
+`ValueKey('screen-element-purpose')` in kebab-case. Document every interactive control in the matching `Wireframe_*.md` § Key map. Prefer `ValueKey` over `Key` for new work ([Design_Audit.md](./Design_Audit.md)).
 
 ---
 
@@ -573,18 +610,19 @@ Pattern: **`[screen]-[element]-[purpose]`** in kebab-case.
 
 | Screen | Example key string | Widget |
 | :--- | :--- | :--- |
-| My Bag | `bag-category-chip-wood` | `ChoiceChip` |
-| My Bag | `bag-club-card-driver` | `Card` |
-| My Bag | `bag-notes-field-driver` | `TextField` |
-| My Bag | `bag-save-notes-btn-driver` | `TextButton` |
+| My Bag | `bag-category-chip-wood` (target) | `ChoiceChip` |
+| My Bag | `bag-club-card-{clubId}` | `Card` |
+| My Bag | `bag-hero-yards-{clubId}` | stat tile `Text` |
+| My Bag | `bag-range-logs-{clubId}` | `ActionChip` |
+| Shell | `shell-tab-oncourse` | `NavigationDestination` |
 | On Course | `oncourse-course-name-field` | `TextField` |
 | On Course | `oncourse-par-chip-4` | `ChoiceChip` |
 | On Course | `oncourse-lie-chip-fairway` | `ChoiceChip` |
-| On Course | `oncourse-record-shot-btn` | `ElevatedButton` |
-| On Course | `oncourse-penalty-1-btn` | `OutlinedButton` |
-| On Course | `oncourse-mulligan-btn` | `OutlinedButton` |
-| On Course | `oncourse-concede-btn` | `OutlinedButton` |
-| On Course | `oncourse-finish-hole-btn` | `ElevatedButton` |
+| On Course FWY | `oncourse-map-background` | `FwyHoleMap` |
+| On Course FWY | `oncourse-top-overlay` | header scrim |
+| On Course FWY | `oncourse-side-rail` | `FwyRailTile` column |
+| On Course | `oncourse-record-shot-btn` | `FilledButton` |
+| On Course | `oncourse-shots-peek` | `InkWell` |
 | Scorecard | `scorecard-hole-tile-{n}` | table row / `InkWell` |
 | Scorecard | `scorecard-new-round-btn` | `OutlinedButton` |
 | Range | `range-club-chip-{clubId}` | `ChoiceChip` |

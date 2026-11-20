@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `SwingDiarySheet` (modal bottom sheet or full-screen route opened from **Save and Evaluate Session** or the Range header icon) |
-| **PRD** | RNGE-005 (Compiled Session Summary) & RNGE-004 (Vertex AI Swing Diary & Evaluation Log) |
+| **Stories** | [RNGE-005](../../stories/RNGE/RNGE-005-session-log-compile.md), [RNGE-004](../../stories/RNGE/RNGE-004-vertex-swing-diary.md) |
 | **Persona** | Riley — sits down after hitting balls, reviews the compiled session summary, and reads what Vertex AI says about recent sessions and progress |
 | **Status** | Target v1.3 (aligned with `PRD.md` v1.5 and `Architecture.md` v1.6) |
 

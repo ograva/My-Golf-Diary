@@ -109,7 +109,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   bool _showSimToHole = false;
   bool _showSimNote = false;
   List<String> _recentClubIds = [];
-  double _diaryEdgeDragDx = 0;
 
   PinDistanceClient get _pinDistance =>
       widget.pinDistance ?? GeolocatorPinDistanceClient();
@@ -1267,42 +1266,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     );
   }
 
-  void _openDiary() {
-    showSwingDiarySheet(
-      context,
-      diary: widget.diary,
-      entrySource: DiaryContextSource.onCourse,
-    );
-  }
-
-  /// A thin strip on the right edge opens the diary on a leftward swipe.
-  /// It only claims horizontal drags, so taps and vertical scrolling pass
-  /// through to the controls underneath.
-  Widget _withDiaryEdgeSwipe(Widget child) {
-    return Stack(
-      children: [
-        Positioned.fill(child: child),
-        Positioned(
-          top: 0,
-          bottom: 0,
-          right: 0,
-          width: 16,
-          child: GestureDetector(
-            key: const ValueKey('oncourse-diary-edge-swipe'),
-            behavior: HitTestBehavior.translucent,
-            onHorizontalDragStart: (_) => _diaryEdgeDragDx = 0,
-            onHorizontalDragUpdate: (details) =>
-                _diaryEdgeDragDx += details.delta.dx,
-            onHorizontalDragEnd: (details) {
-              final velocity = details.primaryVelocity ?? 0;
-              if (_diaryEdgeDragDx < -40 || velocity < -300) _openDiary();
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   // ─── FWY map shell (CRSE-036) ─────────────────────────────────────────────
 
   _FwyGeometry _fwyGeometry() {
@@ -2252,22 +2215,23 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     return Scaffold(
       appBar: AppBar(
         leading: PlayHeaderOverflowButton(
-          showDiary: true,
           showCaddy: _roundId != null,
-          diaryLabel: 'Diary',
-          diaryEntryKey: 'diary-entry-on-course',
-          diary: widget.diary,
-          diaryStore: null,
-          diarySource: DiaryContextSource.onCourse,
           roundId: _roundId,
           courseName: _appliedCourseName,
           caddyInviteKey: 'on-course-invite-caddy',
           extraActions: _simulator ? const [] : _fwyOverflowActions(),
         ),
         title: const Text('On Course'),
-        actions: const [AccountAvatarAppBarMenu()],
+        actions: [
+          DiaryEntryButton(
+            entryKey: 'diary-entry-on-course',
+            diary: widget.diary,
+            entrySource: DiaryContextSource.onCourse,
+          ),
+          const AccountAvatarAppBarMenu(),
+        ],
       ),
-      body: _withDiaryEdgeSwipe(Builder(
+      body: Builder(
         builder: (context) {
           if (!_simulator) {
             return _fwyBody(context, strokes, penalties, mulligans, holeScore);
@@ -2479,7 +2443,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             ],
           );
         },
-      )),
+      ),
     );
   }
 }

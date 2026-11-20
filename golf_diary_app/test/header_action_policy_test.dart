@@ -7,25 +7,38 @@ void main() {
   const amateur = GolferProfile(skillTier: GolferSkillTier.amateur);
   const pro = GolferProfile(skillTier: GolferSkillTier.seasonedPro);
 
-  test('bag shows avatar only', () {
+  test('every tab pins the diary icon and never overflows it', () {
+    for (final profile in [beginner, amateur, pro]) {
+      for (final tab in HeaderTabContext.values) {
+        for (final roundActive in [false, true]) {
+          final p = HeaderActionPolicy.resolve(
+            profile: profile,
+            tab: tab,
+            roundActive: roundActive,
+          );
+          expect(p.showDiaryPinned, isTrue,
+              reason: '${profile.skillTier} $tab round=$roundActive');
+          expect(p.usePlayOverflow, isFalse);
+        }
+      }
+    }
+  });
+
+  test('bag and range show no caddy overflow', () {
     final p = HeaderActionPolicy.resolve(
       profile: beginner,
       tab: HeaderTabContext.bag,
       roundActive: false,
     );
-    expect(p.showDiaryPinned, isFalse);
-    expect(p.usePlayOverflow, isFalse);
-  });
+    expect(p.showCaddyPinned, isFalse);
+    expect(p.showCaddyInOverflow, isFalse);
 
-  test('beginner range puts diary in overflow', () {
-    final p = HeaderActionPolicy.resolve(
+    final range = HeaderActionPolicy.resolve(
       profile: beginner,
       tab: HeaderTabContext.range,
       roundActive: false,
     );
-    expect(p.showDiaryInOverflow, isTrue);
-    expect(p.usePlayOverflow, isTrue);
-    expect(p.showDiaryPinned, isFalse);
+    expect(range.showCaddyInOverflow, isFalse);
   });
 
   test('pro on course with round pins QR and diary', () {

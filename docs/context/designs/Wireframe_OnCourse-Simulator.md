@@ -19,7 +19,7 @@ Header holds **identity and mode**; the **HUD card** is the hero (not a map). Re
 
 ```
 ┌─────────────────────────────┐
-│ On Course      [diary][acct]│  AppBar: no map chrome
+│ [⋮] On Course  [diary][acct]│  diary = diary-entry-on-course; ⋮ has no Diary row
 ├─────────────────────────────┤
 │ Range Sim · Bay 3        ✎ │  VenueNameField (optional venue)
 │ [ Course ] [●Simulator ]   │  oncourse-mode-*
@@ -128,6 +128,7 @@ flowchart TD
 
 | Element | ValueKey | Widget |
 | :--- | :--- | :--- |
+| Swing diary | `diary-entry-on-course` | `IconButton` (same control as Course mode) |
 | Mode Course / Simulator | `oncourse-mode-course` `oncourse-mode-simulator` | `ChoiceChip` |
 | Course / venue field | `oncourse-course-name-field` | `VenueNameField` |
 | Hole previous / label / next | `on-course-hole-previous` `on-course-hole-label` `on-course-hole-next` | `IconButton` / `Text` |

@@ -26,7 +26,9 @@ Default selected index is **2 (On Course)** so a round starts on the capture scr
 └─────────────────────────────┘
 ```
 
-Tab index: **0** My Bag · **1** Range · **2** On Course · **3** Scorecard (Scorecard = round diary grid).
+Tab index: **0** My Bag · **1** Range · **2** On Course · **3** Scorecard (Scorecard = round grid, not the swing diary).
+
+Each tab’s AppBar carries the same **Swing diary** book icon immediately left of the account avatar. That icon is the only way to open the diary from the shell. See [UI_UX_Design_Guide.md](../UI_UX_Design_Guide.md) §4.
 
 - Bar background: `surfaceContainer` (cream elevated / forest elevated). No shadow.
 - Selected: filled icon + Inter 12 w700, indicator `primaryContainer`.

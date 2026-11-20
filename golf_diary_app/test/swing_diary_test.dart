@@ -604,8 +604,6 @@ void main() {
       ),
     ));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('shell-header-overflow-btn')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('diary-entry-on-course')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

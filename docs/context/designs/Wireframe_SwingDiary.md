@@ -9,7 +9,7 @@
 
 ## 1. Screen purpose
 
-Give the golfer a single, calm post-session review surface right after tapping **Save and Evaluate Session** (or anytime via the Range header diary icon):
+Give the golfer a single, calm post-session review surface right after tapping **Save and Evaluate Session**, or anytime from the header book icon on My Bag, Range, On Course, and Scorecard (`diary-entry-bag`, `diary-entry-range`, `diary-entry-on-course`, `diary-entry-scorecard`). That icon is the only shell entry. There is no diary tab, overflow item, or edge swipe:
 
 1. **Compiled Session Summary card (`RNGE-005`):** At the top of the sheet, the golfer immediately sees the compiled **Range Session Log** they just saved—venue, timestamp, their personal **Session Note**, and every club/drill block (`min / avg / max` in tabular digits, shot count, per-club cue). This card renders 100% from local SQLite (`range_sessions`), so even offline the golfer gets an immediate, structured summary of their session.
 2. **Vertex AI Progress & Session Evaluation (`RNGE-004`):** Directly below the compiled session summary, Vertex AI (`FirebaseAI.vertexAI()`, project-billed, no player API key) evaluates today's compiled session against earlier practice—highlighting whether carry yardages, dispersion (`min..max`), and swing cues are progressing—and lets the golfer ask follow-up questions in the same thread or open the **Past Evaluations Log** (`RNGE-024`).
@@ -141,7 +141,7 @@ flowchart TD
 
 | Element | ValueKey | Widget |
 | :--- | :--- | :--- |
-| Open diary (Range header) | `range-swing-diary-btn` | `IconButton` |
+| Open diary (shell header) | `diary-entry-bag` `diary-entry-range` `diary-entry-on-course` `diary-entry-scorecard` | `IconButton` |
 | Compiled session summary card | `diary-session-summary-card` | `Card` |
 | Opt-in continue | `diary-opt-in-continue` | `FilledButton` |
 | Opt-in dismiss | `diary-opt-in-dismiss` | `TextButton` |

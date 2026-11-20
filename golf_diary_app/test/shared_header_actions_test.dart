@@ -25,12 +25,8 @@ void main() {
                 tab: tab,
                 roundId: roundId,
                 courseName: 'Test Course',
-                diaryEntryKey: tab == HeaderTabContext.bag
-                    ? null
-                    : 'diary-entry-test',
-                diarySource: tab == HeaderTabContext.bag
-                    ? null
-                    : DiaryContextSource.range,
+                diaryEntryKey: 'diary-entry-test',
+                diarySource: DiaryContextSource.range,
                 caddyInviteKey: tab == HeaderTabContext.scorecard
                     ? 'scorecard-invite-caddy'
                     : 'on-course-invite-caddy',
@@ -44,14 +40,19 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('beginner bag shows only account avatar', (tester) async {
+  testWidgets('beginner bag shows the diary icon and account avatar',
+      (tester) async {
     await pumpHeader(
       tester,
       tab: HeaderTabContext.bag,
       profile: const GolferProfile(skillTier: GolferSkillTier.beginner),
     );
     expect(find.byKey(const Key('account-avatar-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-entry-test')), findsOneWidget);
+    expect(find.byIcon(Icons.auto_stories_outlined), findsOneWidget);
     expect(find.byKey(const Key('shell-header-overflow-btn')), findsNothing);
+    expect(find.text('Diary'), findsNothing);
+    expect(find.text('Swing diary'), findsNothing);
   });
 
   testWidgets('beginner on course with round uses overflow not pinned QR',

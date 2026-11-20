@@ -17,6 +17,7 @@
 | 1.4 | 2026-11-19 | Eunice (`/wireframe`, `/flow`) | On Course **dual-mode** sharding: map-first **Course** HUD (header/footer rail, aim wedge, markers, sticky record), **Simulator** table layout (`Wireframe_OnCourse-Simulator.md`), end-to-end mode flow (`Flow_OnCourse-Modes.md`); skill-tier field density cross-ref MGDV-202/203 |
 | 1.5 | 2026-11-20 | Eunice (`/audit-ux all`, `/design-system`) | **As-built capture:** stat-tile My Bag (BAG-010), FWY map shell (CRSE-036), onboarding/settings wireframes; story links on all major wireframes; [Design_Audit.md](./designs/Design_Audit.md) + [designs/README.md](./designs/README.md) |
 | 1.6 | 2026-11-20 | Athena | Golfer avatar art + picker (§4 Iconography) |
+| 1.7 | 2026-11-20 | Eunice | One diary write affordance: header book icon on every shell tab. Overflow and right-edge swipe removed |
 
 ---
 
@@ -123,6 +124,7 @@ Three families in strict roles:
 - **Library:** Material Icons (`Icons.*`) — always filled variant for primary actions; outlined for secondary / inactive tab.
 - **Tab icons** (index 0→3): My Bag `Icons.golf_course` · Range `Icons.fitness_center` · On Course `Icons.my_location` · Scorecard `Icons.scoreboard` (filled when selected).
 - **Action icons:** `Icons.cloud_upload_outlined` (sync), `Icons.add`, `Icons.refresh`.
+- **Diary write (one affordance):** `Icons.auto_stories_outlined` on a 48×48dp `IconButton`, tooltip **Swing diary**. It sits in the AppBar actions, immediately left of the account avatar, on **My Bag, Range, On Course, and Scorecard**. Same control for every skill tier. Keys: `diary-entry-bag`, `diary-entry-range`, `diary-entry-on-course`, `diary-entry-scorecard`. It opens `SwingDiarySheet`. There is no diary bottom tab, no task button, no Diary row in the ⋮ menu, and no right-edge swipe.
 - **Size:** 24dp interactive, 20dp decorative inline.
 - **Golfer avatars:** illustrated circular portraits (`assets/avatars/`, female/male × beginner/amateur/seasoned, plus one alternate amateur art per gender) fill the account avatar slot: header 40dp, Account profile 72dp, Settings 56dp, diary "You" rows 32dp. A Google photo takes precedence. The Settings picker rings the selection in `colorScheme.primary`, and **Auto** follows gender × tier.
 - **Color:** selected = `colorScheme.onPrimaryContainer` on indicator; unselected = `colorScheme.onSurfaceVariant`.

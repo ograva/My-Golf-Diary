@@ -4,9 +4,9 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.16 | Active | 2026-11-20 | Watson |
+| 1.18 | Active | 2026-11-20 | Watson |
 
-**Inputs:** [`PRD.md`](./PRD.md) v1.9 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · shards **`CRSE-035`–`036`**, **`CRSE-041`**.
+**Inputs:** [`PRD.md`](./PRD.md) v1.11 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · shards **`CRSE-035`–`036`**, **`CRSE-041`**.
 
 ---
 
@@ -14,7 +14,7 @@
 
 **My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v16**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
 
-**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **Range** ships compiled **`range_sessions`** (`RNGE-005`) and partial **Vertex AI** swing diary (`RNGE-004`). **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`; no Details sheet). Optional **Firebase**: Firestore **`my-golf-diary`** LWW sync for core tables; **Firebase Storage** `course_maps/` for hole packs; **`AccountAvatarAppBarMenu`** (`SYNC-005`) + partial durable sign-in (`SYNC-006`). Web uses the same code path with `sqflite_common_ffi_web` (IndexedDB).
+**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **Range** ships compiled **`range_sessions`** (`RNGE-005`). The **diary** (`RNGE-004`) is one ongoing thread: a range-block save and a finished or left **FWY**/**SIM** round write entries and do not call the model; **Feedback** and a typed note call **Vertex AI** and store the reply in that thread. **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`; no Details sheet). Optional **Firebase**: Firestore **`my-golf-diary`** LWW sync for core tables; **Firebase Storage** `course_maps/` for hole packs; **`AccountAvatarAppBarMenu`** (`SYNC-005`) + partial durable sign-in (`SYNC-006`). Web uses the same code path with `sqflite_common_ffi_web` (IndexedDB).
 
 ```mermaid
 flowchart LR
@@ -43,9 +43,8 @@ flowchart LR
   CS[CloudSyncService] --> FS
   UI --> CS
   FST -->|"Auth getData pack download"| PACK
-  DB -->|"range_sessions RNGE-005"| GEMINI
-  GEMINI --> SwingDiarySheet
-  SwingDiarySheet --> UI
+  UI -->|"Feedback or typed note RNGE-004"| GEMINI
+  GEMINI -->|"reply stored in the diary thread"| DB
 ```
 
 ---
@@ -123,7 +122,7 @@ golf_diary_app/ios/Runner/Info.plist
 | `BAG` | `clubs_screen.dart` stat-tile cards (`MGDV-203`) | `clubs`; reads `golfer_profile` for yardage labels |
 | `CRSE` | `fairway_tracker_screen.dart`, `fwy_hole_map.dart`, `fwy_overlays.dart`, `venue_name_field.dart` | `shots` (+ `aim_direction`, sim optional cols v15), `round_scores`, `golf_rounds`; `CourseMapCacheService` + `course_map_manifest.dart`; coords catalog `CRSE-005`; FWY `CRSE-036` / SIM `CRSE-035` |
 | `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart` (`MGDV-401`), `scorecard_hole_editor.dart` | `round_scores`, `golf_rounds`; `golfer_profile.scorecard_view_mode`, `scorecard_cart_high_contrast` |
-| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart`, `SwingDiarySheet` (`RNGE-004` partial) | `range_drills` → `clubs`; `practice_drills`; shipped `range_sessions`; diary tables |
+| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart`, `SwingDiarySheet` (`RNGE-004` one thread) | `range_drills` → `clubs`; `practice_drills`; shipped `range_sessions`; diary thread tables |
 | `SYNC` | `account_avatar_app_bar_menu.dart`, `account_auth_controller.dart`, `diary_sync_runner.dart` | `CloudSyncService` → Firestore; `SyncIdentity`; Storage pack reads; `google_sign_in` |
 | `MGDV` | `onboarding_starter_wizard.dart`, `golfer_profile_settings_screen.dart`, caddy widgets | `golfer_profile` (skill tier, onboarding, scorecard prefs); caddy Firestore + SQLite v14 tables |
 
@@ -145,7 +144,7 @@ golf_diary_app/ios/Runner/Info.plist
 - **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 12 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
 - **`range_sessions` *(v6 — `RNGE-005` shipped)*** — `id TEXT PRIMARY KEY`, `venue_name TEXT NOT NULL DEFAULT ''`, `session_note TEXT NOT NULL DEFAULT ''`, `compiled_summary_json TEXT NOT NULL DEFAULT '[]'`, `timestamp INTEGER NOT NULL`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
-  - `compiled_summary_json` snapshots the ordered list of club blocks at compile time (`clubId`, `clubName`, `shotCount`, `minYards`, `avgYards`, `maxYards`, `tempoNotes`, `drillId`, `drillTitle`, `drillSteps`) so the compiled session log remains self-contained for UI rendering and Vertex AI (`RNGE-004`) evaluation even if a club or custom drill is later edited or deleted.
+  - `compiled_summary_json` snapshots the ordered list of club blocks at compile time (`clubId`, `clubName`, `shotCount`, `minYards`, `avgYards`, `maxYards`, `tempoNotes`, `drillId`, `drillTitle`, `drillSteps`) so the compiled session log remains self-contained for the Range session log even if a club or custom drill is later edited or deleted. Compiling this row does not call the model (`RNGE-004`, §5.7).
 
 **Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — **mulligans** stored but **not** in gross formula (display/practice).
 
@@ -190,6 +189,8 @@ After inserting **`range_drills`**, updates **`clubs`** for `log.clubId`:
 - **swing_notes:** replace with `log.tempoNotes` if non-empty
 - mark `is_synced = 0`
 
+**Diary entry (`RNGE-004`):** the same save appends one thread entry and does not call Vertex. The entry holds the club, the drill when one is linked, the result (shot count and min/avg/max yards), and the per-club note when the golfer wrote one. A block with no note still writes the entry. Storage is §5.7.
+
 Changing this math requires **Version History** + migration if schema changes.
 
 ### 5.3.1 Session Note & Compiled Range Session Log (`RNGE-005` — shipped v6)
@@ -199,7 +200,7 @@ A range visit often spans several clubs and drills before the golfer wraps up wi
 ```mermaid
 flowchart TD
   subgraph Active_Range_Visit [Active Range Visit on RangeDrillScreen]
-    ClubBlocks["Save Drill Session (1..N club blocks)\nWrites range_drills with session_id = NULL\nUpdates clubs min/max/avg + swing_notes"]
+    ClubBlocks["Save Drill Session (1..N club blocks)\nWrites range_drills with session_id = NULL\nUpdates clubs min/max/avg + swing_notes\nWrites one diary entry; no model call"]
     SessionNote["Session Note TextField\n(ValueKey('range-session-note-field'))\nPersists across club chip switches"]
   end
   Trigger["Tap Save and evaluate session\n(ValueKey('range-save-evaluate-session-btn'))"]
@@ -207,9 +208,7 @@ flowchart TD
   SavePending["Flush pending block via saveRangeDrill()"]
   Compile["Compile RangeSessionLogEntry:\n• venue_name, session_note, timestamp\n• Attach active visit's uncompiled range_drills\n• Snapshot club names, yardages, cues, & drill steps\n• Insert range_sessions + set range_drills.session_id"]
   UIList["Render in Range Session Log\n(ValueKey('range-session-log-list'))"]
-  EvalGate{"Vertex AI (RNGE-004)\nenabled & online?"}
-  RunEval["Pass compiled session log to\nVertex AI evaluation flow"]
-  SavedOffline["Show confirmation snackbar:\nSession log saved locally for later evaluation"]
+  Saved["Confirmation: session log stored\non this device. No model call"]
 
   ClubBlocks --> Trigger
   SessionNote --> Trigger
@@ -217,9 +216,7 @@ flowchart TD
   Flush -->|Yes| SavePending --> Compile
   Flush -->|No| Compile
   Compile --> UIList
-  Compile --> EvalGate
-  EvalGate -->|Yes| RunEval
-  EvalGate -->|No| SavedOffline
+  Compile --> Saved
 ```
 
 - **Two Distinct Note Scopes on `RangeDrillScreen`:**
@@ -234,7 +231,7 @@ flowchart TD
 - **Session Log Rendering (`ValueKey('range-session-log-list')`):**
   - `RangeSessionLog` displays compiled `range_sessions` entries (showing date/time, venue, the overall `session_note`, and a compact breakdown of each club/drill block in the session) alongside any standalone/legacy `range_drills` rows, while preserving the existing `This club` / `All clubs` filter (filtering compiled sessions that include the selected club).
 - **Handoff to `RNGE-004`:**
-  - `compileAndSaveRangeSession` returns the persisted `RangeSessionLogEntry`. When `RNGE-004` is wired and online, the screen immediately invokes the Vertex AI evaluation sheet/service with that `RangeSessionLogEntry`. When offline or before `RNGE-004` is enabled, the compiled session log remains safely stored in `range_sessions` and a confirmation snackbar informs the golfer that the session log is saved.
+  - Each `saveRangeDrill` already wrote one diary entry (§5.3, §5.7). `compileAndSaveRangeSession` returns the persisted `RangeSessionLogEntry` and stops. Online or offline, the screen confirms the session log is stored on this device. It does not open an evaluation and does not call Vertex.
 
 ### 5.4 Live GPS Distance to Hole (`CRSE-005`)
 
@@ -296,10 +293,24 @@ flowchart TD
 - **Aim ring** (`fwy_aim.dart`, `on_course_aim.dart`): snap to ring or manifest markers; persists **`shots.aim_direction`** L/C/R (v15); full bearing columns deferred.
 - **Double par:** banner `oncourse-double-par-banner` — never auto-finishes; pairs with §5.2.1 holing-stroke skip.
 - **Header:** leading overflow (diary, caddy, settings entries); trailing account avatar — legacy **`on-course-map-toggle`** / tabular FWY card **removed**.
+- **Diary (`RNGE-004`):** finishing the round, or leaving it, in **FWY** or **SIM** writes one thread entry (course, mode, score, short shot summary) and does not call the model. See §5.7.
 
-### 5.7 Vertex AI swing diary and range-evaluation log (`RNGE-004` — partial ship)
+### 5.7 One diary thread (`RNGE-004` — locked in PRD 1.11)
 
-The diary comments on **the compiled range session log (`RNGE-005`) and today’s drills in the context of earlier practice**: what the player has been focusing on, how they felt about the session (`session_note`), and whether yardages and cues moved. The project owner pays Vertex AI on `novusinc-8df79` for this phase, aimed at **fewer than 1,000 people**. At about 1,000 people, stop and plan again (in-app charging or a tighter cap). Players do not paste their own Gemini keys.
+PRD v1.11 retired the auto-evaluate path. **Save and evaluate session** compiles `range_sessions` (§5.3.1) and does not call the model. The diary is **one ongoing thread**: a personal log and an AI sounding board. It opens from Range, On Course (overflow and `oncourse-diary-edge-swipe`), and Scorecard. It is not a fifth tab. Entries stay on device and can be re-read offline.
+
+The running client still starts a model call from **Save and evaluate session**. That path is retired here. §8 records the gap. This alignment adds no table and no column.
+
+**When the model is not called.** These writes are local only:
+
+1. **Range block.** `saveRangeDrill` writes one entry whether or not the golfer wrote a note. The entry holds club, drill when one is linked, result (shot count and min/avg/max yards), and the per-club note when one was written. `range_drills` and the club min/max/avg update (§5.3) still happen.
+2. **FWY or SIM round.** Finishing the round, or leaving it, writes one entry: course, mode (`FWY` or `SIM`), score, and a short shot summary. `diary_context_notes.round_id` stores the round.
+3. **Compile (`RNGE-005`).** `compileAndSaveRangeSession` stores the session log and confirms it on device. It does not write a second diary entry for blocks already saved, and it does not call Vertex.
+
+**When the model is called.** Only these two, and only when the golfer has opted in, Firebase is up, and App Check is active. Offline, or before opt-in, the golfer's text stays in the thread and no call is made until Vertex can run.
+
+1. **Feedback** (`diary-feedback-btn`). Submits recent thread entries, inside the token ceiling. The model returns an analysis. That analysis is saved as an entry in the same thread. Feedback is how a run of triggered entries is sent for coaching. It does not itself write a range or round entry.
+2. **Typed note** (`diary-composer-field`, `diary-send-btn`). The text is saved as an entry first. The model then reads the thread, including that entry, and the reply is saved in the same thread on that turn.
 
 ```mermaid
 sequenceDiagram
@@ -307,55 +318,70 @@ sequenceDiagram
   participant App as Flutter App (SQLite)
   participant AI as Vertex AI Gemini
 
-  User->>App: Tap "Save and evaluate session" (RNGE-005) or ask a follow-up
-  App->>App: Persist compiled range_sessions row (session_note + club/drill blocks)
-  App->>App: Load compiled session log in full, recent raw history, progress brief, per-club tally
+  User->>App: Save range block, or finish or leave FWY/SIM
+  App->>App: Write one thread entry. No model call
+  alt Feedback
+    User->>App: Tap Feedback
+    App->>App: Load coach prompt plus recent thread entries
+  else Typed note
+    User->>App: Send a typed note
+    App->>App: Store the note, then load the thread including it
+  end
   App->>AI: Prompt stays under about 250000 tokens
-  AI-->>App: Evaluation framed on session note, club blocks, and past focus
-  App->>App: Append the evaluation to range_evaluations (linked to session_id)
-  Note over App: When history would pass 250000 tokens, store a periodic summary and drop the oldest raw text from the next prompt
+  AI-->>App: Analysis or reply
+  App->>App: Save that text as the next entry in the same thread
+  Note over App: Over the ceiling, store a periodic summary and drop the oldest raw text from the next prompt
 ```
 
-**Who pays.** `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player’s prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`.
+**Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`. There is no second persona.
 
-**What each call contains**, in order:
+**What each call contains**, in order. The existing coach prompt stays. Diary entries are its context. A compiled `range_sessions` row is not attached and does not start the call.
 
 1. **Coaching `systemInstruction`** (`Content.system` in `VertexDiaryModel`): a universal biomechanics / physio / caddie method, then this golfer's `golfer_profile` baseline, current bag, and frequent venues. Empty pillars add one optional Caddie Check-In. The method does not hard-code one person's clubs or injuries. Yardages stay grounded in the logged SQLite numbers.
 2. **Current bag (`clubs` from SQLite)** — club names, categories, brand/model specs, recorded `min / avg / max yd`, and per-club `swing_notes`.
 3. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
 4. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
-5. **Recent history, still raw**, while the whole prompt (including `systemInstruction`) is under the ceiling: earlier compiled `range_sessions` (venue, total shots, `session_note`, and numbered club/drill blocks with dispersion spread) plus any uncompiled standalone `range_drills`.
-6. **Today / active compiled session log, in full (`RNGE-005`)** — the compiled `range_sessions` payload (`session_note`, venue, total shots, and every club block's shot count, min / avg / max, spread, per-club tempo notes, and linked drill title/steps) plus any uncompiled `range_drills` logged today. Today’s session is never folded into the progress brief.
-7. The latest chat turns and active coaching request.
+5. **Diary thread entries, still raw**, while the whole prompt (including `systemInstruction`) is under the ceiling: range-block entries, FWY/SIM round entries, typed notes, and earlier model replies. Feedback sends the recent entries. A typed note is already stored, so the model reads it with the rest of the thread.
+6. **This ask, in full** — the recent entries Feedback submitted, or the thread including the note just typed. That material is not folded into the progress brief.
 
-**250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw history so the evaluation can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
+**250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw thread so the reply can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
 
-- Write a **periodic summary** row (the new progress brief) from SQLite plus the previous brief. Keep the comparison facts above.
-- Leave a recent raw window (about a month of sessions, or the last several dozen logs) verbatim.
-- Leave today in full.
-- Later calls send the brief, the tally, the recent window, today, and the latest turns. Cost per message stays flat after the ceiling. It does not grow because the account is older.
+- Write a **periodic summary** row (the new progress brief) from the thread plus the previous brief. Keep the comparison facts above.
+- Leave a recent raw window (about a month of entries, or the last several dozen) verbatim.
+- Leave the entries this call is about in full.
+- Later calls send the brief, the tally, the recent window, and those entries. Cost per message stays flat after the ceiling. It does not grow because the account is older.
 
-**Readable log.** Every model evaluation and every periodic summary is stored for the player to read later. A navigation entry to that log is not part of this decision. The rows have to be enough to render it without calling Vertex again.
+**What is stored.** One visible thread, in `swing_diary_messages`, ordered by `timestamp`. Roles stay `user` and `model`. The sheet renders this list. No new table.
 
-Planned SQLite table `range_evaluations`:
+| Write | `swing_diary_messages` | Also stored | Model |
+| :--- | :--- | :--- | :--- |
+| Range block | `role = user`. Content is club, drill when linked, shot count, min/avg/max yards, and the note when present | `diary_context_notes` (`source = range`) with the same content | No |
+| FWY/SIM finish or leave | `role = user`. Content is course, mode, score, and a short shot summary | `diary_context_notes` (`source = on_course`, `round_id` set) | No |
+| Typed note | `role = user`. Content is the text, saved before any call | `diary_context_notes` (`source = diary`) | Then yes, if opted in and online |
+| Feedback analysis or typed-note reply | `role = model`. Content is the analysis or reply | `range_evaluations` with `kind = evaluation` (same text) | This row **is** the call's result |
+| Periodic summary | Shown in the thread, marked as a compaction note | `range_evaluations` with `kind = periodic_summary` | Written locally when the next prompt would pass the ceiling. Not a golfer-facing ask |
+
+`diary_context_notes` (shipped): `id`, `source`, `content`, `context_date`, `round_id`, `timestamp`, plus the usual `is_synced` / `updated_at_ms` / `deleted`. A range block with no prose note still inserts a row; the result fields are the content. An empty string is not a valid entry.
+
+`range_evaluations` (shipped, v7). `session_id` is no longer the thing that starts a call. Feedback and typed-note replies may leave it null. A periodic summary leaves it null.
 
 | Column | Purpose |
 | :--- | :--- |
 | `id` | Primary key |
-| `kind` | `evaluation` or `periodic_summary` |
-| `session_id` | Nullable `range_sessions.id` that triggered this evaluation (`RNGE-005`) |
+| `kind` | `evaluation` (a thread reply) or `periodic_summary` (the progress brief) |
+| `session_id` | Nullable. Not the trigger |
 | `session_date` | `YYYY-MM-DD` the note is about |
-| `content` | The text the player can read |
+| `content` | The text the player can read. For `evaluation`, the same text as the `model` message |
 | `prompt_tokens` | Size of the prompt that produced it, when known |
-| `covered_through_ms` | For a periodic summary, the newest session/drill timestamp folded into the brief |
+| `covered_through_ms` | For a periodic summary, the newest thread timestamp folded into the brief |
 | `referenced_drill_ids_json` | Drills cited |
 | `referenced_club_ids_json` | Clubs cited |
 | `timestamp` | When the row was written |
 | `is_synced`, `updated_at_ms`, `deleted` | Same sync shape as other diary tables. Sync can wait |
 
-`swing_diary_messages` still holds the chat turns (`user`, `model`). An `evaluation` row is the durable copy of a model reply the log shows. A `periodic_summary` row is the progress brief used in later prompts and shown in the same log, marked so a reader can tell a compaction note from a day’s evaluation.
+An `evaluation` row is the durable copy of a model entry in the thread. A `periodic_summary` row is the progress brief used in later prompts and shown in the same thread, marked so a reader can tell a compaction note from an analysis. Both are enough to re-read offline without calling Vertex again.
 
-Do not add an embedding index in this phase. A question about a specific older day loads that day’s `range_sessions` and `range_drills` by date and club and adds only those rows.
+Do not add an embedding index in this phase. A question about a specific older day loads that day's thread entries by date and adds only those rows. When a number the entry does not carry is needed, load that day's `range_drills` or `range_sessions` by date and club as well. The compiled session log is not the prompt.
 
 ---
 
@@ -413,7 +439,7 @@ service cloud.firestore {
 - `firebase_options.dart` is public client config. Do not commit **service account keys**, **Maps API keys**, or **Gemini API keys** in repository source. Map-pack upload uses owner credentials outside the app (`GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT_JSON` in `tools/map_pack/` only).
 - Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
 - **Firebase Storage (`CRSE-041`):** `course_maps/**` — authenticated read only; all writes via admin upload scripts (`allow write: if false` in [`storage.rules`](../../storage.rules)).
-- **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()` on this Firebase project (`firebase_ai` 5.1 renamed `vertexAI()`). The owner pays while the diary stays under about 1,000 people. Players do not supply Gemini keys. No model key in the client.
+- **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()` on this Firebase project (`firebase_ai` 5.1 renamed `vertexAI()`). The owner pays while the diary stays under about 1,000 people. Calls run only for **Feedback** and a typed diary note (§5.7). Players do not supply Gemini keys. No model key in the client.
 
 ---
 
@@ -446,6 +472,7 @@ Background location **not** required for current flows.
 | `SYNC-007` table expansion | `range_sessions`, diary tables, profile still local-only in `syncFull` |
 | Pack catalog coverage | CRSE-041 pipeline shipped; not all PH courses uploaded |
 | RNGE-004 production ceiling | 250k-token compaction policy partial in live prompts |
+| RNGE-004 thread writes | §5.7 is the locked contract. The running client still calls Vertex from **Save and evaluate session**. Block saves and FWY/SIM finish-or-leave do not yet write the §5.7 thread entries |
 | CRSE-038/040 deferrals | Manual pin on stand-in; full aim lat/lon columns |
 
 ---
@@ -460,7 +487,7 @@ Background location **not** required for current flows.
 6. **RNGE blend:** changes require Version History + migration if schema changes.
 7. **Seeded vs Custom Drills (`RNGE-003`):** deleting a seeded drill must persist via tombstone/flag (`deleted = 1`) so it does not reappear on app restart.
 8. **Firestore, Storage & Secrets:** no wide-open production rules on user data; **no Google Maps keys** in the Flutter repo; **no Gemini API keys** in the client. Hole maps are **OSM-produced packs** only (CRSE-041). Swing-diary uses Vertex AI billed to the project. Do not add player-supplied API keys. **No runtime `google_maps_flutter` / Mapbox SDK** for v1.
-9. **Compiled Range Session Log & Diary prompt (`RNGE-005` & `RNGE-004`):** Session-level notes (`range-session-note-field`) must stay separate from per-club swing cues so switching club chips never erases the visit note. **Save and evaluate session** (`range-save-evaluate-session-btn`) must always persist the compiled `range_sessions` row locally first (flushing any unsaved club block input) before attempting Vertex AI evaluation so offline sessions never lose data. Send raw session/drill history while the prompt is under about 250,000 tokens; past that, persist a periodic summary and keep today's compiled session log plus a recent raw window. Store every evaluation and periodic summary for a later read-only log.
+9. **Compiled Range Session Log & Diary thread (`RNGE-005` & `RNGE-004`):** Session-level notes (`range-session-note-field`) must stay separate from per-club swing cues so switching club chips never erases the visit note. **Save and evaluate session** (`range-save-evaluate-session-btn`) persists the compiled `range_sessions` row locally first (flushing any unsaved club block) and does not call the model. Saving a range block, and finishing or leaving a FWY or SIM round, each write one diary entry and do not call the model. The only model calls are **Feedback** (`diary-feedback-btn`) and a typed note (`diary-composer-field`, `diary-send-btn`), and only after that golfer text is already stored. Those calls stay under about 250,000 tokens; past that, persist a periodic summary and keep a recent raw window of thread entries. Store the analysis or reply in the same thread.
 10. **Theme/keys:** `app_theme.dart`; FWY keys include `oncourse-map-background`, `oncourse-diary-edge-swipe`, `oncourse-double-par-banner`, `oncourse-map-attribution`; Bag `bag-club-card-{clubId}`; account `account-avatar-button`; see PRD 1.9 and Eunice wireframes.
 11. **Dependencies:** justify in Version History when adding packages.
 
@@ -489,3 +516,4 @@ Background location **not** required for current flows.
 | 1.15 | 2026-11-19 | Watson | `CRSE-006` map provider decision: Google **Maps Static API** (server-side cache builder) → Firebase Storage → on-device WebP; reject runtime `google_maps_flutter`/Mapbox/OSM/Esri/MapKit for v1; document Reuben GCP enablement and key isolation |
 | 1.16 | 2026-11-20 | Watson | Align with **PRD v1.9**: **supersede 1.15** with **CRSE-041 OSM** packs + `CourseMapCacheService`; **CRSE-036/035** FWY/SIM shells; holing stroke §5.2.1; DB **v15**; `SYNC-005` avatar; MGDV-203 stat tiles; PWA gh-pages workflow; graphify agent rule; known gaps table §8 |
 | 1.17 | 2026-11-20 | Athena | Illustrated golfer avatars: `assets/avatars/`, DB **v16** `golfer_profile.avatar_choice`, `GolferAvatarCircle` precedence (Google photo → illustrated → initials → icon), Settings picker with amateur alternates |
+| 1.18 | 2026-11-20 | Watson | Align with **PRD v1.11**: §5.7 is one diary thread. Range-block and FWY/SIM finish-or-leave writes do not call the model. **Feedback** and a typed note do, and the reply is stored in that thread. `RNGE-005` compile no longer starts evaluation. Token ceiling and project billing unchanged. No new table |

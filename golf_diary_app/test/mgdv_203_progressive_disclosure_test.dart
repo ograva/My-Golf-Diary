@@ -26,8 +26,12 @@ void main() {
     LocalDatabaseService.debugSetFileName('golf_diary.db');
   }
 
-  testWidgets('beginner bag shows usual hero and Shortest labels in details', (tester) async {
+  testWidgets('beginner bag card shows Shortest Usual Best on the card without Details', (tester) async {
     final db = LocalDatabaseService.instance;
+    tester.view.physicalSize = const Size(360, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.runAsync(() async {
       await useFreshDatabase();
       await db.saveGolferProfile(
@@ -49,19 +53,28 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Min'), findsNothing);
+    final card = find.byKey(const ValueKey('bag-club-card-driver'));
+    expect(card, findsOneWidget);
+    expect(find.byKey(const ValueKey('bag-details-btn-driver')), findsNothing);
+    expect(find.text('MIN'), findsNothing);
+    expect(find.descendant(of: card, matching: find.text('SHORTEST')), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text('USUAL')), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text('BEST')), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text('TREND')), findsOneWidget);
     expect(find.byKey(const ValueKey('bag-hero-yards-driver')), findsOneWidget);
-    expect(find.byKey(const ValueKey('bag-details-btn-driver')), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('bag-details-btn-driver')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Shortest'), findsOneWidget);
-    expect(find.text('Usual'), findsWidgets);
-    expect(find.text('Best'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bag-min-yards-driver')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bag-max-yards-driver')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bag-range-logs-driver')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('bag-notes-add-driver')).evaluate().length +
+          find.byKey(const ValueKey('bag-notes-text-driver')).evaluate().length,
+      1,
+    );
+    // Card size includes its 8dp bottom margin.
+    expect(tester.getSize(card).height - 8, lessThanOrEqualTo(136));
   });
 
-  testWidgets('full yardage mode shows Min Avg Max on bag row', (tester) async {
+  testWidgets('full yardage mode shows Min Avg Max on bag card', (tester) async {
     final db = LocalDatabaseService.instance;
     await tester.runAsync(() async {
       await useFreshDatabase();
@@ -84,9 +97,10 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Min'), findsAtLeastNWidgets(1));
-    expect(find.text('Avg'), findsAtLeastNWidgets(1));
-    expect(find.text('Max'), findsAtLeastNWidgets(1));
+    expect(find.text('MIN'), findsAtLeastNWidgets(1));
+    expect(find.text('AVG'), findsAtLeastNWidgets(1));
+    expect(find.text('MAX'), findsAtLeastNWidgets(1));
+    expect(find.text('SHORTEST'), findsNothing);
     expect(find.byKey(const ValueKey('bag-details-btn-driver')), findsNothing);
   });
 

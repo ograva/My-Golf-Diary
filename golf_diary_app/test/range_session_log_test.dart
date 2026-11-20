@@ -120,8 +120,9 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 
-    expect(find.text('Range logs (1)'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('bag-range-logs-driver')));
+    final logsChip = find.byKey(const ValueKey('bag-range-logs-driver'));
+    expect(find.descendant(of: logsChip, matching: find.text('1')), findsOneWidget);
+    await tester.tap(logsChip);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
 

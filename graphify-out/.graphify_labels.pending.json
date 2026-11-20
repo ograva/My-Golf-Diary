@@ -180,7 +180,6 @@
   "178": "pwa_update_client.dart",
   "179": "course_map_pack_local.dart",
   "180": "dart:async",
-  "181": "caddy_connected_banner.dart",
   "182": "../models/caddy_session.dart",
   "183": "pwa_update_client_stub.dart",
   "184": "SingleChildRenderObjectWidget",
@@ -193,7 +192,6 @@
   "191": "LocalDatabaseService",
   "192": "package:flutter/rendering.dart",
   "193": "../widgets/oncourse_map_pane.dart",
-  "194": "_CounterEntry",
   "195": "_NewRoundDialog",
   "196": "ScorecardScreenState"
 }

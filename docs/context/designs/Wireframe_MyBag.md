@@ -13,51 +13,52 @@ Show the bag by category with **min / avg / max in yards** and swing notes that 
 
 ## 2. Mobile layout
 
+Amended 2026-11-20: **Option B, stat tiles** (Project store `docs/bag-card-compact-design.md` §4). One card layout for every skill tier, ≈136dp tall at 360dp, everything visible at once. There is **no Details button and no details sheet**.
+
 ```
 ┌─────────────────────────────┐
 │ My Bag              [ + ]   │  add club, key add-club-button (as built)
 ├─────────────────────────────┤
 │ [Wood] Hybrid Iron Wedge …  │  horizontal chips, height 48
 ├─────────────────────────────┤
-│ ┌ Driver ───────────────┐   │
-│ │ MIN    AVG     MAX    │   │
-│ │ 210    230     255    │   │  tabular yds
-│ │ yds    yds     yds    │   │
-│ │ Smooth tempo      ›   │   │  one-line note or "Add swing note"
-│ └───────────────────────┘   │
-│ ┌ 3 Wood ───────────────┐   │
-│ │  —      —      —      │   │  all-zero → em dash, still a card
-│ │ No swing note     ›   │   │
-│ └───────────────────────┘   │
+│ ┌───────────────────────────────────────┐ │
+│ │ Driver ✎ TaylorMade Stealth 2  (🕘 5 ›)│ │  row 1: name 16/600 + brand 12 inline; sessions chip
+│ │ [MIN 210][AVG 230][MAX 255][TREND +6 ╱╲]│ │  row 2: four 44dp tiles, AVG tile primaryContainer
+│ │ ✎ "Smooth tempo, finish high — tee…"  │ │  row 3: one-line note, full width
+│ └───────────────────────────────────────┘ │  ≈136dp, 8dp gap
+│ ┌───────────────────────────────────────┐ │
+│ │ 3 Wood                         (🕘 0 ›)│ │
+│ │ [MIN —][AVG —][MAX —][TREND —]        │ │  all-zero → em dash, still a card
+│ │ ＋ Add swing note                      │ │
+│ └───────────────────────────────────────┘ │
 └─────────────────────────────┘
 ```
 
-**Notes sheet** (tap card):
+| Zone | Content | Behavior |
+| :--- | :--- | :--- |
+| Identity | `club.name` + ✎ glyph, `brand · model` inline (ellipsis) | Tap → `EditClubDialog` |
+| Sessions chip | 🕘 `N` › | Tap → `ClubRangeLogSheet` (empty state at 0). Semantics “Range logs (N)” |
+| Stat tiles | Shortest/Min · Usual/Avg · Best/Max, numbers in tabular mono, no `yds` unit | Not interactive. `—` when 0 |
+| Trend tile | sparkline + `+N` / `−N` delta (`positive` / `negative`) | `first → last yds` in tooltip and semantics. <2 sessions → `—` |
+| Notes row | ✎ + italic note, 1 line, ellipsis; empty → ＋ “Add swing note” in `primary` | Tap → `SwingNotesDialog` |
 
-```
-┌─────────────────────────────┐
-│ Driver                      │
-│ Swing notes                 │
-│ ┌─────────────────────────┐ │
-│ │                         │ │  3–6 lines
-│ └─────────────────────────┘ │
-│              [ Save notes ] │  filled, one primary
-└─────────────────────────────┘
-```
+**Skill tier changes labels only:** beginner and amateur read **Shortest · Usual · Best**, full display reads **Min · Avg · Max**. Layout is identical.
+
+**Notes dialog** (tap note row): `SwingNotesDialog`, 3–6 line `TextField`, **Save notes**. Save is explicit (BAG-003).
 
 ### What changes vs current code
 
-- Remove the always-open `TextField` and per-card **Save notes**. That made the list a form.
-- Card tap opens `showModalBottomSheet` (same pattern as the hole editor). Save is explicit (BAG-003).
-- Category chip row height **48**, not 48 including vertical padding that clips the chip.
-- All-zero stats render `—`, not `0 yds`, so a starter bag does not look measured. Subtitle can say "No distances yet".
+- Remove the **Details** button and `ClubBagDetailsSheet`. Every field from the sheet is on the card.
+- Remove the separate Range logs / Edit notes TextButtons; the sessions chip and the note row are the targets.
+- Remove the 48dp sparkline and its caption; the trend is a tile.
+- Card padding 12 horizontal, 8dp between cards. Tap targets stay ≥ 48dp.
+- All-zero stats render `—`, not `0 yds`, so a starter bag does not look measured.
 - Empty category: centered text "No clubs in this category" — no crash (BAG-001).
-- Loading: `CircularProgressIndicator` centered until the first query returns. Do not flash an empty list.
 - Category selection is session-only (not persisted). Documented here so resume returns to **Wood**.
 
 ## 3. Larger screens
 
-≥600dp: two-column card grid, same chip filter full width. Sheet stays a bottom sheet (max width 560, centered) rather than a new route.
+≥600dp: two-column card grid, same chip filter full width. Card height unchanged.
 
 ## 4. Widget inventory
 
@@ -66,10 +67,11 @@ Show the bag by category with **min / avg / max in yards** and swing notes that 
 | `AppBar` | Title "My Bag" |
 | `ChoiceChip` in horizontal `ListView` | Category filter |
 | `Card` + `InkWell` | Club glance row |
-| `GolfTextStyles.yardage` | Min, avg, max |
-| `ModalBottomSheet` | Notes editor |
-| `TextField` | Notes, only inside the sheet |
-| `FilledButton` | Save notes |
+| Stat tiles (`Container`, `primaryContainer` for usual) | Min, avg, max, trend |
+| `ActionChip` | Sessions count → range logs sheet |
+| `AlertDialog` (`SwingNotesDialog`) | Notes editor |
+| `TextField` | Notes, only inside the dialog |
+| `ElevatedButton` | Save notes |
 | `CircularProgressIndicator` | First load |
 | `SnackBar` floating | "Saved swing notes for {name}" |
 
@@ -80,12 +82,12 @@ Show the bag by category with **min / avg / max in yards** and swing notes that 
 | Loading | Spinner, chips visible but disabled |
 | Loaded | Cards for category |
 | Empty category | Message, no cards |
-| All-zero distances | Em dashes + "No distances yet" |
+| All-zero distances | Em dashes in every tile, same card height |
+| <2 range sessions | Trend tile shows `—` |
 | Note present | Single truncated line (`maxLines: 1`) |
-| Note empty | "Add swing note" in `onSurfaceVariant` |
-| Sheet open | Keyboard inset padding; Save enabled always (empty note is a valid clear) |
-| Save success | Pop sheet, snackbar, card subtitle updates |
-| Save failure | Snackbar with `error` color, sheet stays open |
+| Note empty | "＋ Add swing note" in `primary` |
+| Dialog open | Save enabled always (empty note is a valid clear) |
+| Save success | Pop dialog, snackbar, note row updates |
 
 Switching chips calls `getClubsByCategory` and does not restart the app. Dispose note controllers when the sheet closes.
 
@@ -95,7 +97,9 @@ Switching chips calls `getClubsByCategory` and does not restart the app. Dispose
 flowchart TD
   open[My Bag] --> chips[Select category]
   chips --> list[Club cards]
-  list --> sheet[Notes sheet]
+  list --> sheet[Notes dialog]
+  list --> logs[Range logs sheet]
+  list --> edit[Edit club dialog]
   sheet --> save[Save notes]
   save --> list
   rangeSave[Range drill saved] --> list
@@ -113,12 +117,18 @@ Range saves update club min/avg/max in SQLite. My Bag must reload when the tab i
 | Wedge chip | `bag-category-chip-wedge` | `ChoiceChip` |
 | Putter chip | `bag-category-chip-putter` | `ChoiceChip` |
 | Club card | `bag-club-card-{clubId}` | `Card` |
-| Notes field | `bag-notes-field-{clubId}` | `TextField` |
-| Save notes | `bag-save-notes-btn-{clubId}` | `FilledButton` |
+| Identity / edit club | `bag-club-edit-{clubId}` | `InkWell` |
+| Usual / Avg tile value | `bag-hero-yards-{clubId}` | `Text` |
+| Shortest / Min value | `bag-min-yards-{clubId}` | `Text` |
+| Best / Max value | `bag-max-yards-{clubId}` | `Text` |
+| Trend tile | `bag-trend-{clubId}` | `Tooltip` |
+| Note row | `bag-notes-text-{clubId}` | `InkWell` |
+| Add swing note (empty) | `bag-notes-add-{clubId}` | `InkWell` |
+| Range logs / sessions chip | `bag-range-logs-{clubId}` | `ActionChip` |
 | Empty state | `bag-empty-category` | `Text` |
 | Add club | `add-club-button` | `IconButton` (as built) |
-| Range logs | `bag-range-logs-{clubId}` | `IconButton` (as built) |
+| ~~Details~~ | ~~`bag-details-btn-{clubId}`~~ | Retired 2026-11-20 |
 
 ## 8. As built dialogs
 
-The glance-card target in §2 is not fully shipped. Code still has per-card notes editing, brand and model, a yardage sparkline, delete with confirm, and a range-log sheet. Those surfaces are specified in [Wireframe_ClubEditor.md](./Wireframe_ClubEditor.md) so the current UI has a wireframe even where it differs from the glance target. Add Club stays in the AppBar, not at the bottom of the list.
+The stat-tile card in §2 is the shipped layout. Edit club (brand, model, category, delete with confirm), the swing-notes dialog and the range-log sheet are specified in [Wireframe_ClubEditor.md](./Wireframe_ClubEditor.md). Add Club stays in the AppBar, not at the bottom of the list.

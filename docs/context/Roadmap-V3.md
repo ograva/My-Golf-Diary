@@ -47,7 +47,20 @@ These were drafted earlier as "V3 phases." They complete V2.
 | **A1 — Know your game** | On Course records strokes but not stats | Fairway hit/miss, GIR, putts, up-and-down, penalties per round; on-course vs range carry per club; SIM vs FWY separation |
 | **A2 — Fix your game** | No course management or link back to Range | Where strokes are lost, hole strategy from own bag dispersion, pre-round plan / post-round review, **course → range drill prescription**, goals (break 100/90/80), AI diary across tabs |
 | **B — Flight** | Scorecard is single-player | Up to 4 players per card, caddy attestation (MGDV-5), private buddy history |
-| **C — Tournament** | Pilot only | Club tournament flow (MGDV-6), attested scores, post-tournament report → range plan |
+| **C — Tournament** | Pilot only; gross-only scoring | Club tournament flow (MGDV-6), attested scores, **Philippine scoring formats** (below), post-tournament report → range plan |
+
+### V2 completion C — Philippine tournament scoring (moved from V3)
+
+Club, corporate, and charity tournaments in the Philippines score with these formats more often than pure stroke play, so they complete V2's tournament stage.
+
+| Feature | Rules | Notes |
+| :--- | :--- | :--- |
+| **Molave Points** | Modified Stableford: double eagle 7 (6 in some clubs), hole-in-one 6, eagle 5, birdie 4, par 3, bogey 2, double bogey 1, triple or worse 0 (even par = 54) | Club setting for 6- or 7-point double eagle; pick-up prompt once the player is on triple bogey |
+| **System 36** | Par or better 2, bogey 1, double or worse 0; after 18 holes, daily handicap = 36 − points, net = gross − daily handicap | For players without an official index; computed offline after hole 18 |
+| **Gross / net stroke play** | Standard | Net uses the System 36 daily handicap or the golfer's index |
+| **Paid tournament mulligans** | e.g. one per nine, ₱200 | Tracked separately from gross; not eligible for hole-in-one prizes |
+
+Scoring works offline from the same scorecard and is available in personal rounds too, so a golfer can practise a format before the tournament.
 
 ---
 
@@ -125,7 +138,6 @@ Each pick names the TheGrint feature it comes from, why it fits, and how it is l
 
 | V3 feature | From TheGrint | PH localization |
 | :--- | :--- | :--- |
-| **V3-FMT-01 Philippine scoring engine** | Game formats | Molave Points (6- or 7-point double eagle, triple-bogey pick-up prompt), System 36 (same-day handicap and net), gross/net stroke |
 | **V3-GAME-01 Side-game suite** | 11 game formats, multi-game | 40 Points (holes, corners, nines, total, putt points, chip-ins, Escalera), Skins, BOB, High-Low, Snake 3-Putt, Nassau with presses; several games from one card |
 | **V3-GAME-02 Settlement summary** | (TheGrint tallies only) | Tally only, no money handled in-app; share to Viber with optional GCash / Maya QR |
 | **V3-GAME-03 Score integrity** | EDITED/DELETED stamps, attestation | Visible edit stamps in flight rounds; caddie or partner attest (extends MGDV-5) |
@@ -170,13 +182,11 @@ Each pick names the TheGrint feature it comes from, why it fits, and how it is l
 flowchart LR
   V2C["V2 completion: A1, A2, B, C"] --> T1["V3 wave 1: Know your number + Tinkerer's bag + PH course directory"]
   T1 --> T2["V3 wave 2: Hole history, Ghost, Trophy Room, Caddie Log, Share card"]
-  T2 --> T3["V3 wave 3: PH scoring engine + barkada games + settlement"]
+  T2 --> T3["V3 wave 3: barkada games + settlement"]
   T3 --> T4["V3 wave 4: Watch trigger, OCR, PHP Pro"]
 ```
 
-**Why this order:** wave 1 strengthens the individual (your priority) and needs course ratings, which also unlock handicap. Wave 2 adds retention without needing friends. Wave 3 is the barkada layer, building on the V2 flight scorecard. Wave 4 is convenience and monetization once there is enough history to make Pro worthwhile.
-
-Note: the PH scoring engine (Molave, System 36) could move into V2 completion stage C, since club tournaments already use those formats.
+**Why this order:** wave 1 strengthens the individual (your priority) and needs course ratings, which also unlock handicap. Wave 2 adds retention without needing friends. Wave 3 is the barkada layer, building on the V2 flight scorecard and Molave / System 36 scoring. Wave 4 is convenience and monetization once there is enough history to make Pro worthwhile.
 
 ---
 
@@ -186,7 +196,6 @@ Note: the PH scoring engine (Molave, System 36) could move into V2 completion st
 | :--- | :--- |
 | Source of PH course rating, slope, stroke index | Watson + data |
 | Wording so the handicap estimate is never mistaken for an official NGAP index | Jason |
-| Does Molave / System 36 belong in V2 stage C or V3 wave 3? | Jason + user |
 | Pro pricing and what stays free | Mary |
 | Privacy of Caddie Log and shared flight data | Watson |
 
@@ -196,5 +205,6 @@ Note: the PH scoring engine (Molave, System 36) could move into V2 completion st
 
 1. Confirm V2 completion scope (section 3) and V3 picks (section 5).
 2. Mary updates `ProjectBrief.md` with the PH psyche and non-goals.
-3. Jason drafts PRD prefixes for V3 waves (`HCP`, `HIST`, `BAG`, `FMT`, `GAME`, `SHR`, `CRS`).
-4. Watson adds schema notes (club specs, course ratings, game ledgers) to `Architecture.md`.
+3. Jason adds Molave / System 36 stories to the V2 PRD (SCOR / MGDV-6).
+4. Jason drafts PRD prefixes for V3 waves (`HCP`, `HIST`, `BAG`, `GAME`, `SHR`, `CRS`).
+5. Watson adds schema notes (club specs, course ratings, game ledgers) to `Architecture.md`.

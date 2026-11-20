@@ -35,6 +35,17 @@ class RangeDrillScreen extends StatefulWidget {
   State<RangeDrillScreen> createState() => RangeDrillScreenState();
 }
 
+/// Planned balls for one club block. The Range total-shots control cycles
+/// these in order: 10 → 3 → 5 → 10.
+const List<int> kRangeShotTotals = [10, 3, 5];
+
+/// Next total after [current]. Unknown values return to 10.
+int nextRangeShotTotal(int current) {
+  final index = kRangeShotTotals.indexOf(current);
+  if (index < 0) return kRangeShotTotals.first;
+  return kRangeShotTotals[(index + 1) % kRangeShotTotals.length];
+}
+
 class RangeDrillScreenState extends State<RangeDrillScreen> {
   List<Club> _allClubs = [];
   List<Club> _clubs = [];
@@ -44,6 +55,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   Club? _selectedClub;
   PracticeDrill? _selectedDrill;
   int _shotCounter = 0;
+  int _shotTotal = kRangeShotTotals.first;
   bool _logThisClubOnly = true;
   late final DiaryModel _diary;
   final SwingDiaryService _diaryStore = SwingDiaryService();
@@ -163,7 +175,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
     final log = RangeDrillLog(
       id: 'drill_${DateTime.now().millisecondsSinceEpoch}',
       clubId: _selectedClub!.id,
-      shotCount: _shotCounter > 0 ? _shotCounter : 10,
+      shotCount: _shotCounter > 0 ? _shotCounter : _shotTotal,
       minYards: minYards,
       maxYards: maxYards,
       avgYards: avgYards,
@@ -493,21 +505,43 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Balls hit: $_shotCounter / 10',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Tooltip(
+                    message: 'Total shots. Tap for 10, 3, or 5.',
+                    child: InkWell(
+                      key: const ValueKey('range-shot-total'),
+                      onTap: () => setState(() {
+                        _shotTotal = nextRangeShotTotal(_shotTotal);
+                        if (_shotCounter > _shotTotal) {
+                          _shotCounter = _shotTotal;
+                        }
+                      }),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        child: Text(
+                          'Balls hit: $_shotCounter / $_shotTotal',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: _shotCounter >= 10
+                  onPressed: _shotCounter >= _shotTotal
                       ? null
                       : () => setState(() => _shotCounter++),
                   icon: const Icon(Icons.sports_golf),
                   label: const Text('Hit Shot'),
                   style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(140, 56)),
+                    minimumSize: const Size(48, 56),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
                 ),
               ],
             ),

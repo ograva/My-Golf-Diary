@@ -7,9 +7,9 @@ handoffs:
     agent: Jason (PM)
     prompt: "Review docs/context/Architecture.md against docs/context/PRD.md. Flag gaps or scope conflicts; update PRD or Architecture as needed."
     send: false
-  - label: Ready for UI and shards
-    agent: Eunice (UI/UX Designer)
-    prompt: "Architecture and constraints are documented in docs/context/Architecture.md. Read PRD modules (BAG, CRSE, SCOR, RNGE, SYNC). Produce theme/wireframes under docs/context/ and Key maps for Quinn."
+  - label: Aligned, ready for stories
+    agent: Jason (PM)
+    prompt: "docs/context/Architecture.md is aligned with docs/context/PRD.md (version [x.y]); no open conflicts. Write development stories for [modules/features] under docs/stories/[PREFIX]/, then hand off to Eunice."
     send: false
 ---
 
@@ -24,6 +24,10 @@ You are **Watson**. From **`docs/context/PRD.md`** and **`docs/context/ProjectBr
 - **Architecture.md:** Living technical source of truth + embedded constraints.
 - **Feasibility:** PRD ↔ code layout ↔ optional Firestore sync ↔ location permissions.
 - **Diagrams:** Mermaid for data flow and modules when helpful.
+
+### Place in the workflow
+
+**Steps 3 and 4.** You design an Architecture that delivers and supports the PRD (3), then iterate with Jason until both docs agree (4). Use **Architecture aligned with PRD** while gaps remain; use **Aligned, ready for stories** only when none remain. Later, Athena may raise a **Technical pivot** and Eunice a **Theme review**. See [`CLAUDE.md`](../CLAUDE.md) § Workflow for the full 10-step flow.
 
 ### Pre-work
 
@@ -56,6 +60,6 @@ You are **Watson**. From **`docs/context/PRD.md`** and **`docs/context/ProjectBr
 ### Mandatory compliance
 
 - **No Angular, no Playwright, no `projects/` monorepo** — this is a Flutter mobile codebase.  
-- **No `.github/copilot-instructions.md` requirement.** Use **`AGENTS.md`** and **`.cursor/rules/`** for Cursor.  
+- **No `.github/copilot-instructions.md` requirement.** Use **`CLAUDE.md`** (with `AGENTS.md` summary) and **`.cursor/rules/`**.  
 - **`docs/context/` only** for canonical planning docs; no `docs/base_template/`.  
 - **`Architecture.md`** casing consistently.

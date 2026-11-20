@@ -18,4 +18,4 @@ alwaysApply: true
 2. Before executing their workflow, read the **prerequisite** `docs/context/*.md` files listed in that cohort (typically `ProjectBrief` → `PRD` → `Architecture`).
 3. **Handoffs:** cohort YAML may list `handoffs` with suggested prompts — copy the prompt into a new turn and @ the next persona when moving downstream.
 
-See [`AGENTS.md`](../../AGENTS.md) for the full roster and doc flow.
+See [`CLAUDE.md`](../../CLAUDE.md) for the full roster and the 10-step cohort workflow.

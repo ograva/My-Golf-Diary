@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Shard ID** | CRSE-041 |
 | **Module** | CRSE — On Course |
-| **Story Ref** | CRSE-006, CRSE-009 |
+| **Story Ref** | CRSE-006, CRSE-009, CRSE-041 |
 | **Priority** | Medium |
 | **Status** | In Progress (spike landed: `tools/map_pack/`) |
 | **Complexity** | M |

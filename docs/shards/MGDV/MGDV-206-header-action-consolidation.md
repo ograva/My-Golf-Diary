@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | MGDV-206 |
 | **Module** | MGDV / Shell |
-| **Story Ref** | MGDV-2, UX audit P0 |
+| **Story Ref** | MGDV-206, SYNC-005 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | MGDV-12 (SYNC-005 avatar), #46 single AppBar |
 

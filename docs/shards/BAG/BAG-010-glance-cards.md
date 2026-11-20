@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Shard ID** | BAG-010 |
 | **Module** | BAG — My Bag |
-| **Story Ref** | BAG-001, BAG-002, BAG-003 |
+| **Story Ref** | BAG-001, BAG-002, BAG-003, BAG-010 |
 | **Priority** | High |
 | **Status** | Superseded |
 | **Complexity** | M |
@@ -14,7 +14,7 @@
 
 My Bag filters by category, edits notes in a dialog, and shows brand, model, a yardage sparkline, and past range sessions. The glance-card rebuild is not scheduled.
 
-Superseded on 2026-11-09. The current My Bag screen is the accepted baseline. Do not rebuild the glance cards. A distance of 0 still renders as `0 yds`. There is no first-load spinner and no `bag-category-chip-*` or `bag-club-card-*` key.
+Superseded on 2026-11-09. Stat-tile cards for BAG-001, BAG-002, BAG-003, and BAG-010 shipped in MGDV-203. The current My Bag screen is the accepted baseline. Do not rebuild the glance cards. A distance of 0 still renders as `0 yds`. There is no first-load spinner and no `bag-category-chip-*` or `bag-club-card-*` key.
 
 ## Acceptance Criteria
 

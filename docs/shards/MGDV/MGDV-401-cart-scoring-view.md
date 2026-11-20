@@ -5,9 +5,9 @@
 | **Shard ID** | MGDV-401 |
 | **Epic** | MGDV-4 |
 | **Module** | SCOR |
-| **Story Ref** | v2 roadmap B; PRD SCOR-001 |
+| **Story Ref** | MGDV-401, SCOR-004 |
 | **Priority** | High |
-| **Status** | Ready for Review |
+| **Status** | Completed |
 | **Complexity** | M |
 | **Depends On** | SCOR-010, SCOR-011 (on main) |
 

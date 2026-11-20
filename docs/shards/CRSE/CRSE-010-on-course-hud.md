@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Shard ID** | CRSE-010 |
 | **Module** | CRSE — On Course |
-| **Story Ref** | CRSE-001, CRSE-002, CRSE-003, CRSE-004, SYNC-002 |
+| **Story Ref** | CRSE-001, CRSE-002, CRSE-003, CRSE-004 |
 | **Priority** | High |
 | **Status** | Superseded |
 | **Complexity** | L |
@@ -14,7 +14,7 @@
 
 The fairway screen already has venue lookup, Course / Simulator mode, hole resume and stepping, shot edit, and course-name edits through `applyCoursePar` (that renames every row of the round and sets par on unplayed holes). Shot rows already show the club name, lie, and yards or `Distance pending`. The record button ignores taps while `_busy` is set. Finish on the last hole shows a local-save snackbar.
 
-Superseded on 2026-11-09. The current Fairway HUD is the accepted baseline, including the title `Fairway HUD`, the scrolling record and finish buttons, the permission snackbar, and no `Gimme` chip. Do not rebuild this layout. CRSE-021 ships on this screen.
+Superseded on 2026-11-09. CRSE-001 through CRSE-004 stay linked here as the baseline HUD. The current shells are CRSE-035 (SIM) and CRSE-036 (FWY), including the holing stroke. Manual sync moved to SYNC-002. The current Fairway HUD is the accepted baseline, including the title `Fairway HUD`, the scrolling record and finish buttons, the permission snackbar, and no `Gimme` chip. Do not rebuild this layout. CRSE-021 ships on this screen.
 
 ## Acceptance Criteria
 

@@ -146,8 +146,8 @@
     "semantic_hash": "bd5ccc456c398b16e207159a43a1f186"
   },
   "golf_diary_app/lib/services/local_database_service.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6529448,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.829111,
     "ast_hash": "287e17831961f83be2401fec7031e147",
     "semantic_hash": ""
   },
@@ -237,8 +237,8 @@
     "semantic_hash": "97d3a20fd20a063c192e886d1822b4a8"
   },
   "golf_diary_app/pubspec.yaml": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6530364,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.829168,
     "ast_hash": "2b5177e0d64e0acd738c829f2a604cbd",
     "semantic_hash": ""
   },
@@ -387,8 +387,8 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/models/golfer_profile.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6528523,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8290527,
     "ast_hash": "dd3c0040243f6f76dad1ed9d416c93f4",
     "semantic_hash": ""
   },
@@ -453,8 +453,8 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/golfer_profile_settings_screen.dart": {
-    "mtime": 1795175469.5149922,
-    "seen": 1795175879.6529024,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8290849,
     "ast_hash": "1695a176960f92f23d48737f75bb6f6c",
     "semantic_hash": ""
   },
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/swing_diary_sheet.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6530128,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.829153,
     "ast_hash": "f9edff6b408361d5abc0a98e8a2a2cc5",
     "semantic_hash": ""
   },
@@ -753,8 +753,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531584,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292458,
     "ast_hash": "fd28633a131dacc93c1db553581698ba",
     "semantic_hash": ""
   },
@@ -765,57 +765,57 @@
     "semantic_hash": ""
   },
   "cohorts/athena.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531637,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292487,
     "ast_hash": "c915eaee02274bb919a5cfbefd5e83d6",
     "semantic_hash": ""
   },
   "cohorts/eunice.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531656,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292499,
     "ast_hash": "b90c2b8cbfbb6f503afc2e30d824da59",
     "semantic_hash": ""
   },
   "cohorts/jason.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531672,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292506,
     "ast_hash": "0ba97f471498a0eb8ac412347be0d059",
     "semantic_hash": ""
   },
   "cohorts/mary.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531694,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292515,
     "ast_hash": "43a96bb924ad9719550ed216088e7845",
     "semantic_hash": ""
   },
   "cohorts/poe.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531713,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292527,
     "ast_hash": "64e88d157cdaf265b117afa67f903e23",
     "semantic_hash": ""
   },
   "cohorts/quinn.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.653173,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292534,
     "ast_hash": "cb11a977e7c00efcb5f45961b52545c1",
     "semantic_hash": ""
   },
   "cohorts/watson.agent.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531746,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292544,
     "ast_hash": "66647aa8bac85173292c9f2e2474a028",
     "semantic_hash": ""
   },
   "docs/context/Architecture.md": {
-    "mtime": 1795175204.7468474,
-    "seen": 1795175879.6531763,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8292553,
     "ast_hash": "94643c769b30f14dd351663000b7e3c5",
     "semantic_hash": ""
   },
   "docs/context/BACKLOG.md": {
-    "mtime": 1795168870.2262821,
-    "seen": 1795175879.6531785,
-    "ast_hash": "4aae54c69bf239beaea546cd758309a6",
+    "mtime": 1795175565.9373636,
+    "seen": 1795178960.8292565,
+    "ast_hash": "a9fd9d3ce57047e03efc4c483ba83a20",
     "semantic_hash": ""
   },
   "docs/context/PH_Golf_Course_Hole_Coordinates.md": {
@@ -831,8 +831,8 @@
     "semantic_hash": ""
   },
   "docs/context/PRD.md": {
-    "mtime": 1795175210.4429123,
-    "seen": 1795175879.6531854,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8292606,
     "ast_hash": "84f14e083314a2f55fceb7b647b154c5",
     "semantic_hash": ""
   },
@@ -849,14 +849,14 @@
     "semantic_hash": ""
   },
   "docs/context/UI_UX_Design_Guide.md": {
-    "mtime": 1795175210.4429123,
-    "seen": 1795175879.6531923,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8292644,
     "ast_hash": "c0241d3843b008b46e157973406d12f0",
     "semantic_hash": ""
   },
   "docs/context/designs/DesignSystem.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531942,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292654,
     "ast_hash": "6fc7eaf17c66d53f3afbde8a88cb1fa7",
     "semantic_hash": ""
   },
@@ -867,99 +867,99 @@
     "semantic_hash": ""
   },
   "docs/context/designs/UX_Audit.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.653203,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292704,
     "ast_hash": "44385af593fb76e194ac35b333488ab1",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_ClubEditor.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6532047,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292713,
     "ast_hash": "0b7871754f45f47fba5d77bb82716729",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_HoleEditor.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532066,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292723,
     "ast_hash": "ffc25e74177e7b9b2baba3172c8ee719",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_HoleMap.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532083,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292735,
     "ast_hash": "894078df56c484ef3588a5147c466cf5",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_HomeShell.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.65321,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292742,
     "ast_hash": "c449b7d784bd4ab9ed8ddb4273351f38",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_MyBag.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532118,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292751,
     "ast_hash": "1f1082d78546c620dc803e5fbd7f053e",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_NewRound.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532135,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829276,
     "ast_hash": "7112581d015cd4de31fbb49750411aae",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_OnCourse.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532176,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292782,
     "ast_hash": "5534dd264229f9a02c8cc3ee71cb62fb",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_PracticeDrills.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653221,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292801,
     "ast_hash": "ab40fc3fd7f9a295e227eca3f5be43e2",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_PwaUpdate.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532226,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292813,
     "ast_hash": "0d3bedfde83b0b30206f1a0c240fa3c0",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Range.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532245,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292823,
     "ast_hash": "d31e2bb9877e85b8a5fb9ef3d2430dce",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Scorecard.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532261,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292832,
     "ast_hash": "8ecdfaae5635a5fbbeacc693646de400",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_ShotEdit.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532295,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292854,
     "ast_hash": "a484537928b048dd0d673ac8e333fac6",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_SwingDiary.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532314,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292863,
     "ast_hash": "5cf887dd375d996353ae9f591068ec38",
     "semantic_hash": ""
   },
   "docs/shards/BAG/BAG-010-glance-cards.md": {
-    "mtime": 1795168870.2262821,
-    "seen": 1795175879.6532333,
-    "ast_hash": "95c09411c01d2da2d3111316468b952f",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292875,
+    "ast_hash": "8a8d3384781a8ab43ec6bccb8939a77e",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-010-on-course-hud.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532352,
-    "ast_hash": "a18b1d7693acacdbb9a7f288c7e17723",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292885,
+    "ast_hash": "913b4d7c2ba3fe549d04b4ef0b4f5864",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-020-hole-coordinate-catalog.md": {
@@ -975,33 +975,33 @@
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-022-hole-map-view.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532407,
-    "ast_hash": "6315fe4bab58f0a3c3f720eaaec775de",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292916,
+    "ast_hash": "4070962a2c234c68e859723994d27a9a",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-201-onboarding-starter-wizard.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532836,
-    "ast_hash": "0a3d4a60750ab30fd8781767f578fced",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293004,
+    "ast_hash": "4d6cd0ba2f970fe4209b95650669e428",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-202-golfer-profile-skill-tier.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532853,
-    "ast_hash": "ff937b60dbac910c51652fda49c7ef73",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293016,
+    "ast_hash": "960cd8f4e2302afec1e11261427c7c69",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-203-range-bag-progressive-disclosure.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532874,
-    "ast_hash": "224d1caca71a0adeff492d6100b48ada",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293028,
+    "ast_hash": "556d5bb2cbd5cc22e8ddf7ec2a187f27",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-205-swing-diary-chat-area.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532896,
-    "ast_hash": "b2f3c99a2f523c2ec653d3befd8920e7",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293035,
+    "ast_hash": "5d75662afa875f73a61d0a96392ce456",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-301-putting-approach-drills.md": {
@@ -1011,9 +1011,9 @@
     "semantic_hash": ""
   },
   "docs/shards/RNGE/RNGE-010-drill-layout.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532984,
-    "ast_hash": "d8f545f7c82642fd7203179c0c537467",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.82931,
+    "ast_hash": "0ca95a09892d7942c43908559f84478c",
     "semantic_hash": ""
   },
   "docs/shards/RNGE/RNGE-020-practice-drill-store.md": {
@@ -1071,9 +1071,9 @@
     "semantic_hash": ""
   },
   "docs/shards/SHELL/SHELL-001-keep-tab-state.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6533165,
-    "ast_hash": "269039858f45c0f01b7a2dc9522c65e8",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293204,
+    "ast_hash": "db25e715922f22f738d16e9bacf3e204",
     "semantic_hash": ""
   },
   "golf_diary_app/README.md": {
@@ -1425,9 +1425,9 @@
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-401-cart-scoring-view.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532946,
-    "ast_hash": "05fd63e2de77fe698dc408ab0753c6c1",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293066,
+    "ast_hash": "3004bef47d5495552512fd0ce97a88f2",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/models/caddy_session.dart": {
@@ -1509,9 +1509,9 @@
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-501-caddy-pairing-v1.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532965,
-    "ast_hash": "9f14fe241a4fecef320fbaaaf9f4de4b",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293073,
+    "ast_hash": "9ecaefc3403e15d5a9b7b147f9423f76",
     "semantic_hash": ""
   },
   ".github/workflows/publish-pwa.yml": {
@@ -1551,14 +1551,14 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/account_profile_screen.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6528866,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8290758,
     "ast_hash": "5b4d626f8f7799442d4fd46c0fbbf2c5",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/account_sync_settings_screen.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.6528885,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.829077,
     "ast_hash": "cbeb3b2b8a743995dbddccfd6189ad38",
     "semantic_hash": ""
   },
@@ -1593,8 +1593,8 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/account_avatar_app_bar_menu.dart": {
-    "mtime": 1795175019.1247277,
-    "seen": 1795175879.652971,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8291266,
     "ast_hash": "9b9350d832d9e96a5c4fa31edf0b8fb4",
     "semantic_hash": ""
   },
@@ -1785,27 +1785,27 @@
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_OnCourse-Simulator.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532156,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829277,
     "ast_hash": "64c03b790b8f57cf133e1b66eb3f56c1",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-030-epic-on-course-dual-mode.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532423,
-    "ast_hash": "dbe4150f06053fb9b2af7cd1e2e90d3f",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292925,
+    "ast_hash": "42ef3c57d118794beb48e973265502b8",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-031-simulator-post-shot-logging.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532445,
-    "ast_hash": "e7374ce0e90b43186f589e36c8c8ad18",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292935,
+    "ast_hash": "cd69d6b8a68db6e9cdf69dd8ca437748",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-032-course-plan-aim-record.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532462,
-    "ast_hash": "d6c9985ff7987992d6fdc6d54f4ccd4d",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292947,
+    "ast_hash": "05781c03a961fc54819ab8db988f2db3",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-033-map-satellite-hud-markers.md": {
@@ -1815,33 +1815,33 @@
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-034-unmapped-tabular-map-fallback.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.65325,
-    "ast_hash": "37aa662c0c4ca6fdc4abfbdd6e205423",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292966,
+    "ast_hash": "517e9891e119e1a13b1f6fabe21df78f",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-035-compact-on-course-layout.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532516,
-    "ast_hash": "d2caa9b8457f4998cf059d786877f67d",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292978,
+    "ast_hash": "7cc71f781da1f2e734137d42275911a7",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-041-map-pack-pipeline.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.653281,
-    "ast_hash": "10688998b0b96fae6129bbe4f8e197b3",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292997,
+    "ast_hash": "36cce2f854db4c4aecc09fcea1d905f2",
     "semantic_hash": ""
   },
   "docs/shards/MGDV/MGDV-206-header-action-consolidation.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.653291,
-    "ast_hash": "7f63ebd10a53e148a7501e42d3b9f296",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8293047,
+    "ast_hash": "acc20a0c163a4aef785b5578a79eaa42",
     "semantic_hash": ""
   },
   "docs/shards/SYNC/SYNC-005-account-avatar-auth.md": {
-    "mtime": 1795175204.7508476,
-    "seen": 1795175879.6533182,
-    "ast_hash": "215425d9578222452d050f293b1e1fa0",
+    "mtime": 1795178951.528019,
+    "seen": 1795178960.8293257,
+    "ast_hash": "79a75e9869517d07756045b55775280a",
     "semantic_hash": ""
   },
   "tools/map_pack/README.md": {
@@ -1929,9 +1929,9 @@
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-036-fwy-map-background-shell.md": {
-    "mtime": 1795168870.2302823,
-    "seen": 1795175879.6532533,
-    "ast_hash": "ce7b215dad7da1ac4f4a1830deddec07",
+    "mtime": 1795175402.3888407,
+    "seen": 1795178960.8292987,
+    "ast_hash": "783dd1ac2eb4e513a4267d47a979857d",
     "semantic_hash": ""
   },
   "golf_diary_app/test/finish_hole_holing_stroke_test.dart": {
@@ -1941,32 +1941,32 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/models/golfer_avatar.dart": {
-    "mtime": 1795174896.8231807,
-    "seen": 1795175879.6528502,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8290505,
     "ast_hash": "77076dbbcc7951f38852f333c0931c9a",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/golfer_avatar_circle.dart": {
-    "mtime": 1795174915.6034648,
-    "seen": 1795175879.6529908,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8291397,
     "ast_hash": "ad3ee0f705169050ddff3b4a0ae94827",
     "semantic_hash": ""
   },
   "golf_diary_app/test/golfer_avatar_test.dart": {
-    "mtime": 1795175094.837594,
-    "seen": 1795175879.6530547,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8291798,
     "ast_hash": "6a8bc2a8c5f5cdfaa4ebe6b0e61cc1d6",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531599,
+    "mtime": 1795174883.6724534,
+    "seen": 1795178960.8292468,
     "ast_hash": "891904f0f9c423af0498fe496e0611f0",
     "semantic_hash": ""
   },
   "docs/context/PRD-Architecture-validation.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531835,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292596,
     "ast_hash": "62d434dffb678ad71b97ba8c65bb7044",
     "semantic_hash": ""
   },
@@ -1977,339 +1977,399 @@
     "semantic_hash": ""
   },
   "docs/context/designs/Design_Audit.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.6531959,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829266,
     "ast_hash": "f3cfa0d3e4d3470b27f8268af06cde19",
     "semantic_hash": ""
   },
   "docs/context/designs/README.md": {
-    "mtime": 1795174774.2054722,
-    "seen": 1795175879.653201,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292694,
     "ast_hash": "7bbeebaa6ea6b598d3a07bfb01f8147e",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Onboarding.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653219,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292792,
     "ast_hash": "fd5de5ffb9326a854191bd0781ab964a",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Settings.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6532278,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8292844,
     "ast_hash": "e487268abe8f0b999e886c902e1f4ed6",
     "semantic_hash": ""
   },
   "docs/stories/BAG/BAG-001-filter-by-category.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533196,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293304,
     "ast_hash": "3e0e7595a9dfa2f9db0cd2db88c214ee",
     "semantic_hash": ""
   },
   "docs/stories/BAG/BAG-002-distance-stats.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533217,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293312,
     "ast_hash": "951243729e1b75b5e996f510e4ae8e43",
     "semantic_hash": ""
   },
   "docs/stories/BAG/BAG-003-swing-notes.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533234,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829332,
     "ast_hash": "735cd0001c0f2bf595b93e85f50f0750",
     "semantic_hash": ""
   },
   "docs/stories/BAG/BAG-010-stat-tile-cards.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653325,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293335,
     "ast_hash": "47d964198e0f079d1cdc155e24c70b8d",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-001-active-round-context.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533263,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293343,
     "ast_hash": "5cb2563188b5d140bc4d2f1dcc680ec7",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-002-shot-capture-dual-mode.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533282,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293352,
     "ast_hash": "abf2a02993b9e34d9609a7656e611c75",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-003-penalties-mulligans-concede.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533294,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293364,
     "ast_hash": "b7d9aa3e633fc50f40ebd725ee1a1496",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-004-finish-hole-holing.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533313,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293371,
     "ast_hash": "fb929e319f0d16f59381c37e9f58c1f1",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-005-live-pin-distance.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653333,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829338,
     "ast_hash": "171b3ae2f101b6f1dfb35de7283160b7",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-006-stylized-hole-map.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533422,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829339,
     "ast_hash": "78738359c8bc33e9620d622908f00112",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-007-sim-post-shot-fields.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653344,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293402,
     "ast_hash": "b7e743b1698359c9491887572791f932",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-008-plan-aim-segments.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653346,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293412,
     "ast_hash": "d824a325b25b26b844b05713169c3bdf",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-009-fwy-map-overlays.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533477,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293421,
     "ast_hash": "58a6c7fbb3c33906267c6aca6a6ad035",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-011-unmapped-fallback.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533496,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293433,
     "ast_hash": "168097fd2df67cc99c472813e9403fba",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-035-sim-compact-layout.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653351,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293443,
     "ast_hash": "12d2a63345b10782a73aabbb45b198eb",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-036-fwy-map-shell.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653353,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829345,
     "ast_hash": "f46959357d1afcb9a66a94e0d5fce081",
     "semantic_hash": ""
   },
   "docs/stories/CRSE/CRSE-041-map-pack-pipeline.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533544,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829346,
     "ast_hash": "9803fd58c004ca647065ad0bd6b1aeb2",
     "semantic_hash": ""
   },
   "docs/stories/MGDV/MGDV-201-onboarding-wizard.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653356,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293471,
     "ast_hash": "5ea46eba1a28ffc2961d376100855c8a",
     "semantic_hash": ""
   },
   "docs/stories/MGDV/MGDV-202-skill-tier-settings.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533577,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829348,
     "ast_hash": "cdc0ae93aabaa79d6c99024083689c70",
     "semantic_hash": ""
   },
   "docs/stories/MGDV/MGDV-203-progressive-disclosure.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533594,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829349,
     "ast_hash": "d19d8e059b89e57d2502a2a5b036fe21",
     "semantic_hash": ""
   },
   "docs/stories/MGDV/MGDV-401-cart-scoring-epic.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533608,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293502,
     "ast_hash": "28bb4a4cc9f2161d78249f68bebde916",
     "semantic_hash": ""
   },
   "docs/stories/MGDV/MGDV-501-caddy-pairing.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533628,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293512,
     "ast_hash": "4cd16f2fc91b1186837899b7122d2048",
     "semantic_hash": ""
   },
   "docs/stories/PWA/PWA-001-github-pages-publish.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533642,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293521,
     "ast_hash": "4d7d2250678205847d925efeb8780202",
     "semantic_hash": ""
   },
   "docs/stories/README.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533659,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293529,
     "ast_hash": "3b70b2e84a4f82ac067b98dc9ef8a94a",
     "semantic_hash": ""
   },
   "docs/stories/RNGE/RNGE-001-club-shot-block.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533675,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.829354,
     "ast_hash": "aa45e96afd40d5c9d3a67182aee2bc02",
     "semantic_hash": ""
   },
   "docs/stories/RNGE/RNGE-002-aggregates-save.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533694,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293548,
     "ast_hash": "eb8addb25399e37bdbed5f108662a57e",
     "semantic_hash": ""
   },
   "docs/stories/RNGE/RNGE-003-practice-drill-catalog.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533709,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293557,
     "ast_hash": "342040ceb7994fa7f47749a97bc599f4",
     "semantic_hash": ""
   },
   "docs/stories/RNGE/RNGE-004-vertex-swing-diary.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533725,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293564,
     "ast_hash": "3d5b50de447743f7cc1fb310e3e9fb74",
     "semantic_hash": ""
   },
   "docs/stories/RNGE/RNGE-005-session-log-compile.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653374,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293576,
     "ast_hash": "30dee3f6ca4cdbb0f7358329b61462e0",
     "semantic_hash": ""
   },
   "docs/stories/SCOR/SCOR-001-view-rounds-grid.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533754,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293583,
     "ast_hash": "7635a9a932edc62d37556892998d3e75",
     "semantic_hash": ""
   },
   "docs/stories/SCOR/SCOR-002-hole-editor.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533768,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293593,
     "ast_hash": "6fea3c583864175cc3973a393a658d01",
     "semantic_hash": ""
   },
   "docs/stories/SCOR/SCOR-003-concede-visibility.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533782,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293605,
     "ast_hash": "2c89debbae27077b36684f1091fe270d",
     "semantic_hash": ""
   },
   "docs/stories/SCOR/SCOR-004-cart-scoring.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533802,
+    "mtime": 1795174883.6764536,
+    "seen": 1795178960.8293614,
     "ast_hash": "b6206a70f88deb979e3c738b5c5b9e0a",
     "semantic_hash": ""
   },
   "docs/stories/SHELL/SHELL-001-keep-tab-state.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533813,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293624,
     "ast_hash": "1a52bd200a08914c7151e03e45ab1eb3",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-001-firebase-optional.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533833,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.829363,
     "ast_hash": "7333047b703f82e5e07af3366f026478",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-002-manual-sync.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653385,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293645,
     "ast_hash": "b5835c289b09b024c7f3b2e2c18781b5",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-003-anonymous-identity.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533868,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293655,
     "ast_hash": "7dd88b9d5289b8faa5275b7fbbe7b60b",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-004-lww-merge.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533883,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293667,
     "ast_hash": "df4478e24a12aed5e0d62385315f3bf5",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-005-account-avatar-menu.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.65339,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293676,
     "ast_hash": "724caca9edb3a717e717891b7db56e9c",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-006-google-email-sign-in.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533916,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293686,
     "ast_hash": "5029ac700ecd74fff8743cb161d2474a",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-007-multi-device-retrieve.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533933,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293695,
     "ast_hash": "7aff0909194cd0fccb5465481dee5443",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-008-account-linking.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533947,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293703,
     "ast_hash": "ac1ab0f5a39c0eddf7faca1e1ca1cd20",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-009-profile-screen.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.6533964,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293715,
     "ast_hash": "a07c1761c6a045147e5ac6c64e8569fe",
     "semantic_hash": ""
   },
   "docs/stories/SYNC/SYNC-010-sync-settings.md": {
-    "mtime": 1795174774.2094717,
-    "seen": 1795175879.653398,
+    "mtime": 1795174883.6804535,
+    "seen": 1795178960.8293722,
     "ast_hash": "33e14ab14bf4e5eb1daf064936aff342",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/female_amateur.png": {
-    "mtime": 1795174879.0348597,
-    "seen": 1795175879.6534371,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8293958,
     "ast_hash": "a5b45e77355930870c8023aef4a57337",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/female_amateur_alt.png": {
-    "mtime": 1795174879.5708704,
-    "seen": 1795175879.6534388,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8293967,
     "ast_hash": "afa0717902d6652f71df5e1f27e92747",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/female_beginner.png": {
-    "mtime": 1795174878.55885,
-    "seen": 1795175879.6534402,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8293974,
     "ast_hash": "85ad5c7a9e89c6bed81049528a5770c0",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/female_seasoned.png": {
-    "mtime": 1795174880.1428819,
-    "seen": 1795175879.653442,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8293986,
     "ast_hash": "0ccb527c662a1bfbde22f715143e6708",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/male_amateur.png": {
-    "mtime": 1795174879.3308656,
-    "seen": 1795175879.6534433,
+    "mtime": 1795178897.0270355,
+    "seen": 1795178960.8293996,
     "ast_hash": "25ed0599310903ed98835b0fa58686a9",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/male_amateur_alt.png": {
-    "mtime": 1795174879.8748765,
-    "seen": 1795175879.6534445,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8294003,
     "ast_hash": "832c1dca7cd4fa0e00b073abca561438",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/male_beginner.png": {
-    "mtime": 1795174878.802855,
-    "seen": 1795175879.653446,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8294013,
     "ast_hash": "cafa1b8d6a44304f2c3604827c751531",
     "semantic_hash": ""
   },
   "golf_diary_app/assets/avatars/male_seasoned.png": {
-    "mtime": 1795174880.406887,
-    "seen": 1795175879.6534474,
+    "mtime": 1795178897.0310357,
+    "seen": 1795178960.8294022,
     "ast_hash": "08f95e0d7a8e06f57359f7e7c8692a4b",
+    "semantic_hash": ""
+  },
+  "golf_diary_app/test/sync_account_shards_test.dart": {
+    "mtime": 1795178952.0360177,
+    "seen": 1795178960.8292103,
+    "ast_hash": "7d6c3c4fadbca66308d5a1c7016b81e2",
+    "semantic_hash": ""
+  },
+  "docs/shards/PWA/PWA-001-github-pages-publish.md": {
+    "mtime": 1795175469.3729887,
+    "seen": 1795178960.8293087,
+    "ast_hash": "f69ed1faffa70453bc601dab097d2969",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-001-firebase-optional.md": {
+    "mtime": 1795175419.2928655,
+    "seen": 1795178960.8293214,
+    "ast_hash": "0243fe266596ebc04408c4758b4d78df",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-002-manual-sync.md": {
+    "mtime": 1795175424.2168746,
+    "seen": 1795178960.8293228,
+    "ast_hash": "82141fdf4e4f30ce91668417c383dae9",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-003-anonymous-identity.md": {
+    "mtime": 1795175428.7768836,
+    "seen": 1795178960.8293238,
+    "ast_hash": "31e1d348093bb14c78d21653c9dd144a",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-004-lww-merge.md": {
+    "mtime": 1795175433.7968943,
+    "seen": 1795178960.8293245,
+    "ast_hash": "21e53bffd40b3c5eab10928a6e6f4747",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-007-multi-device-retrieve.md": {
+    "mtime": 1795175441.904913,
+    "seen": 1795178960.8293266,
+    "ast_hash": "f04c68a80248747cbeaaea3bd7fd7f17",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-008-account-linking.md": {
+    "mtime": 1795175450.1729338,
+    "seen": 1795178960.8293276,
+    "ast_hash": "59a00800bc07c8141d5b1cc885401edc",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-009-profile-screen.md": {
+    "mtime": 1795175456.7569516,
+    "seen": 1795178960.8293283,
+    "ast_hash": "c6111961f5049548837d4d7354cbe854",
+    "semantic_hash": ""
+  },
+  "docs/shards/SYNC/SYNC-010-sync-settings.md": {
+    "mtime": 1795178956.4960184,
+    "seen": 1795178960.8293295,
+    "ast_hash": "98d7e642f36008e9969439cbe1fe4041",
     "semantic_hash": ""
   }
 }

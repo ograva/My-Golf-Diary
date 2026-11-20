@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | MGDV-202 |
 | **Module** | MGDV — V2 profile & onboarding |
-| **Story Ref** | MGDV-2 |
+| **Story Ref** | MGDV-202 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | S |
 | **Depends On** | MGDV-201 |
 
@@ -18,17 +18,17 @@ Skill tier is the single source for UI density rules consumed by MGDV-203 (Bag/R
 
 ## Acceptance Criteria
 
-- [ ] Settings (or profile sheet) shows current **skill tier**, demographics, and yardage display mode with save feedback.
-- [ ] **Match skill tier** maps: beginner → simple yardage UI; amateur → simple with optional expand hints; seasoned pro → full stats by default (exact mapping documented in shard MGDV-203).
-- [ ] Editing skill tier updates the in-memory profile used on next build of Bag and Range screens without app restart.
-- [ ] **Reset onboarding** action clears `onboarding_completed` and reopens MGDV-201 on next launch (confirm dialog).
-- [ ] Existing baseline pillars (equipment, swing anchors, physical constraints, training environment) remain editable; new fields do not remove lead-in chips behavior.
+- [x] Settings (or profile sheet) shows current **skill tier**, demographics, and yardage display mode with save feedback.
+- [x] **Match skill tier** maps: beginner → simple yardage UI; amateur → simple with optional expand hints; seasoned pro → full stats by default (exact mapping documented in shard MGDV-203).
+- [x] Editing skill tier updates the in-memory profile used on next build of Bag and Range screens without app restart.
+- [x] **Reset onboarding** action clears `onboarding_completed` and reopens MGDV-201 on next launch (confirm dialog).
+- [x] Existing baseline pillars (equipment, swing anchors, physical constraints, training environment) remain editable; new fields do not remove lead-in chips behavior.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Changing skill tier in settings persists across `getGolferProfile()`. `Match skill tier` resolves to expected display enum.
-- [ ] **Integration (if needed):** Optional — diary prompt includes updated profile fields when Vertex is faked.
-- [ ] **Keys:** `settings-golfer-profile-entry`, `profile-skill-tier-{tier}`, `profile-yardage-display-{mode}`, `profile-save-btn`, `profile-reset-onboarding-btn`.
+- [x] **Unit/widget:** Changing skill tier in settings persists across `getGolferProfile()`. `Match skill tier` resolves to expected display enum.
+- [x] **Integration (if needed):** Optional — diary prompt includes updated profile fields when Vertex is faked.
+- [x] **Keys:** `settings-golfer-profile-entry`, `profile-skill-tier-{tier}`, `profile-yardage-display-{mode}`, `profile-save-btn`, `profile-reset-onboarding-btn`.
 
 ## Dev notes
 

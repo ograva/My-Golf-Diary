@@ -6,11 +6,13 @@
 | **Module** | CRSE — On Course |
 | **Story Ref** | CRSE-006 |
 | **Priority** | Low |
-| **Status** | Not Started |
+| **Status** | Superseded |
 | **Complexity** | L |
 | **Depends On** | CRSE-020 |
 
 ## Description
+
+Superseded by CRSE-036 (full-bleed FWY map, no `on-course-map-toggle`) and CRSE-041 (OSM packs via `CourseMapCacheService`). The toggle-based pane below was not built.
 
 Let the player switch the On Course pane from the HUD to a hole map when that hole has a tee and a green. The map draws those two points and the saved shots for the hole. Course imagery is downloaded once into Firebase Storage and then onto the device. Without a downloaded photo, and without a network, the pane still draws the tee-to-green line and the shots.
 

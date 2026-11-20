@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Shard ID** | CRSE-030 |
 | **Module** | CRSE — On Course |
-| **Story Ref** | CRSE-007–011 (epic); refinements CRSE-001, CRSE-002, CRSE-004 |
+| **Story Ref** | CRSE-001, CRSE-002, CRSE-004, CRSE-007, CRSE-008, CRSE-009, CRSE-011, CRSE-035, CRSE-036 |
 | **Priority** | High |
-| **Status** | Not Started |
+| **Status** | Completed |
 | **Complexity** | XL |
 | **Depends On** | CRSE-021 |
 
@@ -23,20 +23,20 @@ Program epic for PRD v1.8 **On Course dual-mode enhancement**: one `FairwayTrack
 | 3 | CRSE-032 | CRSE-008 | [CRSE-032-course-plan-aim-record.md](./CRSE-032-course-plan-aim-record.md) |
 | 4 | CRSE-033 | CRSE-009 | [CRSE-033-map-satellite-hud-markers.md](./CRSE-033-map-satellite-hud-markers.md) |
 
-Map imagery follows Architecture §5.5 (Static API → Firebase Storage → device pack). **CRSE-033** shares implementation scope with [CRSE-022](./CRSE-022-hole-map-view.md) (`CRSE-006`); provider decision is tracked as **MGDV-18** in the PRD (Watson has documented v1 choice in Architecture).
+Map imagery follows Architecture §5.5 (OSM packs, CRSE-041). CRSE-022’s toggle pane is superseded by CRSE-036. Child shards CRSE-031 through CRSE-036 are Completed in `golf_diary_app/`.
 
 ## Acceptance Criteria
 
-- [ ] Every child shard reaches **Ready for Review** or **Completed** without regressing CRSE-020/021 coordinate gating or SYNC-002 non-blocking sync.
-- [ ] Mode chip persistence and GPS stream lifecycle match [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md) (stop pin stream on Simulator; restart on Course when mapped).
-- [ ] PRD refinements to `CRSE-001` (venue/hole context), `CRSE-002` (dual capture), and `CRSE-004` (finish hole / holed rules) are satisfied by the union of child ACs; no separate route for Simulator.
-- [ ] All new interactive widgets use Eunice `ValueKey`s from `Wireframe_OnCourse.md`, `Wireframe_OnCourse-Simulator.md`, and `Wireframe_HoleMap.md`.
+- [x] Every child shard reaches **Ready for Review** or **Completed** without regressing CRSE-020/021 coordinate gating or SYNC-002 non-blocking sync.
+- [x] Mode chip persistence and GPS stream lifecycle match [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md) (stop pin stream on Simulator; restart on Course when mapped).
+- [x] PRD refinements to `CRSE-001` (venue/hole context), `CRSE-002` (dual capture), and `CRSE-004` (finish hole / holed rules) are satisfied by the union of child ACs; no separate route for Simulator.
+- [x] All new interactive widgets use Eunice `ValueKey`s from `Wireframe_OnCourse.md`, `Wireframe_OnCourse-Simulator.md`, and `Wireframe_HoleMap.md`.
 
 ## Test coverage
 
-- [ ] **Unit/widget:** Epic closure = green `flutter test` for widgets added in CRSE-031–034; existing `fairway_tracker_screen_test.dart` (if present) updated per child.
-- [ ] **Integration (if needed):** One manual pass per [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md) § acceptance checklist after all children ship.
-- [ ] **Keys:** Cross-ref child shards; no new keys at epic level.
+- [x] **Unit/widget:** Epic closure = green `flutter test` for widgets added in CRSE-031–034; existing `fairway_tracker_screen_test.dart` (if present) updated per child.
+- [x] **Integration (if needed):** One manual pass per [`Flow_OnCourse-Modes.md`](../../context/designs/Flow_OnCourse-Modes.md) § acceptance checklist after all children ship.
+- [x] **Keys:** Cross-ref child shards; no new keys at epic level.
 
 ## Dev notes
 

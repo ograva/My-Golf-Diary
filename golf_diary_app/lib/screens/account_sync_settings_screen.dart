@@ -7,6 +7,7 @@ import '../services/sync_constants.dart';
 import '../services/sync_identity.dart';
 import 'golfer_profile_settings_screen.dart';
 import '../widgets/diary_sync_runner.dart';
+import '../widgets/golfer_avatar_circle.dart';
 
 class AccountSyncSettingsScreen extends StatefulWidget {
   const AccountSyncSettingsScreen({super.key});
@@ -134,8 +135,16 @@ class _AccountSyncSettingsScreenState extends State<AccountSyncSettingsScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Skill tier and coaching baseline stay in SQLite and are not part of cloud account profile.',
+                Row(
+                  children: [
+                    GolferAvatarCircle(session: session, radius: 28),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Skill tier, avatar, and coaching baseline stay in SQLite and are not part of cloud account profile.',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(

@@ -16,6 +16,7 @@
 | 1.3 | 2026-11-11 | Eunice (`/wireframe`, `/flow`) | Post-range sit-down flow (`RNGE-005` → `RNGE-004`): session note card, active visit summary, **Save and evaluate session** compilation, compiled session log cards, and seamless handoff to the Vertex AI Swing Diary sheet (`Flow_RangeSessionAndEvaluation.md`) |
 | 1.4 | 2026-11-19 | Eunice (`/wireframe`, `/flow`) | On Course **dual-mode** sharding: map-first **Course** HUD (header/footer rail, aim wedge, markers, sticky record), **Simulator** table layout (`Wireframe_OnCourse-Simulator.md`), end-to-end mode flow (`Flow_OnCourse-Modes.md`); skill-tier field density cross-ref MGDV-202/203 |
 | 1.5 | 2026-11-20 | Eunice (`/audit-ux all`, `/design-system`) | **As-built capture:** stat-tile My Bag (BAG-010), FWY map shell (CRSE-036), onboarding/settings wireframes; story links on all major wireframes; [Design_Audit.md](./designs/Design_Audit.md) + [designs/README.md](./designs/README.md) |
+| 1.6 | 2026-11-20 | Athena | Golfer avatar art + picker (§4 Iconography) |
 
 ---
 
@@ -123,6 +124,7 @@ Three families in strict roles:
 - **Tab icons** (index 0→3): My Bag `Icons.golf_course` · Range `Icons.fitness_center` · On Course `Icons.my_location` · Scorecard `Icons.scoreboard` (filled when selected).
 - **Action icons:** `Icons.cloud_upload_outlined` (sync), `Icons.add`, `Icons.refresh`.
 - **Size:** 24dp interactive, 20dp decorative inline.
+- **Golfer avatars:** illustrated circular portraits (`assets/avatars/`, female/male × beginner/amateur/seasoned, plus one alternate amateur art per gender) fill the account avatar slot: header 40dp, Account profile 72dp, Settings 56dp, diary "You" rows 32dp. A Google photo takes precedence. The Settings picker rings the selection in `colorScheme.primary`, and **Auto** follows gender × tier.
 - **Color:** selected = `colorScheme.onPrimaryContainer` on indicator; unselected = `colorScheme.onSurfaceVariant`.
 
 ---

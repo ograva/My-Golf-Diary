@@ -50,7 +50,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 15,
+      version: 16,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -119,6 +119,14 @@ class LocalDatabaseService {
       await _addColumnIfMissing(db, 'shots', 'sim_carry_yards', 'REAL');
       await _addColumnIfMissing(
           db, 'shots', 'sim_distance_to_hole_yards', 'REAL');
+    }
+    if (oldVersion < 16) {
+      await _addColumnIfMissing(
+        db,
+        'golfer_profile',
+        'avatar_choice',
+        "TEXT NOT NULL DEFAULT ''",
+      );
     }
   }
 
@@ -1690,6 +1698,7 @@ class LocalDatabaseService {
         bag_nickname TEXT NOT NULL DEFAULT '',
         scorecard_view_mode TEXT NOT NULL DEFAULT 'classic',
         scorecard_cart_high_contrast INTEGER NOT NULL DEFAULT 0,
+        avatar_choice TEXT NOT NULL DEFAULT '',
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
         deleted INTEGER NOT NULL DEFAULT 0

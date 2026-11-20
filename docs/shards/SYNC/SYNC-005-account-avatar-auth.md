@@ -16,6 +16,8 @@
 - [x] Sign-out clears Firebase session; anonymous play still allowed via `initializeFirebase` + `SyncIdentity.ensureSignedIn()` for legacy/background use.
 - [x] Widget/unit tests with fakes (`debugSetSession`); `google_sign_in` dependency for Android/web path.
 
+- [x] Illustrated golfer avatar (`GolferAvatarCircle`): Google photo → profile avatar (choice or gender × tier) → initials → generic icon; picker in Golfer profile settings; DB v16 `avatar_choice`.
+
 ## Deferred (follow-up shards)
 
 - [ ] **SYNC-008** — Full `linkWithCredential` success path is implemented; **“Replace this device with the account”** and complete upload-then-download conflict flow.
@@ -37,10 +39,12 @@
 | Session model | `golf_diary_app/lib/services/account_session.dart` |
 | Sync runner | `golf_diary_app/lib/widgets/diary_sync_runner.dart` |
 | Account profile | `golf_diary_app/lib/screens/account_profile_screen.dart` |
+| Golfer avatar | `golf_diary_app/lib/models/golfer_avatar.dart`, `golf_diary_app/lib/widgets/golfer_avatar_circle.dart`, `golf_diary_app/assets/avatars/` |
 | Sync settings | `golf_diary_app/lib/screens/account_sync_settings_screen.dart` |
 
 ## Tests
 
 - `golf_diary_app/test/account_session_test.dart`
 - `golf_diary_app/test/account_avatar_menu_test.dart`
+- `golf_diary_app/test/golfer_avatar_test.dart`
 - `golf_diary_app/test/account_login_sheet_test.dart`

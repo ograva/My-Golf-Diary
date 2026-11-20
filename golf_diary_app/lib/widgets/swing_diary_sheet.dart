@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import '../app_check_config.dart';
 import '../models/diary_context_note.dart';
 import '../models/golfer_profile.dart';
+import '../services/account_auth_controller.dart';
 import '../services/diary_model.dart';
 import '../services/golfer_profile_service.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import 'diary_markdown_body.dart';
+import 'golfer_avatar_circle.dart';
 import 'golfer_baseline_sheet.dart';
 
 /// Opt-in swing diary. The model is only called after Continue, and only
@@ -347,6 +349,14 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                               for (final message in _messages)
                                 ListTile(
                                   key: ValueKey('diary-message-${message.id}'),
+                                  leading: message.role == 'model'
+                                      ? null
+                                      : GolferAvatarCircle(
+                                          session: AccountAuthController
+                                              .instance.session,
+                                          profile: _profile,
+                                          radius: 16,
+                                        ),
                                   title: Text(message.role == 'model'
                                       ? 'Evaluation'
                                       : 'You'),

@@ -1,185 +1,200 @@
 # My Golf Diary — V3 Roadmap
 
 **Status:** Draft for review · **Date:** 2026-11-20 · **Type:** Planning only (no code)
-**Benchmark:** The Grint (reference "complete roadmap") · **Market:** Philippines first
+**Benchmark:** TheGrint (Play / Improve / Compete) · **Market:** Philippines
+**Source:** *TheGrint Product Teardown, Philippine Golf Market Cross-Correlation, and Roadmap Reference for My-Golf-Diary* (user research, Nov 2026)
 
 ---
 
-## 1. Purpose
+## 1. How to read this document
 
-V2 made the individual golfer *aware* of where they are (bag, range, course, card). V3 turns that awareness into *measured growth*, then opens the loop to a flight of buddies and finally tournaments, so each tournament sends the golfer back to the range with a clear list of what to fix.
+| Track | Meaning |
+| :--- | :--- |
+| **V2 completion** | Gaps that finish V2's promise: the individual golfer's growth loop (Range → Course → Scorecard → back to Range), then flight and tournament. Section 3. |
+| **V3 expansion** | Things TheGrint does *for the golfer* that V2 does not, cherry-picked and localized for Philippine golfers. Section 5. |
+
+The golfer cycle stays the same for both tracks:
 
 ```mermaid
 flowchart LR
-  Solo["A. Individual: range + course growth"] --> Flight["B. Flight: play and improve with buddies"]
+  Solo["A. Individual: range + course growth"] --> Flight["B. Flight: barkada on course"]
   Flight --> Tourney["C. Tournament: test the game"]
   Tourney -->|"gaps found"| Solo
 ```
 
 ---
 
-## 2. The Grint — benchmark summary
-
-### 2.1 Feature set
-
-| Area | What The Grint offers |
-| :--- | :--- |
-| Handicap | USGA/WHS-style handicap index from posted rounds; official GHIN handicap in the US (paid tier); course handicap per tee |
-| Scoring | Hole-by-hole scorecard, multiple players per card, scan a paper card |
-| Stats | Fairways hit, greens in regulation (GIR), putts, scrambling, sand saves, penalties, scoring by par type, trends over time |
-| GPS | Front/middle/back distances, hazards, layups, shot tracking with club per shot, club average distances |
-| Courses | Large global course database with tees, ratings, slopes |
-| Social | Friends feed, comments, sharing rounds, buddy handicaps |
-| Competition | Live leaderboards, leagues, tournaments, side games (skins, Nassau, match play) |
-| Devices | Apple Watch / Wear OS |
-| Model | Free core; paid tiers for advanced stats, GPS extras, official handicap |
-
-### 2.2 Golfer mindset The Grint is built for
-
-The **everyday amateur who wants a number**: they play regularly with the same group, care about their handicap and bragging rights, and improve by seeing stats and competing with friends. It is *score-first and social-first*; practice is largely outside the app.
-
-### 2.3 Match against V2's mindset
-
-| Dimension | The Grint | My Golf Diary V2 |
-| :--- | :--- | :--- |
-| Entry point | Post a score, get a handicap | Know your bag, practise, log honestly |
-| Growth driver | Stats + competition | Self-awareness + structured practice + diary |
-| Practice | Minimal | Core (drills, club blocks, session log, AI diary) |
-| Simulator | Minimal | First-class (SIM mode) |
-| Social | Core, from day one | Deferred by design |
-| Locale | US-centric (GHIN) | Philippine courses, venues, sim shops |
-
-**Conclusion:** V2 covers the stage *before* The Grint's user: the beginner-to-amateur who needs to learn their game. V3 adopts The Grint's measurement layer (stats, handicap, course management) for the individual first, and only later its social and competition layer, reframed around the PH flight and tournament culture.
-
----
-
-## 3. What V2 accomplished
+## 2. What V2 accomplished
 
 | Module | Delivered | Golfer value |
 | :--- | :--- | :--- |
-| **Onboarding (MGDV-2)** | Starter wizard, skill tier (beginner / amateur / seasoned pro), progressive disclosure | App speaks at the golfer's level |
-| **My Bag (BAG)** | Category chips, per-club min/max/avg, swing notes | "What I carry and what each club does" |
-| **Range (RNGE, MGDV-3)** | Drill catalog + custom drills, putting/approach drills, multi-club blocks, session note, compiled session log, Vertex AI swing diary (planned) | Form improves, and club ranges in My Bag update from real practice |
-| **On Course (CRSE)** | Course (GPS) and Simulator modes, PH catalog pars, live yards to pin, map/satellite HUD on mapped holes, plan → record at ball, penalties, mulligans, concede | Every stroke traced on fairway or in a sim bay; gross score progress |
-| **Scorecard (SCOR)** | 9/18-hole grid, editor, concede visibility, totals vs par | Personal per-course record |
-| **Sync (SYNC)** | Local-first, anonymous Firebase sync; accounts planned (SYNC-005–010) | Diary is safe and portable |
-| **V2 close-out (MGDV-4–7)** | Scorecard cart view, caddy QR pairing, club/tournament attestation pilot at Club Intramuros | Foundation for flight and tournament stages |
-
-**Gap V2 leaves open:** On Course records *what happened* but does not yet teach *why* or *what to do next*. Scorecard is gross-only and personal. There is no handicap, no stat trends, and no link from course weaknesses back to Range drills.
+| Onboarding (MGDV-2) | Starter wizard, skill tier, progressive disclosure | App speaks at the golfer's level |
+| My Bag (BAG) | Category chips, per-club min/max/avg, swing notes | What I carry and what each club does |
+| Range (RNGE, MGDV-3) | Drill catalog + custom drills, putting/approach drills, multi-club blocks, session note, compiled session log, Vertex AI swing diary (planned) | Form improves; club ranges update from real practice |
+| On Course (CRSE) | Course (GPS) and Simulator modes, PH catalog pars, live yards to pin, map HUD on mapped holes, plan → record at ball, penalties, mulligans, concede | Every stroke traced, on the fairway or in a sim bay |
+| Scorecard (SCOR) | 9/18 grid, editor, concede visibility, totals vs par | Personal per-course record |
+| Sync (SYNC) | Local-first, anonymous Firebase sync; accounts planned | Diary is safe and portable |
+| V2 close-out (MGDV-4–7) | Cart view, caddy QR pairing, club/tournament pilot at Club Intramuros | Foundation for flight and tournament |
 
 ---
 
-## 4. V3 guiding principles
+## 3. V2 completion (gaps to close before V3)
 
-1. **Individual first.** Phases 1–2 serve one golfer; social waits until the solo loop is strong.
-2. **Every number points to an action.** A stat is only shown with the drill or course decision it suggests.
-3. **Local-first stays.** No login wall; offline on the fairway.
-4. **Philippines-native.** PH courses, caddy culture, sim shops, flights, club tournaments, pesos for side games.
-5. **Borrow The Grint's measurement, not its noise.** Adopt stats/handicap; skip feature sprawl.
+These were drafted earlier as "V3 phases." They complete V2.
+
+| Stage | Gap to close | Examples |
+| :--- | :--- | :--- |
+| **A1 — Know your game** | On Course records strokes but not stats | Fairway hit/miss, GIR, putts, up-and-down, penalties per round; on-course vs range carry per club; SIM vs FWY separation |
+| **A2 — Fix your game** | No course management or link back to Range | Where strokes are lost, hole strategy from own bag dispersion, pre-round plan / post-round review, **course → range drill prescription**, goals (break 100/90/80), AI diary across tabs |
+| **B — Flight** | Scorecard is single-player | Up to 4 players per card, caddy attestation (MGDV-5), private buddy history |
+| **C — Tournament** | Pilot only | Club tournament flow (MGDV-6), attested scores, post-tournament report → range plan |
 
 ---
 
-## 5. Roadmap phases
+## 4. Overlap: TheGrint vs V2
 
-### Phase 1 — Know your game (Individual: measurement)
-*Grint parity on personal stats, built on V2 data.*
+TheGrint is built around three pillars: **Play** (GPS + scoring), **Improve** (handicap + stats), **Compete** (games, leaderboards, social).
 
-| ID (proposed) | Feature | Builds on |
+| TheGrint capability | V2 status | Notes |
 | :--- | :--- | :--- |
-| V3-STAT-01 | Per-hole stat capture: fairway hit/miss (L/R), GIR, putts, up-and-down, sand save | CRSE shots + lie; SCOR editor |
-| V3-STAT-02 | Stats dashboard: trends by round, par 3/4/5 scoring, penalties per round | SCOR history |
-| V3-STAT-03 | Club performance from the course: real on-course carry vs range carry per club | CRSE segment yards + BAG |
-| V3-HCP-01 | Unofficial handicap index (WHS-style) using course rating/slope from PH catalog | SCOR + PH_Golf_Venues |
-| V3-HCP-02 | Net score and course handicap per round | V3-HCP-01 |
-| V3-SIM-01 | Separate SIM vs FWY stat views (sim rounds excluded from handicap) | CRSE modes |
+| GPS yardage to green | **Overlap** | V2 has live yards to pin on surveyed PH holes; TheGrint covers 40,000+ courses with front/center/back |
+| Aerial hole map | **Overlap (partial)** | V2 map/satellite HUD on mapped holes only |
+| Manual shot tracking with club | **Overlap** | Both are manual; V2 adds plan (club/lie/aim) and simulator typed yards |
+| Basic hole-by-hole scoring | **Overlap** | V2 Scorecard + On Course |
+| Penalties, mulligans, concede | **Overlap (V2 stronger)** | V2 tracks mulligans separately, which fits PH practice |
+| Club average distances | **Overlap (V2 stronger)** | V2 feeds from range blocks; TheGrint from on-course shots only |
+| Advanced scoring (FIR, GIR, putts) | **V2 gap** | Covered by V2 completion A1 |
+| Multi-player card, attestation | **V2 gap** | Covered by V2 completion B/C |
+| Range drills, swing cues, sim logging, AI diary | **V2 only** | TheGrint has none; this is our differentiator |
+| Handicap Index, Anti-Handicap, What-if Score, Insights & Targets, Match Play Index | **TheGrint only** | V3 candidates |
+| Hole History, Ghost Mode, Trophy Room, Highlights, Yaps | **TheGrint only** | V3 candidates |
+| Side games (11 formats), Teams Cup, King of the Course, live broadcast | **TheGrint only** | V3 candidates (localized) |
+| Scorecard Picture Service, Hole Notes | **TheGrint only** | V3 candidates (lightweight) |
+| Watch app, Swingman rangefinder, Green Maps | **TheGrint only** | Watch later; rest skipped |
 
-**Exit:** a golfer can answer "what's my handicap, and where do I lose strokes?"
-
-### Phase 2 — Fix your game (Individual: coaching and course management)
-*Where My Golf Diary goes beyond The Grint.*
-
-| ID (proposed) | Feature | Builds on |
-| :--- | :--- | :--- |
-| V3-CM-01 | Strokes-lost breakdown: off the tee, approach, short game, putting | Phase 1 stats |
-| V3-CM-02 | Hole strategy card: suggested club off the tee and target based on *your* bag dispersion and hole geometry | BAG min/max + hole coordinates |
-| V3-CM-03 | Pre-round game plan and post-round review ("you went driver on 4 tight holes; 3 penalties") | CRSE plan/aim bearing |
-| V3-CM-04 | Miss pattern map: dispersion per club on mapped holes | CRSE-009 map |
-| V3-LOOP-01 | **Course → Range prescription**: weakest area auto-suggests drills and a practice plan | RNGE drill catalog |
-| V3-LOOP-02 | AI diary spans Range + On Course + Scorecard: one thread on progress | RNGE-004, MGDV-2-003 |
-| V3-GOAL-01 | Goals and milestones (break 100/90/80, handicap target, GIR %) with tier promotion | MGDV-2 skill tier |
-
-**Exit:** after every round, the golfer gets 1–3 concrete things to practise, and can see whether they improved next round.
-
-### Phase 3 — Play together (Flight)
-*The Grint's social layer, scoped to a PH flight of buddies.*
-
-| ID (proposed) | Feature | Builds on |
-| :--- | :--- | :--- |
-| V3-ACC-01 | Accounts required for flight features only (SYNC-005–010) | SYNC |
-| V3-FLT-01 | Flight scorecard: up to 4 players, one scorer or each self-scores, merged card | SCOR cart view (MGDV-4) |
-| V3-FLT-02 | Caddy as scorer/attester via QR PWA | MGDV-5 |
-| V3-FLT-03 | Side games: skins, Nassau, match play, with net strokes from handicaps | V3-HCP-02 |
-| V3-FLT-04 | Buddy list and private flight history (no public feed) | Accounts |
-| V3-FLT-05 | Shared flight review: who gained where, group goals | Phase 2 stats |
-
-**Exit:** a regular Saturday flight runs its card and games in the app and sees each other's progress.
-
-### Phase 4 — Test your game (Tournament) → back to Range
-*Grint leagues/tournaments, built from the V2 Club Intramuros pilot.*
-
-| ID (proposed) | Feature | Builds on |
-| :--- | :--- | :--- |
-| V3-TRN-01 | Club tournament setup: format (stroke, Stableford, scramble), flights by handicap, tee times | MGDV-6 |
-| V3-TRN-02 | Live leaderboard (gross and net) | Flight scorecards |
-| V3-TRN-03 | Attested scores (marker/caddy) feeding handicap | MGDV-5/6 |
-| V3-TRN-04 | Post-tournament report: stats under pressure vs casual rounds | Phase 1–2 |
-| V3-TRN-05 | **Tournament → Range plan**: gaps exposed in competition become the next practice block | V3-LOOP-01 |
-| V3-ORG-01 | Club / organiser view for PH clubs and corporate outings | Pilot clubs |
-
-**Exit:** the full A → B → C loop closes in-app.
-
-### Later / optional
-Watch capture, paper-card scan, launch-monitor/sim-shop data import, official handicap partnership (NGAP or club-level), public community feed, premium tier.
+**Mindset match.** Both apps serve the amateur who wants to get better without sensor hardware. TheGrint gets them there through *the number and the group* (handicap, games, leaderboards). V2 gets them there through *the diary and the range*. V3 adds TheGrint's number and group mechanics on top of V2's practice loop.
 
 ---
 
-## 6. Philippines opportunity
+## 5. V3 expansion: cherry-picked from TheGrint for the Philippine golfer
 
-- **Flights and caddies are standard**: caddy-attested scoring is a natural differentiator over The Grint.
-- **Sim shops are growing** in Metro Manila: SIM mode lets beginners progress before green fees.
-- **Club and corporate tournaments** are frequent; organisers often still use paper and spreadsheets.
-- **No dominant local app** with PH course data, ratings, and par cards; `PH_Golf_Venues.md` and hole coordinates are an asset to keep expanding.
-- **Handicap access** is club-driven; an unofficial, transparent index fills the gap until a partnership exists.
+### 5.1 The Philippine golf psyche (from the research)
+
+- **Caddie does the work.** Caddies carry, spot, call yardage, read greens, and keep the paper card. The phone is a *second opinion*, used between caddie handoffs.
+- **Practice is where weekly golf happens.** Green fees and private club costs push play to driving ranges and CBD simulators (GolfX, Friends Screen, Citygolf, Villamor range).
+- **Club tinkerers.** Japan trips, Japan surplus shops, and Viber trading groups (Tower Golf, ~10k members) mean mixed "franken-bags" that constantly need re-gapping.
+- **Barkada play and local formats.** Molave Points, System 36, 40 Points with Escalera, Snake 3-Putt, paid mulligans; settlement over GCash / Maya; banter on Viber.
+- **NGAP owns the official handicap** (₱500/year WHS). Golfers want a companion, not a rival.
+- **Subscription-averse**, prefer one-time purchases; battery matters on 4.5–5 hour tropical rounds.
+- **Growing young and female segment** (Gen Z, millennials, +18% female participation) that shares on IG / TikTok.
+
+### 5.2 Picks
+
+Each pick names the TheGrint feature it comes from, why it fits, and how it is localized.
+
+#### Theme 1 — Know your number (Improve)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-HCP-01 NGAP Companion Card** | Handicap Index | Store NGAP member ID; unofficial WHS estimate after 3+ rounds; high-contrast "Clubhouse Posting Card" to hand the caddie or post on ngapwhs.com. Never claims to be official. |
+| **V3-HCP-02 Anti-Handicap & Consistency Gap** | Anti-Handicap | Worst 8 of last 20 differentials vs index; shows how wide the golfer's swings in form are |
+| **V3-HCP-03 What-if Score** | What-if Score | Average score minus penalties **and mulligans**, since mulligans are a local norm |
+| **V3-INS-01 Peer benchmarks** | Insights & Targets | Compare driving, approach, GIR, scrambling, putting to golfers of similar index; each gap links to a Range drill (V2 loop) |
+
+#### Theme 2 — Your history on every hole (retention)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-HIST-01 Hole History on the tee** | Hole History | Personal average/best/worst per hole at repeat public courses (Villamor, Veterans, Intramuros, Navy) |
+| **V3-HIST-02 Ghost Diary** | Ghost Mode | Play hole-by-hole against your own best or average round at that course; offline in SQLite |
+| **V3-HIST-03 Trophy Room & milestones** | Trophy Room, Collectibles | Break 100/90/80, first birdie, 3-putt-free streak, first Molave 36+; each linked to the round |
+| **V3-HIST-04 Private Hole & Green Notes** | Hole Notes | Personal notes (grain, downhill speed, where to miss) in place of paid green maps |
+| **V3-HIST-05 Caddie Log** | (new; replaces Green Maps value) | Caddie name, vest number, course, green-reading rating, last tip; helps the golfer request a good caddie again |
+
+#### Theme 3 — Tinkerer's bag (extends My Bag, inspired by TheGrint club stats)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-BAG-01 Club specs & status** | Club model filters in Approach stats | Brand/model, shaft flex/weight, status (in bag / testing / retired), source (Japan, surplus, Viber trade) |
+| **V3-BAG-02 Club A/B test log** | Shot Distance by club | Compare incumbent vs test club across range and sim blocks |
+| **V3-BAG-03 Gapping chart** | Shot Distance quartiles | Shows overlaps and dead zones in a mixed bag |
+| **V3-BAG-04 Range vs fairway reality gap** | Club distances from shot tracking | Sim/range averages vs on-course GPS segments |
+| **V3-SIM-01 Simulator block capture** | (none in TheGrint) | Carry vs total and shot shape (pull/straight/push/slice/hook) for GolfX, Friends Screen, Metro Golf Zone |
+
+#### Theme 4 — Barkada games (Compete, localized)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-FMT-01 Philippine scoring engine** | Game formats | Molave Points (6- or 7-point double eagle, triple-bogey pick-up prompt), System 36 (same-day handicap and net), gross/net stroke |
+| **V3-GAME-01 Side-game suite** | 11 game formats, multi-game | 40 Points (holes, corners, nines, total, putt points, chip-ins, Escalera), Skins, BOB, High-Low, Snake 3-Putt, Nassau with presses; several games from one card |
+| **V3-GAME-02 Settlement summary** | (TheGrint tallies only) | Tally only, no money handled in-app; share to Viber with optional GCash / Maya QR |
+| **V3-GAME-03 Score integrity** | EDITED/DELETED stamps, attestation | Visible edit stamps in flight rounds; caddie or partner attest (extends MGDV-5) |
+
+#### Theme 5 — Share the round (social, light)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-SHR-01 19th-hole share card** | Highlights, Yaps | Vertical card for Viber / IG / TikTok: gross, Molave or System 36 total, longest drive, club highlight, flight or caddie card photo |
+| **V3-SHR-02 Caddie card photo** | Scorecard Picture Service | Free photo attachment on each round; OCR to fill the scorecard later (no human transcription) |
+
+#### Theme 6 — Course directory (Play, localized)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-CRS-01 PH course directory** | 40,000-course database | ~124 PH courses with pars, stroke index, rating/slope (needed for handicap), clean 27-hole nine pickers, local tags (night golf, Intramuros closed Sundays, caddie fee guide) |
+| **V3-CRS-02 Course leaderboard (personal first)** | King of the Course | Start with personal records per course; opt-in weekly course leaderboard later |
+
+#### Theme 7 — Convenience (later)
+
+| V3 feature | From TheGrint | PH localization |
+| :--- | :--- | :--- |
+| **V3-WCH-01 Minimal watch trigger** | Watch scoring / shot tracking | Wear OS / Apple Watch: select club → mark ball only; no wrist maps, to last a 5-hour round |
+| **V3-PRO-01 PHP-priced Pro** | Free core / paid analytics | Free capture forever; Pro unlocks analytics on all past rounds; priced near NGAP's ₱500/year, paid via GCash / Maya / app stores |
+
+### 5.3 Deliberately not picked
+
+| TheGrint feature | Why not |
+| :--- | :--- |
+| Green Maps | Caddies read greens; PH contour data is sparse |
+| GHAP / selling a handicap | NGAP is the official ₱500 WHS body; we complement it |
+| Swingman rangefinder, wind/elevation "plays-like" | Golfers buy cheap lasers and Garmin/Huawei watches |
+| Social feed, live broadcast, Teams Cup | Viber, Telegram, and KaGolf already own group chat; revisit after flight features |
+| Club tournament operations | Gscore owns B2B club scoring; we stay the golfer's own diary that goes into tournaments |
+| Continuous GPS tracking | Battery; keep GPS on tap |
 
 ---
 
-## 7. Dependencies and open questions
+## 6. Suggested sequencing
+
+```mermaid
+flowchart LR
+  V2C["V2 completion: A1, A2, B, C"] --> T1["V3 wave 1: Know your number + Tinkerer's bag + PH course directory"]
+  T1 --> T2["V3 wave 2: Hole history, Ghost, Trophy Room, Caddie Log, Share card"]
+  T2 --> T3["V3 wave 3: PH scoring engine + barkada games + settlement"]
+  T3 --> T4["V3 wave 4: Watch trigger, OCR, PHP Pro"]
+```
+
+**Why this order:** wave 1 strengthens the individual (your priority) and needs course ratings, which also unlock handicap. Wave 2 adds retention without needing friends. Wave 3 is the barkada layer, building on the V2 flight scorecard. Wave 4 is convenience and monetization once there is enough history to make Pro worthwhile.
+
+Note: the PH scoring engine (Molave, System 36) could move into V2 completion stage C, since club tournaments already use those formats.
+
+---
+
+## 7. Open questions
 
 | Question | Owner |
 | :--- | :--- |
-| Course rating/slope data for PH courses (needed for handicap) | Watson + data |
-| Handicap formula: WHS clone vs simplified, and naming to avoid "official" claims | Jason |
-| Strokes-gained baseline for amateurs without PGA-level data | Watson |
-| Account requirement boundary (solo stays account-free) | Jason + Watson |
-| Monetisation: free solo, paid flight/tournament or organiser plan? | Mary |
-| Privacy for shared flight data | Watson |
+| Source of PH course rating, slope, stroke index | Watson + data |
+| Wording so the handicap estimate is never mistaken for an official NGAP index | Jason |
+| Does Molave / System 36 belong in V2 stage C or V3 wave 3? | Jason + user |
+| Pro pricing and what stays free | Mary |
+| Privacy of Caddie Log and shared flight data | Watson |
 
 ---
 
-## 8. Success metrics
+## 8. Next steps
 
-| Phase | Metric |
-| :--- | :--- |
-| 1 | % of rounds with stats captured; handicap computed for active users |
-| 2 | % of rounds followed by a prescribed range session; average gross trend over 10 rounds |
-| 3 | Flights with ≥3 rounds together; side games per round |
-| 4 | Tournaments run in-app; % of players starting a range plan within 7 days after a tournament |
-
----
-
-## 9. Next steps
-
-1. Mary validates scope and PH opportunity in `ProjectBrief.md`.
-2. Jason converts Phase 1–2 into PRD stories (`STAT`, `HCP`, `CM`, `LOOP`, `GOAL` prefixes).
-3. Watson adds data model for stats, handicap, and course ratings to `Architecture.md`.
-4. Poe shards Phase 1 once V2 close-out (MGDV-4–7) ships.
+1. Confirm V2 completion scope (section 3) and V3 picks (section 5).
+2. Mary updates `ProjectBrief.md` with the PH psyche and non-goals.
+3. Jason drafts PRD prefixes for V3 waves (`HCP`, `HIST`, `BAG`, `FMT`, `GAME`, `SHR`, `CRS`).
+4. Watson adds schema notes (club specs, course ratings, game ledgers) to `Architecture.md`.

@@ -64,7 +64,11 @@ jobs:
           fi
           echo "Publishing $FILE_COUNT files to gh-pages"
 
-          git -c http.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+          # Git's smart HTTP endpoint accepts basic auth, not a bearer
+          # extraheader. Match actions/checkout so the token is actually sent.
+          AUTH="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${AUTH}"
+          GIT_TERMINAL_PROMPT=0 git -c credential.helper= \
             push --force \
             "https://github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:gh-pages

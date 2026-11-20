@@ -9,9 +9,9 @@
 | 1.7 | Approved | 2026-11-15 | Jason (PM cohort) |
 | 1.6 | Approved (V2 epics additive) | 2026-11-15 | Jason (PM cohort) |
 
-**PRD revision note (1.9):** Aligned with `golf_diary_app/` and `docs/shards/` as of 2026-11-20. Documents shipped **CRSE-035/036** On Course layouts (SIM compact stack; **FWY** full-bleed map shell), **CRSE-041** OSM stylized hole **map packs** via Firebase Storage, **Finish Hole holing stroke**, header **account avatar** (**SYNC-005**, partial **SYNC-006** sign-in), **MGDV-201/202/203** onboarding + skill-tier Bag stat-tile cards and Range yardage disclosure, **MGDV-401** scorecard cart view, partial **RNGE-004** Vertex swing diary, tier-aware **diary** entry + On Course edge swipe, **PWA** GitHub Pages deploy (`.github/workflows/publish-pwa.yml`). Map imagery in the app follows **OSM-produced packs**, not the Google Static satellite path still described in Architecture §5.5 — Watson should reconcile Architecture separately.
+**PRD revision note (1.9):** Aligned with `golf_diary_app/` and `docs/shards/` as of 2026-11-20. Documents shipped **CRSE-035/036** On Course layouts (SIM compact stack; **FWY** full-bleed map shell), **CRSE-041** OSM stylized hole **map packs** via Firebase Storage, **Finish Hole holing stroke**, header **account avatar** (**SYNC-005**, partial **SYNC-006** sign-in), **MGDV-201/202/203** onboarding + skill-tier Bag stat-tile cards and Range yardage disclosure, **MGDV-401** scorecard cart view, partial **RNGE-004** Vertex swing diary, tier-aware **diary** entry + On Course edge swipe, **PWA** GitHub Pages deploy (`.github/workflows/publish-pwa.yml`). Map imagery matches **Architecture v1.16** (OSM-produced packs via `tools/map_pack/`).
 
-**Stories:** Embedded in §3 (38 total across v1 shipped and planned roadmap). Optional `docs/stories/[PREFIX]/` files can mirror these IDs later. No file-per-story set for this version.
+**Stories:** Canonical narratives in [`docs/stories/`](../stories/README.md) (file-per-story); §3 below remains the requirement source with full AC text.
 
 **Inputs:** [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · Code: `golf_diary_app/lib/` (Flutter).
 
@@ -31,7 +31,7 @@ My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub
 | **Range-first Riley** | Pick structured practice drills, log block aggregates across several clubs, jot a session review, compile a session log, and review Vertex AI swing diary takeaways | RNGE drill catalog + RNGE → BAG path + compiled session log (`RNGE-005`) + future AI Swing Diary (`RNGE-004`) |
 | **Bag-first Blake** | Pre-round yardages + cues | BAG clarity + persistence |
 
-Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA. That multi-device account is future `SYNC-005`–`SYNC-010`. It does not add a fourth persona, and it does not require an account before local play.
+Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA. **Account avatar and sign-in** (`SYNC-005`/`SYNC-006`) ship today; **full multi-device diary parity** (compiled sessions, drills, diary rows) tracks `SYNC-007`–`SYNC-010`. It does not add a fourth persona, and it does not require an account before local play.
 
 ---
 
@@ -229,7 +229,7 @@ As **Rory**, I want **sync from any tab** when online.
 
 **SYNC-003 — Anonymous identity**  
 As **product**, each install syncs as its Firebase anonymous user.  
-**AC:** (1) `SyncIdentity.ensureSignedIn()` is the user id. (2) Path stays `users/{uid}/...` on database `my-golf-diary`. (3) Durable Google and email/password accounts are future `SYNC-006` and `SYNC-008`; until they ship, each install keeps its own anonymous uid. (4) Old `users/local_user` data is not migrated automatically.
+**AC:** (1) `SyncIdentity.ensureSignedIn()` is the user id. (2) Path stays `users/{uid}/...` on database `my-golf-diary`. (3) Durable Google and email/password accounts ship via `SYNC-006` (with linking per `SYNC-008`); anonymous uid remains the default until the player signs in. (4) Old `users/local_user` data is not migrated automatically.
 
 **SYNC-004 — Pull and last-write-wins**  
 As **Rory**, I want **another browser or phone to pick up my diary**.  

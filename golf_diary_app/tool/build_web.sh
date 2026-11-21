@@ -31,7 +31,10 @@ else
   BUILD_ID="${SHA}-${STAMP}"
 fi
 
+# Local CanvasKit. The CDN build fetches canvaskit.wasm from gstatic and
+# the installed PWA cannot paint with no network.
 flutter build web --release --base-href "$BASE_HREF" --no-wasm-dry-run \
+  --no-web-resources-cdn \
   --dart-define=APP_BUILD_ID="$BUILD_ID"
 
 python3 - "$BUILD_ID" <<'PY'
@@ -64,5 +67,30 @@ bundle = web / "main.dart.js"
 if build_id not in bundle.read_text(errors="ignore"):
     raise SystemExit("APP_BUILD_ID was not compiled into main.dart.js")
 
+bootstrap = (web / "flutter_bootstrap.js").read_text(errors="ignore")
+if '"useLocalCanvasKit":true' not in bootstrap:
+    raise SystemExit("offline PWA requires local CanvasKit (useLocalCanvasKit)")
+if not (web / "canvaskit" / "canvaskit.wasm").exists():
+    raise SystemExit("canvaskit.wasm missing from build/web")
+
+skip_names = {"precache_manifest.json", "app_build.json", "pwa_service_worker.js"}
+urls = []
+for path in sorted(web.rglob("*")):
+    if not path.is_file() or path.suffix == ".map" or path.name in skip_names:
+        continue
+    rel = path.relative_to(web).as_posix()
+    if rel.startswith("/") or ".." in rel.split("/"):
+        raise SystemExit(f"precache path escaped the web root: {rel}")
+    urls.append(rel)
+if "index.html" not in urls or "main.dart.js" not in urls:
+    raise SystemExit("precache manifest is missing the app shell")
+
+precache = web / "precache_manifest.json"
+precache.write_text(json.dumps({"urls": urls}, indent=2) + "\n")
+worker = (web / "pwa_service_worker.js").read_text()
+if "precache_manifest.json" not in worker:
+    raise SystemExit("service worker does not precache the shell")
+
 print(f"Stamped {manifest} buildId={build_id} version={version}")
+print(f"Wrote {precache} with {len(urls)} urls")
 PY

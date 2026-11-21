@@ -155,7 +155,12 @@
           return Promise.resolve();
         }));
       }).then(function () {
-        return navigator.serviceWorker.register(script, { scope: scope });
+        return navigator.serviceWorker.register(script, {
+          scope: scope,
+          updateViaCache: 'none',
+        }).catch(function () {
+          return navigator.serviceWorker.register(script, { scope: scope });
+        });
       }).catch(function (error) {
         console.warn('Golf Diary update worker failed to register', error);
       });

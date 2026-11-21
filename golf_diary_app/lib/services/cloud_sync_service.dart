@@ -90,19 +90,31 @@ class CloudSyncService {
   }
 }
 
+/// How long a Firebase startup step may wait before the app continues local-only.
+const Duration kOptionalFirebaseStartupLimit = Duration(seconds: 8);
+
 Future<bool> initializeFirebase() async {
   final alreadyRunning = Firebase.apps.isNotEmpty;
   try {
     if (!alreadyRunning) {
       await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(kOptionalFirebaseStartupLimit);
     }
-    await activateWebAppCheck();
-    if (!alreadyRunning) {
-      await SyncIdentity.ensureSignedIn();
-    }
-    return true;
   } catch (_) {
     return false;
   }
+
+  // App Check loads reCAPTCHA; anonymous sign-in waits on Auth. Either can
+  // hang when the radio is up but nothing is reachable. A persisted user is
+  // still readable once [Firebase.initializeApp] has returned.
+  try {
+    await activateWebAppCheck().timeout(kOptionalFirebaseStartupLimit);
+  } catch (_) {}
+
+  try {
+    await SyncIdentity.ensureSignedIn().timeout(kOptionalFirebaseStartupLimit);
+  } catch (_) {}
+
+  return Firebase.apps.isNotEmpty;
 }

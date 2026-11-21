@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'pwa/pwa_update_client.dart';
@@ -11,9 +13,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await preparePwaSession();
   await initDesktopDatabase();
+  // Local SQLite is enough to paint. Firebase, App Check, and anonymous
+  // sign-in need the network and must not hold the first frame.
+  runApp(const GolfDiaryApp());
+  unawaited(_startOptionalCloud());
+}
+
+Future<void> _startOptionalCloud() async {
   await initializeFirebase();
   AccountAuthController.instance.startListening();
-  runApp(const GolfDiaryApp());
 }
 
 class GolfDiaryApp extends StatelessWidget {

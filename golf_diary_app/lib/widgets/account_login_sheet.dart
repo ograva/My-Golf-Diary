@@ -53,6 +53,9 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
         await _showLinkConflictDialog();
         return;
       }
+      if (isSignInCancelled(err)) {
+        return;
+      }
       if (err != null) {
         setState(() => _error = err);
         return;

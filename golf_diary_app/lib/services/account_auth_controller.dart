@@ -4,8 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../firebase_options.dart';
 import 'account_session.dart';
+import 'cloud_sync_service.dart';
 import 'sync_identity.dart';
+
+/// User closed the Google account picker without choosing an account.
+const String kSignInCancelled = '__sign_in_cancelled__';
+
+bool isSignInCancelled(String? message) => message == kSignInCancelled;
 
 /// Firebase Auth + Google sign-in; passwords never touch SQLite.
 class AccountAuthController extends ChangeNotifier {
@@ -45,7 +52,18 @@ class AccountAuthController extends ChangeNotifier {
   }
 
   GoogleSignIn get _google {
-    return _googleSignIn ??= _googleOverride ?? GoogleSignIn();
+    return _googleSignIn ??= _googleOverride ?? _platformGoogleSignIn();
+  }
+
+  GoogleSignIn _platformGoogleSignIn() {
+    if (kIsWeb) {
+      final clientId = DefaultFirebaseOptions.googleWebClientId;
+      if (clientId.isEmpty) {
+        return GoogleSignIn();
+      }
+      return GoogleSignIn(clientId: clientId);
+    }
+    return GoogleSignIn();
   }
 
   void startListening() {
@@ -91,13 +109,16 @@ class AccountAuthController extends ChangeNotifier {
   }
 
   Future<String?> signInWithGoogle() async {
+    if (!await ensureFirebaseForSignIn()) {
+      return 'Firebase is not available yet. Check your connection, wait a moment, and try again.';
+    }
     final auth = _firebaseAuth;
     if (auth == null) {
       return 'Firebase is not configured on this device.';
     }
     try {
       final googleUser = await _google.signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) return kSignInCancelled;
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -122,7 +143,11 @@ class AccountAuthController extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       return _messageForAuthError(e);
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('signInWithGoogle failed: $e\n$stack');
+      if (kDebugMode) {
+        return 'Google sign-in failed: $e';
+      }
       return 'Google sign-in failed. Try again.';
     }
   }

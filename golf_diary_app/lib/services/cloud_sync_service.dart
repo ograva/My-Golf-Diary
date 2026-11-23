@@ -93,6 +93,12 @@ class CloudSyncService {
 /// How long a Firebase startup step may wait before the app continues local-only.
 const Duration kOptionalFirebaseStartupLimit = Duration(seconds: 8);
 
+/// Ensures Firebase is initialized before sign-in UI (PWA may still be starting cloud).
+Future<bool> ensureFirebaseForSignIn() async {
+  if (Firebase.apps.isNotEmpty) return true;
+  return initializeFirebase();
+}
+
 Future<bool> initializeFirebase() async {
   final alreadyRunning = Firebase.apps.isNotEmpty;
   try {

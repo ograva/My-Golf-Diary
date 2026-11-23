@@ -67,6 +67,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(client.applyCount, 1);
+    expect(client.dismissedBuildId, 'published-2');
+    expect(find.byKey(PwaUpdateDialog.dialogKey), findsNothing);
+  });
+
+  testWidgets('Update does not immediately re-prompt for the same publish',
+      (tester) async {
+    final client = _FakePwaUpdateClient(
+      const PwaPublishedBuild(buildId: 'published-2', version: '1.0.0+1'),
+    );
+    await _pumpHost(tester, client);
+
+    await tester.tap(find.byKey(PwaUpdateDialog.updateKey));
+    await tester.pumpAndSettle();
+    expect(client.applyCount, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
     expect(find.byKey(PwaUpdateDialog.dialogKey), findsNothing);
   });
 
@@ -119,6 +136,7 @@ class _FakePwaUpdateClient extends PwaUpdateClient {
 
   final PwaPublishedBuild? published;
   int applyCount = 0;
+  String? dismissedBuildId;
 
   @override
   Future<PwaPublishedBuild?> fetchPublishedBuild() async => published;
@@ -126,5 +144,13 @@ class _FakePwaUpdateClient extends PwaUpdateClient {
   @override
   Future<void> applyUpdate() async {
     applyCount += 1;
+  }
+
+  @override
+  Future<String?> readDismissedBuildId() async => dismissedBuildId;
+
+  @override
+  Future<void> writeDismissedBuildId(String? buildId) async {
+    dismissedBuildId = buildId;
   }
 }

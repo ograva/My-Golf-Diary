@@ -14,6 +14,12 @@ external void _applyPwaUpdate();
 @JS('golfDiaryDisableServiceWorker')
 external JSPromise<JSAny?> _disableServiceWorker();
 
+@JS('golfDiaryReadDismissedBuildId')
+external JSString? _readDismissedBuildId();
+
+@JS('golfDiaryWriteDismissedBuildId')
+external void _writeDismissedBuildId(JSString? buildId);
+
 Future<PwaPublishedBuild?> fetchPublishedBuild() async {
   try {
     final JSAny? result = await _fetchPublishedBuild().toDart;
@@ -34,6 +40,27 @@ Future<PwaPublishedBuild?> fetchPublishedBuild() async {
 
 Future<void> applyPwaUpdate() async {
   _applyPwaUpdate();
+}
+
+Future<String?> readDismissedBuildId() async {
+  try {
+    final raw = _readDismissedBuildId();
+    if (raw == null) return null;
+    final value = raw.toDart.trim();
+    return value.isEmpty ? null : value;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> writeDismissedBuildId(String? buildId) async {
+  try {
+    _writeDismissedBuildId(
+      buildId == null || buildId.trim().isEmpty ? null : buildId.trim().toJS,
+    );
+  } catch (_) {
+    // sessionStorage blocked in some privacy modes
+  }
 }
 
 Future<void> preparePwaSession() async {

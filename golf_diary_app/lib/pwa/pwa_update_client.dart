@@ -9,6 +9,11 @@ abstract class PwaUpdateClient {
   Future<PwaPublishedBuild?> fetchPublishedBuild();
 
   Future<void> applyUpdate();
+
+  /// Persisted for the browser session so Update/Later does not re-prompt in a loop.
+  Future<String?> readDismissedBuildId();
+
+  Future<void> writeDismissedBuildId(String? buildId);
 }
 
 class PlatformPwaUpdateClient extends PwaUpdateClient {
@@ -20,6 +25,13 @@ class PlatformPwaUpdateClient extends PwaUpdateClient {
 
   @override
   Future<void> applyUpdate() => impl.applyPwaUpdate();
+
+  @override
+  Future<String?> readDismissedBuildId() => impl.readDismissedBuildId();
+
+  @override
+  Future<void> writeDismissedBuildId(String? buildId) =>
+      impl.writeDismissedBuildId(buildId);
 }
 
 Future<void> preparePwaSession() => impl.preparePwaSession();

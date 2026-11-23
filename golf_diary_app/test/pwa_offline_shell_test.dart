@@ -21,6 +21,12 @@ void main() {
     expect(worker, contains("new Response('{\"buildId\":\"\"}'"));
     expect(worker, isNot(contains('caches.delete(key);\n')));
     expect(worker, contains("pathname.endsWith('/app_build.json')"));
+    final applyIdx = worker.indexOf('async function applyUpdate');
+    expect(applyIdx, greaterThan(-1));
+    expect(
+      worker.indexOf('await precacheShell()', applyIdx),
+      greaterThan(applyIdx),
+    );
 
     expect(build, contains('--no-web-resources-cdn'));
     expect(build, contains('useLocalCanvasKit'));

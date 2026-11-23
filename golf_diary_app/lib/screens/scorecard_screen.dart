@@ -6,11 +6,15 @@ import '../models/scorecard_preferences.dart';
 import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
+import '../models/scoring_format.dart';
 import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
+import '../services/swing_diary_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/flight_sheet.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
+import '../widgets/scorecard_format_bar.dart';
 import '../ui/header_action_policy.dart';
 import '../widgets/shared_header_actions.dart';
 import '../widgets/venue_name_field.dart';
@@ -42,6 +46,8 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   bool _cartHighContrast = false;
   int _cartSelectedHole = 1;
   bool _wakelockActive = false;
+  RoundFormatSettings? _format;
+  double? _handicap;
 
   @override
   void initState() {
@@ -131,10 +137,13 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     }
     List<RoundScore> holes = [];
     RoundTotals? totals;
+    RoundFormatSettings? format;
     if (roundId != null) {
       holes = await db.getScoresForRound(roundId);
       totals = await db.computeRoundTotals(roundId);
+      format = await db.getRoundFormat(roundId);
     }
+    final handicap = await db.unofficialHandicapEstimate();
     if (!mounted) return;
     final loadedCourse = totals?.courseName ??
         (holes.isNotEmpty ? holes.first.courseName : 'Local Course');
@@ -144,6 +153,8 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       _selectedRoundId = roundId;
       _holes = holes;
       _totals = totals;
+      _format = format;
+      _handicap = handicap;
       _loading = false;
       if (_cartSelectedHole > holeCount) {
         _cartSelectedHole = 1;
@@ -167,6 +178,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       if (choice == null || choice == SaveRoundBeforeNewChoice.cancel) return;
       if (choice == SaveRoundBeforeNewChoice.saveAndStartNew) {
         await db.completeRound(activeId);
+        await _writeRoundDiary(activeId);
       } else {
         await db.discardRound(activeId);
       }
@@ -182,6 +194,9 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final roundId = await db.startNewRound(
       courseName: courseName,
       par: PhGolfCatalog.parForHole(courseName, 1) ?? 4,
+    );
+    await db.saveRoundFormat(
+      RoundFormatSettings(roundId: roundId, format: ScoringFormat.gross),
     );
     if (!mounted) return;
     setState(() => _selectedRoundId = roundId);
@@ -214,6 +229,172 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     return PhGolfCatalog.parForHole(_courseName, hole);
   }
 
+  Future<void> _writeRoundDiary(String roundId) async {
+    final db = LocalDatabaseService.instance;
+    final settings = await db.getRoundFormat(roundId);
+    final holes = await db.getScoresForRound(roundId);
+    final card = scoreRound(
+      [
+        for (final hole in holes)
+          holeInputFromScore(
+            holeNumber: hole.holeNumber,
+            par: hole.par,
+            strokes: hole.strokes,
+            penalties: hole.penalties,
+            conceded: hole.conceded,
+            paidMulligans: hole.paidMulligans,
+            finalScore: hole.finalScore,
+          ),
+      ],
+      format: settings.format,
+      doubleEaglePoints: settings.molaveDoubleEaglePoints,
+      manualIndex: _handicap,
+    );
+    await SwingDiaryService(database: db).appendContextNote(
+      content: 'Round finished. ${card.summary}. ${settings.attestationLabel}.',
+      source: DiaryContextSource.scorecard,
+      roundId: roundId,
+    );
+  }
+
+  List<HoleScoreInput> get _holeInputs => [
+        for (final hole in _holes)
+          holeInputFromScore(
+            holeNumber: hole.holeNumber,
+            par: hole.par,
+            strokes: hole.strokes,
+            penalties: hole.penalties,
+            conceded: hole.conceded,
+            paidMulligans: hole.paidMulligans,
+            finalScore: hole.finalScore,
+          ),
+      ];
+
+  FormatCardResult? get _card {
+    final settings = _format;
+    if (settings == null) return null;
+    return scoreRound(
+      _holeInputs,
+      format: settings.format,
+      doubleEaglePoints: settings.molaveDoubleEaglePoints,
+      manualIndex: _handicap,
+    );
+  }
+
+  Future<bool> _allowAttestedEdit() async {
+    final settings = _format;
+    final roundId = _selectedRoundId;
+    if (settings == null || roundId == null || !settings.isAttested) {
+      return true;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit attested card?'),
+        content: const Text(
+          'This clears the attestation until the card is attested again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('scorecard-attest-edit-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return false;
+    await LocalDatabaseService.instance.invalidateAttestation(roundId);
+    return true;
+  }
+
+  Future<void> _saveFormat(RoundFormatSettings settings) async {
+    await LocalDatabaseService.instance.saveRoundFormat(settings);
+    await loadScorecard();
+  }
+
+  Future<void> _attest() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    final nameController = TextEditingController(text: 'Me');
+    var role = 'self';
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: const Text('Attest card'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                key: const ValueKey('scorecard-attest-name'),
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButton<String>(
+                key: const ValueKey('scorecard-attest-role'),
+                value: role,
+                isExpanded: true,
+                items: [
+                  for (final item in attestRoles)
+                    DropdownMenuItem(value: item, child: Text(item)),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setLocal(() => role = value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const ValueKey('scorecard-attest-save'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Attest'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final name = nameController.text;
+    nameController.dispose();
+    if (saved != true || !mounted) return;
+    await LocalDatabaseService.instance.attestRound(
+      roundId: roundId,
+      name: name,
+      role: role,
+    );
+    await loadScorecard();
+  }
+
+  Future<void> _openFlight() async {
+    final roundId = _selectedRoundId;
+    final settings = _format;
+    if (roundId == null || settings == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.75,
+        child: FlightSheet(
+          roundId: roundId,
+          courseName: _courseName,
+          format: settings.format,
+          displayName: 'Me',
+        ),
+      ),
+    );
+  }
+
   Future<void> _cartMutation(Future<void> Function() action) async {
     await action();
     await loadScorecard();
@@ -222,6 +403,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartPlusStroke() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
+    if (!await _allowAttestedEdit()) return;
     await _cartMutation(() => LocalDatabaseService.instance.incrementStrokes(
           roundId: roundId,
           courseName: _courseName,
@@ -232,6 +414,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartPenalty() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
+    if (!await _allowAttestedEdit()) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -246,6 +429,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartMulligan() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
+    if (!await _allowAttestedEdit()) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -260,6 +444,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartGimme() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
+    if (!await _allowAttestedEdit()) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -274,12 +459,15 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _editHole(int holeNumber) async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
+    if (!await _allowAttestedEdit()) return;
     await showScorecardHoleEditor(
       context: context,
       roundId: roundId,
       courseName: _courseName,
       holeNumber: holeNumber,
       existing: _holeRow(holeNumber),
+      format: _format?.format ?? ScoringFormat.gross,
+      doubleEaglePoints: _format?.molaveDoubleEaglePoints ?? 7,
     );
     await loadScorecard();
   }
@@ -402,6 +590,37 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       },
                       showSelectedIcon: false,
                     ),
+                    if (_format != null && _card != null) ...[
+                      const SizedBox(height: 12),
+                      ScorecardFormatBar(
+                        settings: _format!,
+                        summary: _card!.summary,
+                        handicap: _handicap,
+                        onFormat: (format) => _saveFormat(
+                          _format!.copyWith(format: format),
+                        ),
+                        onDoubleEagle: (points) => _saveFormat(
+                          _format!.copyWith(molaveDoubleEaglePoints: points),
+                        ),
+                        onRating: (rating, slope) => _saveFormat(
+                          _format!.copyWith(
+                            courseRating: rating,
+                            slopeRating: slope,
+                            clearCourseRating: rating == null,
+                            clearSlope: slope == null,
+                          ),
+                        ),
+                        onAttest: _attest,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: const ValueKey('scorecard-flight-btn'),
+                          onPressed: _openFlight,
+                          child: const Text('Flight'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     if (_viewMode == ScorecardViewMode.classic) ...[
                       const SizedBox(height: 8),
@@ -424,6 +643,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         onMulligan: _cartMulligan,
                         onGimme: _cartGimme,
                         onHighContrastChanged: _persistHighContrast,
+                        formatSummary: _card?.summary,
                       ),
                     if (_viewMode == ScorecardViewMode.classic)
                       _NineGrid(

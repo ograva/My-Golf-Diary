@@ -21,6 +21,7 @@ class ScorecardCartPanel extends StatelessWidget {
     required this.onMulligan,
     required this.onGimme,
     required this.onHighContrastChanged,
+    this.formatSummary,
   });
 
   final String courseName;
@@ -35,6 +36,7 @@ class ScorecardCartPanel extends StatelessWidget {
   final VoidCallback onMulligan;
   final VoidCallback onGimme;
   final ValueChanged<bool> onHighContrastChanged;
+  final String? formatSummary;
 
   static const _actionMinSize = Size(56, 64);
 
@@ -58,6 +60,15 @@ class ScorecardCartPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (totals != null) _CartTotalsBar(totals: totals!, highContrast: highContrast),
+          if (formatSummary != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Text(
+                formatSummary!,
+                key: const ValueKey('scorecard-cart-format-total'),
+                textAlign: TextAlign.center,
+              ),
+            ),
           SwitchListTile(
             key: const ValueKey('scorecard-cart-high-contrast-switch'),
             contentPadding: const EdgeInsets.symmetric(horizontal: 8),

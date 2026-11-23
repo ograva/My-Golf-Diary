@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/golfer_profile.dart';
 import '../screens/caddy_pairing_gate.dart';
+import '../screens/flight_join_screen.dart';
 import '../screens/home_shell.dart';
 import '../screens/onboarding_starter_wizard.dart';
 import '../services/caddy_launch_config.dart';
+import '../services/flight_launch_config.dart';
 import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
 
@@ -20,14 +22,16 @@ class _OnboardingGateState extends State<OnboardingGate> {
   bool _loading = true;
   bool _showShell = false;
   String? _caddyRequestToken;
+  String? _flightToken;
   GolferProfile _profile = const GolferProfile();
   final GolferProfileStore _profileStore = GolferProfileStore();
 
   @override
   void initState() {
     super.initState();
+    _flightToken = FlightLaunchConfig.currentPlatformLaunch()?.token;
     _caddyRequestToken = CaddyLaunchConfig.currentPlatformLaunch()?.requestToken;
-    if (_caddyRequestToken != null) {
+    if (_flightToken != null || _caddyRequestToken != null) {
       setState(() => _loading = false);
       return;
     }
@@ -54,6 +58,19 @@ class _OnboardingGateState extends State<OnboardingGate> {
 
   @override
   Widget build(BuildContext context) {
+    final flightToken = _flightToken;
+    if (flightToken != null) {
+      return FlightJoinScreen(
+        token: flightToken,
+        onContinue: () {
+          setState(() {
+            _flightToken = null;
+            _loading = true;
+          });
+          _refresh();
+        },
+      );
+    }
     final caddyToken = _caddyRequestToken;
     if (caddyToken != null) {
       return CaddyPairingGate(requestToken: caddyToken);

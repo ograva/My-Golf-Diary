@@ -66,7 +66,7 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 | **MGDV-3** | Putting and approach drills | MGDV-2 | [MGDV-301](../shards/MGDV/MGDV-301-putting-approach-drills.md). Completed. |
 | **MGDV-4** | Cart scoring view on Scorecard | SCOR stable | [MGDV-401](../shards/MGDV/MGDV-401-cart-scoring-view.md). Completed. |
 | **MGDV-5** | Caddy v1: single-use QR, PWA shell, per-stroke sync | CRSE shot→score | [MGDV-501](../shards/MGDV/MGDV-501-caddy-pairing-v1.md). v1 Completed. Player picker, accept/dispute, hardened rules, and production redeem stay in the shard’s deferred list. |
-| **MGDV-6** | Club and tournament attestation, events, leaderboard | MGDV-5 optional | No shard. Intramuros Club first rollout. |
+| **MGDV-6** | Club and tournament attestation, events, leaderboard | MGDV-5 optional | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) covers individual formats, local attestation, flight QR, and caddy hole scores. Club enrollment and a shared leaderboard stay later. |
 | **MGDV-7** | Barefoot / no-glove practice tab | Local stroke video storage | No shard. Blocked on storage architecture. |
 
 ## Shard index
@@ -94,6 +94,7 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 | MGDV-301 | Putting and approach drills | RNGE | High | Completed | M | RNGE-003 | [MGDV-301](../shards/MGDV/MGDV-301-putting-approach-drills.md) |
 | MGDV-401 | Cart scoring view | SCOR | High | Completed | M | MGDV-401, SCOR-004 | [MGDV-401](../shards/MGDV/MGDV-401-cart-scoring-view.md) |
 | MGDV-501 | Caddy pairing v1 | CRSE + SCOR + SYNC | High | Completed | L | MGDV-501 | [MGDV-501](../shards/MGDV/MGDV-501-caddy-pairing-v1.md) |
+| MGDV-601 | Scoring formats, flight, caddy scores | SCOR | High | Completed | L | MGDV-601 | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) |
 | PWA-001 | GitHub Pages publish | PWA | High | Completed | M | PWA-001 | [PWA-001](../shards/PWA/PWA-001-github-pages-publish.md) |
 | RNGE-010 | Range drill layout | RNGE | High | Superseded | M | RNGE-001, RNGE-002 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
@@ -125,4 +126,5 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 - **CRSE-041** — pipeline and client cache are in the tree. Pack catalog coverage (owner upload for the remaining PH courses) is still open.
 - **RNGE-004** — 250k-token compaction in production prompts stays a known partial inside completed RNGE-023. No new shard.
 - **MGDV-501** — v1 pairing is completed. Deferred caddy follow-ups stay listed on that shard.
-- **MGDV-6 / MGDV-7** — no story file and no shard until a story exists.
+- **MGDV-601** — individual formats, attestation, flight QR, and caddy hole scores are in. Club enrollment and a shared leaderboard are not.
+- **MGDV-7** — no story file and no shard until a story exists.

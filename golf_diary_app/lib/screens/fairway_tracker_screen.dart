@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import '../data/ph_golf_catalog.dart';
 import '../data/ph_golf_hole_coords.dart';
 import '../models/diary_context_note.dart';
+import '../models/scoring_format.dart';
 import '../on_course/fwy_aim.dart';
 import '../on_course/hole_projection.dart';
 import '../on_course/on_course_aim.dart';
@@ -18,6 +19,7 @@ import '../services/hole_map_pack_source.dart';
 import '../services/local_database_service.dart';
 import '../services/on_course_settings.dart';
 import '../services/pin_distance.dart';
+import '../services/swing_diary_service.dart';
 import '../widgets/account_avatar_app_bar_menu.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/fwy_hole_map.dart';
@@ -580,6 +582,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       });
     }
     await _refreshHoleState();
+    if (finishingRound) {
+      await _writeFinishedRoundDiary();
+    }
     if (finishingRound && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -589,6 +594,36 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       );
     }
     _syncPinWatch();
+  }
+
+  Future<void> _writeFinishedRoundDiary() async {
+    final roundId = _roundId;
+    if (roundId == null) return;
+    final db = LocalDatabaseService.instance;
+    final settings = await db.getRoundFormat(roundId);
+    final holes = await db.getScoresForRound(roundId);
+    final card = scoreRound(
+      [
+        for (final hole in holes)
+          holeInputFromScore(
+            holeNumber: hole.holeNumber,
+            par: hole.par,
+            strokes: hole.strokes,
+            penalties: hole.penalties,
+            conceded: hole.conceded,
+            paidMulligans: hole.paidMulligans,
+            finalScore: hole.finalScore,
+          ),
+      ],
+      format: settings.format,
+      doubleEaglePoints: settings.molaveDoubleEaglePoints,
+    );
+    await SwingDiaryService(database: db).appendContextNote(
+      content:
+          'Round finished. ${card.summary}. ${settings.attestationLabel}.',
+      source: DiaryContextSource.onCourse,
+      roundId: roundId,
+    );
   }
 
   String _shotSubtitle(ShotRecord shot) {

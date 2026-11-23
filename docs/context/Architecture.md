@@ -4,17 +4,18 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.18 | Active | 2026-11-20 | Watson |
+| 1.20 | Active | 2026-11-23 | Watson |
+| 1.19 | Active | 2026-11-23 | Athena |
 
-**Inputs:** [`PRD.md`](./PRD.md) v1.11 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · shards **`CRSE-035`–`036`**, **`CRSE-041`**.
+**Inputs:** [`PRD.md`](./PRD.md) v1.13 · [`ProjectBrief.md`](./ProjectBrief.md) v1.0 · [`PH_Golf_Venues.md`](./PH_Golf_Venues.md) · [`PH_Golf_Course_Hole_Coordinates.md`](./PH_Golf_Course_Hole_Coordinates.md) · [`Range_Drills.md`](./Range_Drills.md) · shards **`CRSE-035`–`036`**, **`CRSE-041`**.
 
 ---
 
 ## 1. System Overview
 
-**My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v16**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
+**My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v17**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
 
-**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **Range** ships compiled **`range_sessions`** (`RNGE-005`). The **diary** (`RNGE-004`) is one ongoing thread: a range-block save and a finished or left **FWY**/**SIM** round write entries and do not call the model; **Feedback** and a typed note call **Vertex AI** and store the reply in that thread. **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`; no Details sheet). Optional **Firebase**: Firestore **`my-golf-diary`** LWW sync for core tables; **Firebase Storage** `course_maps/` for hole packs; **`AccountAvatarAppBarMenu`** (`SYNC-005`) + partial durable sign-in (`SYNC-006`). Web uses the same code path with `sqflite_common_ffi_web` (IndexedDB).
+**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **`MGDV-601`** adds derived **Gross / Molave / System 36** totals, optional rating/slope → unofficial handicap estimate, local **attestation** on `golf_rounds`, **flight** hole-gross publish (`flights/{flightId}`), and caddy **hole-score** rows for non-primary players. **Range** ships compiled **`range_sessions`** (`RNGE-005`) and tap-cycled shot totals (`range-shot-total` **10 → 3 → 5**). The **diary** (`RNGE-004`) is one ongoing thread: triggered writes stay local; **composer Send** (`diary-send-btn`) is the only UI model path. **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`). Optional **Firebase**: Firestore LWW sync for core tables; **Firebase Storage** `course_maps/`; **`AccountAvatarAppBarMenu`** (`SYNC-006` partial). **PWA-002:** precached shell; `runApp` before optional Firebase init. Web: `sqflite_common_ffi_web` (IndexedDB).
 
 ```mermaid
 flowchart LR
@@ -22,7 +23,7 @@ flowchart LR
     UI[Flutter_UI_PWA_and_mobile]
     CAT["Catalogs Venues Coords Drills"]
     LDS[LocalDatabaseService]
-    DB[(SQLite_v16)]
+    DB[(SQLite_v17)]
     PACK[(course_maps_cache)]
     GPS[Geolocator]
     UI --> CAT
@@ -43,7 +44,7 @@ flowchart LR
   CS[CloudSyncService] --> FS
   UI --> CS
   FST -->|"Auth getData pack download"| PACK
-  UI -->|"Feedback or typed note RNGE-004"| GEMINI
+  UI -->|"Composer Send RNGE-004"| GEMINI
   GEMINI -->|"reply stored in the diary thread"| DB
 ```
 
@@ -94,7 +95,7 @@ My-Golf-Diary/
     ├── pwa/                          # build ID, update host, published-build probe
     ├── range/                        # club chip helpers
     ├── screens/                      # clubs, fairway_tracker (FWY/SIM), range, scorecard, home_shell, onboarding, account/caddy shells
-    ├── services/                     # local_database_service (v16), course_map_cache_service, account_auth_controller, swing_diary_*, …
+    ├── services/                     # local_database_service (v17), flight_service, course_map_cache_service, account_auth_controller, swing_diary_*, …
     ├── ui/                           # header_action_policy, yardage_display_copy
     ├── widgets/                      # fwy_hole_map, fwy_overlays, shared_header_actions, account_avatar_app_bar_menu, …
     └── theme/app_theme.dart
@@ -106,11 +107,11 @@ golf_diary_app/ios/Runner/Info.plist
 ### 3.1 App shell, headers & navigation
 
 - **`HomeShell`:** four-tab `NavigationBar` — **My Bag**, **Range**, **On Course** (default index), **Scorecard** — `IndexedStack` preserves tab state (`SHELL-001`).
-- **`OnboardingGate`:** starter wizard (`onboarding_starter_wizard.dart`) until `golfer_profile.onboarding_completed`; PWA `?mode=caddy` bypasses to `CaddyShell`.
+- **`OnboardingGate`:** starter wizard until `golfer_profile.onboarding_completed`; PWA deep links: `?mode=caddy` → `CaddyShell`; `?mode=flight&token=` → `FlightJoinScreen` then shell (join completes from Scorecard flight sheet).
 - **Trailing header:** every tab uses **`SharedHeaderActions`** → **`AccountAvatarAppBarMenu`** (`account-avatar-button`: Login, Sync, Profile, Settings — `SYNC-005` shipped). Legacy `sync_cloud_button.dart` remains for tests/reference; production UI is the avatar menu.
 - **Golfer avatar** (`golfer_avatar.dart`, `golfer_avatar_circle.dart`): bundled portraits in `assets/avatars/` (512px PNG, transparent corners). One **`GolferAvatarCircle`** renders the header button, Account profile, Settings, and the diary sheet's "You" rows. **Precedence:** a signed-in Google `photoUrl` wins, as `SYNC-005` already specified. Next comes the illustrated avatar: `golfer_profile.avatar_choice` when set, otherwise female/male × tier (`seasoned_pro` → *seasoned*). Then initials for a signed-in account with no avatar, then the generic icon. Non-binary and prefer-not-to-say golfers get no gendered default and can pick any portrait. The menu re-provides `GolferProfileScope` to the Profile and Settings routes it pushes, so edits refresh the header.
 - **Leading header:** **Bag** — add-club; **Range** — drills icon; **On Course FWY** — `PlayHeaderOverflowButton` (⋯: diary, caddy invite, Concede/Finish, on-course settings); **On Course SIM** — same overflow pattern; **Scorecard** — tier-aware diary/caddy per `HeaderActionPolicy`.
-- **Diary access:** `SwingDiarySheet` via pinned diary button or overflow; **On Course** adds right-edge swipe (`oncourse-diary-edge-swipe`) — must not steal rail/map gutters (`CRSE-036`).
+- **Diary access (`MGDV-206`):** `SwingDiarySheet` via **`diary-entry-{bag,range,on-course,scorecard}`** book icon in `SharedHeaderActions`; beginner tier may use `shell-header-overflow-btn`. **No** On Course edge swipe (retired).
 - **MGDV-203 Bag:** one stat-tile card per club (~136dp); **Details sheet retired**; session count chip → range log sheet.
 
 ---
@@ -121,16 +122,17 @@ golf_diary_app/ios/Runner/Info.plist
 | :--- | :--- | :--- |
 | `BAG` | `clubs_screen.dart` stat-tile cards (`MGDV-203`) | `clubs`; reads `golfer_profile` for yardage labels |
 | `CRSE` | `fairway_tracker_screen.dart`, `fwy_hole_map.dart`, `fwy_overlays.dart`, `venue_name_field.dart` | `shots` (+ `aim_direction`, sim optional cols v15), `round_scores`, `golf_rounds`; `CourseMapCacheService` + `course_map_manifest.dart`; coords catalog `CRSE-005`; FWY `CRSE-036` / SIM `CRSE-035` |
-| `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart` (`MGDV-401`), `scorecard_hole_editor.dart` | `round_scores`, `golf_rounds`; `golfer_profile.scorecard_view_mode`, `scorecard_cart_high_contrast` |
-| `RNGE` | `range_drill_screen.dart`, `range_session_log.dart`, `practice_drill_sheet.dart`, `SwingDiarySheet` (`RNGE-004` one thread) | `range_drills` → `clubs`; `practice_drills`; shipped `range_sessions`; diary thread tables |
+| `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart`, `scorecard_hole_editor.dart`, `scorecard_format_bar.dart`, `flight_sheet.dart` | `round_scores` (+ `paid_mulligans` v17), `golf_rounds` (+ format, attestation, rating/slope v17); `scoring_format.dart` (derived totals); `golfer_profile` view prefs |
+| `RNGE` | `range_drill_screen.dart` (`range-shot-total` cycle), `SwingDiarySheet` (bottom composer) | `range_drills`, `practice_drills`, `range_sessions`; diary tables (`swing_diary_messages`, `range_evaluations`, `diary_settings`) |
 | `SYNC` | `account_avatar_app_bar_menu.dart`, `account_auth_controller.dart`, `diary_sync_runner.dart` | `CloudSyncService` → Firestore; `SyncIdentity`; Storage pack reads; `google_sign_in` |
-| `MGDV` | `onboarding_starter_wizard.dart`, `golfer_profile_settings_screen.dart`, caddy widgets | `golfer_profile` (skill tier, onboarding, scorecard prefs); caddy Firestore + SQLite v14 tables |
+| `PWA` | `pwa_service_worker.js`, `PwaUpdateHost`, `tool/build_web.sh` | Precache manifest; `main.dart` optional Firebase (`unawaited(_startOptionalCloud())`) |
+| `MGDV` | onboarding, `header_action_policy.dart`, `shared_header_actions.dart`, caddy + flight screens | `golfer_profile`; caddy SQLite + Firestore channel; **`FlightService`** + `flights/{flightId}`; `caddy_flight_players`, `caddy_player_holes` (v17) |
 
 ---
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 16** (`LocalDatabaseService._initDB`). Migration chain: v2 club identity + range venue; v3 sync metadata; v4 `golf_rounds`; v5 `practice_drills` + `drill_id`; v6 **`range_sessions`** + `session_id` (`RNGE-005` **shipped**); v7 diary tables + `diary_settings`; v8 `golfer_profile`; v13 scorecard view prefs on profile; v14 caddy session/queue; **v15** `shots.aim_direction` (default `center`), `shots.sim_carry_yards`, `shots.sim_distance_to_hole_yards` (`CRSE-007`/`008` partial); **v16** `golfer_profile.avatar_choice` (`''` = auto).
+**DB:** `golf_diary.db`, currently **version 17** (`LocalDatabaseService._initDB`). Migration chain through **v16** unchanged (see v1.17 history); **v17** adds `golf_rounds` scoring format + attestation + rating/slope columns, `round_scores.paid_mulligans`, and caddy flight tables `caddy_flight_players`, `caddy_player_holes`.
 
 **Still outside `syncFull` today:** `practice_drills`, `range_sessions`, swing-diary tables, `golfer_profile`, caddy queue — expand when `SYNC-007` lands (PRD).
 
@@ -138,15 +140,23 @@ golf_diary_app/ios/Runner/Info.plist
 
 - **`clubs`** — `id`, `name`, `category`, `brand`, `model`, `min_distance`, `max_distance`, `avg_distance` (yards), `swing_notes`, `is_synced`, `updated_at_ms`, `deleted`. Starter bag seeded on create.
 - **`shots`** — above plus **`aim_direction`** (`left`/`center`/`right`, v15); optional **`sim_carry_yards`**, **`sim_distance_to_hole_yards`** (simulator, v15). **`isHoled`** is derived: `notes == 'Holed'` (`kHoledShotNote`). Holed strokes use putter + `lie_type` green (`finishHole` / `_recordHoledStroke`).
-- **`round_scores`** — `id`, `round_id`, `course_name`, `hole_number`, `par`, **`strokes`**, `penalties`, `mulligans`, `conceded`, **`final_score`**, `is_synced`, `updated_at_ms`, `deleted`.
-- **`golf_rounds`** — `round_id`, `course_name`, `started_at_ms`, `completed_at_ms`, `is_synced`, `updated_at_ms`, `deleted`.
+- **`round_scores`** — above plus **`paid_mulligans`** (v17, tournament mulligan; clamp one per nine; excluded from HIO/Molave rules). **`paid_mulligans`** is in the `round_scores` sync column list so LWW pull does not drop it. Practice **`mulligans`** unchanged.
+- **`golf_rounds`** — `round_id`, `course_name`, timing fields, sync metadata, plus v17: **`scoring_format`** (`gross`|`molave`|`system36`), **`molave_double_eagle_pts`**, **`paid_mulligan_fee_php`**, **`course_rating`**, **`slope_rating`**, **`attested_at_ms`**, **`attested_by_name`**, **`attested_role`**, **`edited_after_attest_count`**. **`golf_rounds` stays out of `syncFull`** until `SYNC-007` / tournament enrollment (PRD MGDV-6-010).
 - **`range_drills`** — same columns including nullable **`session_id`** → `range_sessions.id` (NULL = active visit block or legacy row).
 - **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 12 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
 - **`range_sessions` *(v6 — `RNGE-005` shipped)*** — `id TEXT PRIMARY KEY`, `venue_name TEXT NOT NULL DEFAULT ''`, `session_note TEXT NOT NULL DEFAULT ''`, `compiled_summary_json TEXT NOT NULL DEFAULT '[]'`, `timestamp INTEGER NOT NULL`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - `compiled_summary_json` snapshots the ordered list of club blocks at compile time (`clubId`, `clubName`, `shotCount`, `minYards`, `avgYards`, `maxYards`, `tempoNotes`, `drillId`, `drillTitle`, `drillSteps`) so the compiled session log remains self-contained for the Range session log even if a club or custom drill is later edited or deleted. Compiling this row does not call the model (`RNGE-004`, §5.7).
 
-**Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — **mulligans** stored but **not** in gross formula (display/practice).
+**Scoring helpers** (`golf_models.dart`): `computeFinalScore(strokes, penalties) = strokes + penalties` — practice **mulligans** stored but **not** in gross. **`scoring_format.dart`** derives Molave/System 36/net without rewriting `strokes`. Unofficial handicap uses WHS-style differential from entered rating/slope (not PH catalog).
+
+#### 5.0.1 MGDV-601 formats, attestation & flight (shipped v17)
+
+- **Local-first:** format switch on Scorecard recalculates UI totals only.
+- **Attestation:** `attestRound` / `invalidateAttestation` on edit; caddy `attestPlayerCard` can attest primary card.
+- **Flight:** `FlightService` + Firestore `flights/{flightId}` (or in-memory when Firebase absent). Publishes **hole gross arrays** only; keeps `attestedHoleGross` snapshot for mismatch audit. Max 4 players.
+- **Caddy multi-player:** `setHoleScore` with `targetPlayerId` → `caddy_player_holes`; primary golfer strokes unchanged on other-player holes.
+- **Planned (`MGDV-6-010+`):** `tournament_*` tables and event leaderboard — not in schema yet (PRD).
 
 ### 5.1 Yards vs meters
 
@@ -289,28 +299,23 @@ flowchart TD
 
 **FWY specifics (see shard CRSE-036):**
 
-- **Live vs Manual GPS** (`oncourse-gps-badge`, `OnCourseSettings`): Manual pin with stale-fix gate; diary edge swipe (`oncourse-diary-edge-swipe`) ignores rail gutters.
+- **Live vs Manual GPS** (`oncourse-gps-badge`, `OnCourseSettings`): Manual pin with stale-fix gate.
 - **Aim ring** (`fwy_aim.dart`, `on_course_aim.dart`): snap to ring or manifest markers; persists **`shots.aim_direction`** L/C/R (v15); full bearing columns deferred.
 - **Double par:** banner `oncourse-double-par-banner` — never auto-finishes; pairs with §5.2.1 holing-stroke skip.
 - **Header:** leading overflow (diary, caddy, settings entries); trailing account avatar — legacy **`on-course-map-toggle`** / tabular FWY card **removed**.
 - **Diary (`RNGE-004`):** finishing the round, or leaving it, in **FWY** or **SIM** writes one thread entry (course, mode, score, short shot summary) and does not call the model. See §5.7.
 
-### 5.7 One diary thread (`RNGE-004` — locked in PRD 1.11)
+### 5.7 One diary thread (`RNGE-004` — PRD 1.13)
 
-PRD v1.11 retired the auto-evaluate path. **Save and evaluate session** compiles `range_sessions` (§5.3.1) and does not call the model. The diary is **one ongoing thread**: a personal log and an AI sounding board. It opens from Range, On Course (overflow and `oncourse-diary-edge-swipe`), and Scorecard. It is not a fifth tab. Entries stay on device and can be re-read offline.
+**Save and evaluate session** compiles `range_sessions` (§5.3.1) and does not call the model. The diary is **one ongoing thread** opened from **`diary-entry-*`** header icons (`MGDV-206`). **`SwingDiarySheet`** pins a multiline **composer** at the bottom (`diary-composer-field`, `minLines` 1 / `maxLines` 6); **Send** shows **`diary-send-busy`** while streaming. There is no **`diary-feedback-btn`**, **Save note on this device**, or **Summarize today** in the main sheet (evaluation history remains via **`diary-evaluation-log-btn`**).
 
-The running client still starts a model call from **Save and evaluate session**. That path is retired here. §8 records the gap. This alignment adds no table and no column.
+**When the model is not called:**
 
-**When the model is not called.** These writes are local only:
+1. **Range block** (`saveRangeDrill` → `SwingDiaryService.appendContextNote`).
+2. **FWY/SIM** finish or leave; **Scorecard** finish with format summary (`fairway_tracker_screen`, `scorecard_screen`).
+3. **`compileAndSaveRangeSession`** (`RNGE-005`).
 
-1. **Range block.** `saveRangeDrill` writes one entry whether or not the golfer wrote a note. The entry holds club, drill when one is linked, result (shot count and min/avg/max yards), and the per-club note when one was written. `range_drills` and the club min/max/avg update (§5.3) still happen.
-2. **FWY or SIM round.** Finishing the round, or leaving it, writes one entry: course, mode (`FWY` or `SIM`), score, and a short shot summary. `diary_context_notes.round_id` stores the round.
-3. **Compile (`RNGE-005`).** `compileAndSaveRangeSession` stores the session log and confirms it on device. It does not write a second diary entry for blocks already saved, and it does not call Vertex.
-
-**When the model is called.** Only these two, and only when the golfer has opted in, Firebase is up, and App Check is active. Offline, or before opt-in, the golfer's text stays in the thread and no call is made until Vertex can run.
-
-1. **Feedback** (`diary-feedback-btn`). Submits recent thread entries, inside the token ceiling. The model returns an analysis. That analysis is saved as an entry in the same thread. Feedback is how a run of triggered entries is sent for coaching. It does not itself write a range or round entry.
-2. **Typed note** (`diary-composer-field`, `diary-send-btn`). The text is saved as an entry first. The model then reads the thread, including that entry, and the reply is saved in the same thread on that turn.
+**When the model is called:** **Composer Send** only — store golfer text, then `VertexDiaryModel` with coach prompt + thread context (opt-in, online, App Check). Offline: text may persist; no call until Vertex is available.
 
 ```mermaid
 sequenceDiagram
@@ -318,19 +323,13 @@ sequenceDiagram
   participant App as Flutter App (SQLite)
   participant AI as Vertex AI Gemini
 
-  User->>App: Save range block, or finish or leave FWY/SIM
-  App->>App: Write one thread entry. No model call
-  alt Feedback
-    User->>App: Tap Feedback
-    App->>App: Load coach prompt plus recent thread entries
-  else Typed note
-    User->>App: Send a typed note
-    App->>App: Store the note, then load the thread including it
-  end
-  App->>AI: Prompt stays under about 250000 tokens
-  AI-->>App: Analysis or reply
-  App->>App: Save that text as the next entry in the same thread
-  Note over App: Over the ceiling, store a periodic summary and drop the oldest raw text from the next prompt
+  User->>App: Triggered entry (range block, round, compile)
+  App->>App: Append thread entry. No model call
+  User->>App: Composer Send
+  App->>App: Store note, load thread + coach prompt
+  App->>AI: Under token ceiling
+  AI-->>App: Reply stream
+  App->>App: Save model entry in same thread
 ```
 
 **Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`. There is no second persona.
@@ -341,8 +340,8 @@ sequenceDiagram
 2. **Current bag (`clubs` from SQLite)** — club names, categories, brand/model specs, recorded `min / avg / max yd`, and per-club `swing_notes`.
 3. **Progress brief** — present only after a periodic summary exists. It states clubs and drills they returned to, cues they wrote, and how min / avg / max moved.
 4. **Per-club tally** from SQLite, not from the model: session count, average this period versus the previous period, and the drill titles used most. Numbers stay exact after older notes are shortened.
-5. **Diary thread entries, still raw**, while the whole prompt (including `systemInstruction`) is under the ceiling: range-block entries, FWY/SIM round entries, typed notes, and earlier model replies. Feedback sends the recent entries. A typed note is already stored, so the model reads it with the rest of the thread.
-6. **This ask, in full** — the recent entries Feedback submitted, or the thread including the note just typed. That material is not folded into the progress brief.
+5. **Diary thread entries, still raw**, while under the ceiling: range-block entries, round entries, typed notes, and earlier model replies.
+6. **This ask, in full** — the thread including the note just typed.
 
 **250,000-token ceiling.** Count the prompt before the call. While it fits, send the raw thread so the reply can see focus and progress directly. When the next call would pass about 250,000 tokens, compact the oldest material:
 
@@ -358,12 +357,12 @@ sequenceDiagram
 | Range block | `role = user`. Content is club, drill when linked, shot count, min/avg/max yards, and the note when present | `diary_context_notes` (`source = range`) with the same content | No |
 | FWY/SIM finish or leave | `role = user`. Content is course, mode, score, and a short shot summary | `diary_context_notes` (`source = on_course`, `round_id` set) | No |
 | Typed note | `role = user`. Content is the text, saved before any call | `diary_context_notes` (`source = diary`) | Then yes, if opted in and online |
-| Feedback analysis or typed-note reply | `role = model`. Content is the analysis or reply | `range_evaluations` with `kind = evaluation` (same text) | This row **is** the call's result |
+| Composer reply | `role = model`. Content is the reply | `range_evaluations` with `kind = evaluation` (same text) | This row **is** the call's result |
 | Periodic summary | Shown in the thread, marked as a compaction note | `range_evaluations` with `kind = periodic_summary` | Written locally when the next prompt would pass the ceiling. Not a golfer-facing ask |
 
 `diary_context_notes` (shipped): `id`, `source`, `content`, `context_date`, `round_id`, `timestamp`, plus the usual `is_synced` / `updated_at_ms` / `deleted`. A range block with no prose note still inserts a row; the result fields are the content. An empty string is not a valid entry.
 
-`range_evaluations` (shipped, v7). `session_id` is no longer the thing that starts a call. Feedback and typed-note replies may leave it null. A periodic summary leaves it null.
+`range_evaluations` (shipped, v7). `session_id` does not start a call. Composer replies may leave it null. A periodic summary leaves it null.
 
 | Column | Purpose |
 | :--- | :--- |
@@ -387,11 +386,11 @@ Do not add an embedding index in this phase. A question about a specific older d
 
 ## 6. Sync & External Services
 
-- **Init:** `initializeFirebase()` in `main.dart` / `cloud_sync_service.dart` uses [`firebase_options.dart`](../../golf_diary_app/lib/firebase_options.dart). Failure is soft; the app stays local-only.
+- **Init:** Optional cloud in `_startOptionalCloud()` after first frame (not blocking `runApp`). Uses [`firebase_options.dart`](../../golf_diary_app/lib/firebase_options.dart). Failure is soft; the app stays local-only.
 - **Database:** named Firestore database `my-golf-diary` via `FirebaseFirestore.instanceFor(databaseId: ...)`. Do not write the `(default)` database.
 - **Identity:** Firebase **Anonymous Auth** by default; **`AccountAuthController`** adds Google / email-password (`SYNC-006` partial). `SyncIdentity.ensureSignedIn()` and map-pack reads require **some** Firebase Auth session (anonymous OK). Enable Anonymous (+ Google/Email when testing durable accounts) in console.
 - **Map packs:** Storage paths under `course_maps/`; same anonymous gate as sync. Deploy [`storage.rules`](../../storage.rules): read if `request.auth != null`; **write: false** for clients. CORS: [`storage.cors.json`](../../storage.cors.json) for PWA + `localhost` (GET only).
-- **PWA:** [`.github/workflows/publish-pwa.yml`](../../.github/workflows/publish-pwa.yml) on `main` → `flutter build web` with `APP_BUILD_ID` = git SHA → orphan **`gh-pages`**. `PwaUpdateHost` prompts when published build is newer.
+- **PWA:** [`.github/workflows/publish-pwa.yml`](../../.github/workflows/publish-pwa.yml) on `main` → `flutter build web` with `APP_BUILD_ID` = git SHA → orphan **`gh-pages`**. **`PWA-002`:** `golf-diary-shell-v2` service worker precaches shell + local CanvasKit; `main.dart` calls `runApp` before `unawaited(_startOptionalCloud())` with startup timeout (`kOptionalFirebaseStartupLimit`). Contract: `pwa_offline_shell_test.dart`. `PwaUpdateHost` prompts when published build is newer.
 - **Client config:** `firebase_options.dart` holds the public web client config (API key is not a server secret). Re-run `flutterfire configure` when Android or iOS apps are registered.
 
 **CloudSyncService.syncFull**
@@ -406,9 +405,15 @@ Club delete is a tombstone (`deleted = 1`), not an immediate local `DELETE`, so 
 
 Pairing uses a top-level Firestore collection **`caddy_round_channels/{channelId}`** where `channelId` is the opaque single-use token in the PWA QR (`?mode=caddy&request=`). Golfer mints while an active round exists; caddy redeems once (transaction → `status: active`). Stroke/score actions append to **`events`**; the golfer app **`CaddyGolferMergeHost`** listens and applies via **`recordCaddyStroke`** → **`syncStrokeCountFromShots`**. Caddy offline writes queue in SQLite **`caddy_pending_events`** and flush on reconnect.
 
-**v1 limits:** Event writes are authenticated but not yet bound to session principal in rules (see `firestore.rules` comment). **Manual golfer scorecard edits** on the same hole can be overwritten when the next caddy stroke syncs (same precedence as GPS shot sync in §5.2). **Player picker**, hole-segment accept, and hardened rules are follow-up shards.
+**v1 limits:** Event writes are authenticated but not yet bound to session principal in rules (see `firestore.rules` comment). **Manual golfer scorecard edits** on the same hole can be overwritten when the next caddy stroke syncs (same precedence as GPS shot sync in §5.2). **Player picker** + **`setHoleScore`** / **`attestPlayerCard`** for additional flight players ship in **`MGDV-601`** (local `caddy_player_holes`). Production token hardening and accept/dispute remain deferred (PRD **MGDV-6-015**).
 
 **PWA entry:** `OnboardingGate` bypasses golfer onboarding when `mode=caddy` is present and loads **`CaddyShell`** (On Course + Scorecard tabs only).
+
+### MGDV-601 — Flight channel (v1)
+
+- Firestore **`flights/{flightId}`** (database `my-golf-diary`): embedded `players[]` with hole gross arrays and attestation snapshots. Rules: authenticated read/create/update (pilot — same looseness as caddy v1).
+- **Memory fallback** when `Firebase.apps.isEmpty` (tests / offline).
+- QR: `?mode=flight&token=` (`flight_launch_config.dart`).
 
 ### Firestore security rules
 
@@ -439,7 +444,7 @@ service cloud.firestore {
 - `firebase_options.dart` is public client config. Do not commit **service account keys**, **Maps API keys**, or **Gemini API keys** in repository source. Map-pack upload uses owner credentials outside the app (`GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT_JSON` in `tools/map_pack/` only).
 - Sync exposes data to cloud—deploy the named-database rules and turn on Anonymous Auth before production use.
 - **Firebase Storage (`CRSE-041`):** `course_maps/**` — authenticated read only; all writes via admin upload scripts (`allow write: if false` in [`storage.rules`](../../storage.rules)).
-- **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()` on this Firebase project (`firebase_ai` 5.1 renamed `vertexAI()`). The owner pays while the diary stays under about 1,000 people. Calls run only for **Feedback** and a typed diary note (§5.7). Players do not supply Gemini keys. No model key in the client.
+- **Vertex AI (`RNGE-004`):** `FirebaseAI.agentPlatform()`. Calls run only for **composer Send** (§5.7). Players do not supply Gemini keys. No model debug line in the diary UI.
 
 ---
 
@@ -448,8 +453,8 @@ service cloud.firestore {
 - **GPS:**
   - **Shot capture (`CRSE-002`):** single `getCurrentPosition` per “Record Shot”.
   - **Live distance to hole (`CRSE-005`):** distance-filtered position stream (`distanceFilter: 3` meters) active **only** while `FairwayTrackerScreen` is mounted, in **FWY** mode, and on a hole with verified coordinates. Cancelled off-screen, in **SIM** mode, or on unmapped hole.
-- **DB:** version **15** (see §5 migration chain).
-- **PWA / web:** `sqflite_common_ffi_web` + `PwaUpdateHost`; map packs session-cached in memory on web.
+- **DB:** version **17** (see §5).
+- **PWA / web:** `sqflite_common_ffi_web` + precached shell (`PWA-002`) + `PwaUpdateHost`; map packs session-cached in memory on web.
 
 **Android** — `AndroidManifest.xml`: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
 
@@ -472,7 +477,8 @@ Background location **not** required for current flows.
 | `SYNC-007` table expansion | `range_sessions`, diary tables, profile still local-only in `syncFull` |
 | Pack catalog coverage | CRSE-041 pipeline shipped; not all PH courses uploaded |
 | RNGE-004 production ceiling | 250k-token compaction policy partial in live prompts |
-| RNGE-004 thread writes | §5.7 is the locked contract. The running client still calls Vertex from **Save and evaluate session**. Block saves and FWY/SIM finish-or-leave do not yet write the §5.7 thread entries |
+| MGDV-6 tournament schema | PRD MGDV-6-010+; no `tournament_enrollment` table yet |
+| `golf_rounds` cloud sync | Format/attestation columns local until SYNC-007 / enrollment decision |
 | CRSE-038/040 deferrals | Manual pin on stand-in; full aim lat/lon columns |
 
 ---
@@ -487,8 +493,8 @@ Background location **not** required for current flows.
 6. **RNGE blend:** changes require Version History + migration if schema changes.
 7. **Seeded vs Custom Drills (`RNGE-003`):** deleting a seeded drill must persist via tombstone/flag (`deleted = 1`) so it does not reappear on app restart.
 8. **Firestore, Storage & Secrets:** no wide-open production rules on user data; **no Google Maps keys** in the Flutter repo; **no Gemini API keys** in the client. Hole maps are **OSM-produced packs** only (CRSE-041). Swing-diary uses Vertex AI billed to the project. Do not add player-supplied API keys. **No runtime `google_maps_flutter` / Mapbox SDK** for v1.
-9. **Compiled Range Session Log & Diary thread (`RNGE-005` & `RNGE-004`):** Session-level notes (`range-session-note-field`) must stay separate from per-club swing cues so switching club chips never erases the visit note. **Save and evaluate session** (`range-save-evaluate-session-btn`) persists the compiled `range_sessions` row locally first (flushing any unsaved club block) and does not call the model. Saving a range block, and finishing or leaving a FWY or SIM round, each write one diary entry and do not call the model. The only model calls are **Feedback** (`diary-feedback-btn`) and a typed note (`diary-composer-field`, `diary-send-btn`), and only after that golfer text is already stored. Those calls stay under about 250,000 tokens; past that, persist a periodic summary and keep a recent raw window of thread entries. Store the analysis or reply in the same thread.
-10. **Theme/keys:** `app_theme.dart`; FWY keys include `oncourse-map-background`, `oncourse-diary-edge-swipe`, `oncourse-double-par-banner`, `oncourse-map-attribution`; Bag `bag-club-card-{clubId}`; account `account-avatar-button`; see PRD 1.9 and Eunice wireframes.
+9. **Compiled Range Session Log & Diary thread (`RNGE-005` & `RNGE-004`):** Session-level notes stay separate from per-club swing cues. **Save and evaluate session** does not call the model. Triggered entries (range block, round finish/leave, scorecard format summary) do not call the model. The only model path is **composer Send** after the golfer text is stored. Token ceiling ~250,000; periodic summary when over. Reply stored in the same thread.
+10. **Theme/keys:** `app_theme.dart`; diary `diary-entry-*`, `diary-composer-field`, `diary-send-busy`; Range `range-shot-total`; Scorecard `scorecard-format-*`, `flight-*`; FWY `oncourse-map-background`, `oncourse-double-par-banner`; see PRD 1.13 and Eunice wireframes (refresh diary + On Course wireframes for retired edge swipe).
 11. **Dependencies:** justify in Version History when adding packages.
 
 ---
@@ -518,3 +524,4 @@ Background location **not** required for current flows.
 | 1.17 | 2026-11-20 | Athena | Illustrated golfer avatars: `assets/avatars/`, DB **v16** `golfer_profile.avatar_choice`, `GolferAvatarCircle` precedence (Google photo → illustrated → initials → icon), Settings picker with amateur alternates |
 | 1.18 | 2026-11-20 | Watson | Align with **PRD v1.11**: §5.7 is one diary thread. Range-block and FWY/SIM finish-or-leave writes do not call the model. **Feedback** and a typed note do, and the reply is stored in that thread. `RNGE-005` compile no longer starts evaluation. Token ceiling and project billing unchanged. No new table |
 | 1.19 | 2026-11-23 | Athena | DB **v17**: round scoring format, paid tournament mulligans, course rating/slope, local attestation, and caddy flight player tables. Formats and the unofficial handicap estimate are derived. `golf_rounds` stays out of `syncFull`. |
+| 1.20 | 2026-11-23 | Watson | Align with **PRD v1.12–1.13**: §5.0.1 **MGDV-601** formats/flight/attestation; §5.7 composer-only Vertex path (no Feedback UI); **MGDV-206** diary header (no edge swipe); **PWA-002** precache + async Firebase; flight Firestore notes; DB v17 in overview; gaps for tournament schema |

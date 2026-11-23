@@ -13,11 +13,18 @@ File-per-story product narratives for **Eunice** wireframe coverage and **Poe** 
 | **SCOR** | [SCOR/](SCOR/) | 4 | Grid, editor, cart view |
 | **RNGE** | [RNGE/](RNGE/) | 5 | Drills, blocks, session log, diary thread |
 | **SYNC** | [SYNC/](SYNC/) | 10 | Auth, sync, avatar menu |
-| **MGDV** | [MGDV/](MGDV/) | 8 | Onboarding, disclosure, header actions, cart epic, caddy, MGDV-6 |
+| **MGDV** | [MGDV/](MGDV/) | 14 | Onboarding, disclosure, header actions, cart epic, caddy, MGDV-601 shipped, MGDV-6-010…015 planned |
 | **PWA** | [PWA/](PWA/) | 2 | GitHub Pages publish, offline precache shell |
 | **SHELL** | [SHELL/](SHELL/) | 1 | Tab state |
 
-**Total:** 47 story files.
+**Total:** 53 story files.
+
+### MGDV-6 pilot index
+
+| Story | Status |
+| :--- | :--- |
+| [MGDV-601](MGDV/MGDV-601-scoring-formats-epic.md) | Shipped |
+| [MGDV-6-010 … 015](MGDV/MGDV-6-club-tournament-pilot.md) | Planned (Intramuros pilot) |
 
 ## Naming
 

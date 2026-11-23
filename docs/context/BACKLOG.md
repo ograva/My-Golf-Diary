@@ -2,11 +2,11 @@
 
 Index only. Shard bodies live under `docs/shards/`.
 
-Checked against `golf_diary_app/` and `docs/stories/` on 2026-11-20 (PRD 1.9, Architecture 1.16). **Completed** means the shard’s shipped acceptance criteria are in the app. **Superseded** means a later shard replaced that plan; the story still links here when no newer shard owns the baseline. **In Progress** / **Not Started** are the open gaps.
+Checked against `golf_diary_app/` and `docs/stories/` on 2026-11-23 (PRD 1.13, Architecture 1.19). **Completed** means the shard’s shipped acceptance criteria are in the app. **Superseded** means a later shard replaced that plan; the story still links here when no newer shard owns the baseline. **In Progress** / **Not Started** are the open gaps.
 
 ## Story traceability
 
-Every file under `docs/stories/` except `README.md` (43 stories).
+Every file under `docs/stories/` except `README.md` (53 stories).
 
 | Story | Shard | Shard status |
 | :--- | :--- | :--- |
@@ -32,7 +32,16 @@ Every file under `docs/stories/` except `README.md` (43 stories).
 | MGDV-203 | [MGDV-203](../shards/MGDV/MGDV-203-range-bag-progressive-disclosure.md) | Completed |
 | MGDV-401 | [MGDV-401](../shards/MGDV/MGDV-401-cart-scoring-view.md) | Completed |
 | MGDV-501 | [MGDV-501](../shards/MGDV/MGDV-501-caddy-pairing-v1.md) | Completed |
+| MGDV-601 | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) | Completed |
+| MGDV-206 | [MGDV-206](../shards/MGDV/MGDV-206-header-action-consolidation.md) | Completed |
+| MGDV-6-010 | [MGDV-6-010](../shards/MGDV/MGDV-6-010-club-tournament-enrollment.md) | Not Started |
+| MGDV-6-011 | [MGDV-6-011](../shards/MGDV/MGDV-6-011-tournament-event-rules.md) | Not Started |
+| MGDV-6-012 | [MGDV-6-012](../shards/MGDV/MGDV-6-012-event-leaderboard.md) | Not Started |
+| MGDV-6-013 | [MGDV-6-013](../shards/MGDV/MGDV-6-013-committee-attestation.md) | Not Started |
+| MGDV-6-014 | [MGDV-6-014](../shards/MGDV/MGDV-6-014-post-tournament-diary.md) | Not Started |
+| MGDV-6-015 | [MGDV-6-015](../shards/MGDV/MGDV-6-015-caddy-flight-hardening.md) | Not Started |
 | PWA-001 | [PWA-001](../shards/PWA/PWA-001-github-pages-publish.md) | Completed |
+| PWA-002 | [PWA-002](../shards/PWA/PWA-002-offline-precache-shell.md) | Completed |
 | RNGE-001 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) | Superseded |
 | RNGE-002 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) | Superseded |
 | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md), [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) | Completed |
@@ -58,7 +67,7 @@ Historical shards that still name those stories: [BAG-010](../shards/BAG/BAG-010
 
 ## V2 program epics (MGDV)
 
-Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. MGDV-6 and MGDV-7 have no shard yet.
+Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. **MGDV-601** shipped; **MGDV-6-010…015** shards are the Intramuros pilot backlog. **MGDV-7** has no story or shard.
 
 | Epic | One-line outcome | Depends on | Pilot / notes |
 | :--- | :--- | :--- | :--- |
@@ -66,7 +75,7 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 | **MGDV-3** | Putting and approach drills | MGDV-2 | [MGDV-301](../shards/MGDV/MGDV-301-putting-approach-drills.md). Completed. |
 | **MGDV-4** | Cart scoring view on Scorecard | SCOR stable | [MGDV-401](../shards/MGDV/MGDV-401-cart-scoring-view.md). Completed. |
 | **MGDV-5** | Caddy v1: single-use QR, PWA shell, per-stroke sync | CRSE shot→score | [MGDV-501](../shards/MGDV/MGDV-501-caddy-pairing-v1.md). v1 Completed. Player picker, accept/dispute, hardened rules, and production redeem stay in the shard’s deferred list. |
-| **MGDV-6** | Club and tournament attestation, events, leaderboard | MGDV-5 optional | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) covers individual formats, local attestation, flight QR, and caddy hole scores. Club enrollment and a shared leaderboard stay later. |
+| **MGDV-6** | Club tournament pilot (Intramuros) | MGDV-601 shipped; MGDV-5 optional | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) **Completed**. Pilot: [MGDV-6-010](../shards/MGDV/MGDV-6-010-club-tournament-enrollment.md) → [6-015](../shards/MGDV/MGDV-6-015-caddy-flight-hardening.md) in dependency order. |
 | **MGDV-7** | Barefoot / no-glove practice tab | Local stroke video storage | No shard. Blocked on storage architecture. |
 
 ## Shard index
@@ -95,7 +104,14 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 | MGDV-401 | Cart scoring view | SCOR | High | Completed | M | MGDV-401, SCOR-004 | [MGDV-401](../shards/MGDV/MGDV-401-cart-scoring-view.md) |
 | MGDV-501 | Caddy pairing v1 | CRSE + SCOR + SYNC | High | Completed | L | MGDV-501 | [MGDV-501](../shards/MGDV/MGDV-501-caddy-pairing-v1.md) |
 | MGDV-601 | Scoring formats, flight, caddy scores | SCOR | High | Completed | L | MGDV-601 | [MGDV-601](../shards/MGDV/MGDV-601-scoring-formats.md) |
+| MGDV-6-010 | Club tournament enrollment | MGDV | High | Not Started | L | MGDV-6-010 | [MGDV-6-010](../shards/MGDV/MGDV-6-010-club-tournament-enrollment.md) |
+| MGDV-6-011 | Tournament round event rules | SCOR | High | Not Started | M | MGDV-6-011 | [MGDV-6-011](../shards/MGDV/MGDV-6-011-tournament-event-rules.md) |
+| MGDV-6-012 | Event-scoped leaderboard | MGDV | High | Not Started | L | MGDV-6-012 | [MGDV-6-012](../shards/MGDV/MGDV-6-012-event-leaderboard.md) |
+| MGDV-6-013 | Marker and committee attestation | MGDV | High | Not Started | M | MGDV-6-013 | [MGDV-6-013](../shards/MGDV/MGDV-6-013-committee-attestation.md) |
+| MGDV-6-014 | Post-tournament diary handoff | RNGE | Medium | Not Started | M | MGDV-6-014 | [MGDV-6-014](../shards/MGDV/MGDV-6-014-post-tournament-diary.md) |
+| MGDV-6-015 | Caddy flight hardening | MGDV | High | Not Started | L | MGDV-6-015 | [MGDV-6-015](../shards/MGDV/MGDV-6-015-caddy-flight-hardening.md) |
 | PWA-001 | GitHub Pages publish | PWA | High | Completed | M | PWA-001 | [PWA-001](../shards/PWA/PWA-001-github-pages-publish.md) |
+| PWA-002 | Offline precache shell | PWA | High | Completed | M | PWA-002 | [PWA-002](../shards/PWA/PWA-002-offline-precache-shell.md) |
 | RNGE-010 | Range drill layout | RNGE | High | Superseded | M | RNGE-001, RNGE-002 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) |
 | RNGE-020 | Practice drill store | RNGE | High | Completed | M | RNGE-003 | [RNGE-020](../shards/RNGE/RNGE-020-practice-drill-store.md) |
 | RNGE-021 | Practice drill sheet | RNGE | High | Completed | M | RNGE-003 | [RNGE-021](../shards/RNGE/RNGE-021-practice-drill-sheet.md) |
@@ -125,6 +141,6 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 - **SYNC-010** — Change password for email accounts. Verification email and Sync now already ship.
 - **CRSE-041** — pipeline and client cache are in the tree. Pack catalog coverage (owner upload for the remaining PH courses) is still open.
 - **RNGE-004** — 250k-token compaction in production prompts stays a known partial inside completed RNGE-023. No new shard.
-- **MGDV-501** — v1 pairing is completed. Deferred caddy follow-ups stay listed on that shard.
-- **MGDV-601** — individual formats, attestation, flight QR, and caddy hole scores are in. Club enrollment and a shared leaderboard are not.
+- **MGDV-501** — v1 pairing is completed. Remaining trust work moves to **MGDV-6-015** (player picker hardening, dispute, rules, redeem).
+- **MGDV-6 (pilot)** — **MGDV-6-010…015** shards ready; blocked on Watson tournament schema / Firestore rules and Eunice tournament wireframes. Ship **010 → 015** in backlog order.
 - **MGDV-7** — no story file and no shard until a story exists.

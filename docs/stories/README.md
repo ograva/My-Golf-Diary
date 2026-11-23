@@ -13,11 +13,11 @@ File-per-story product narratives for **Eunice** wireframe coverage and **Poe** 
 | **SCOR** | [SCOR/](SCOR/) | 4 | Grid, editor, cart view |
 | **RNGE** | [RNGE/](RNGE/) | 5 | Drills, blocks, session log, diary thread |
 | **SYNC** | [SYNC/](SYNC/) | 10 | Auth, sync, avatar menu |
-| **MGDV** | [MGDV/](MGDV/) | 5 | Onboarding, disclosure, cart epic, caddy |
+| **MGDV** | [MGDV/](MGDV/) | 8 | Onboarding, disclosure, header actions, cart epic, caddy, MGDV-6 |
+| **PWA** | [PWA/](PWA/) | 2 | GitHub Pages publish, offline precache shell |
 | **SHELL** | [SHELL/](SHELL/) | 1 | Tab state |
-| **PWA** | [PWA/](PWA/) | 1 | GitHub Pages publish |
 
-**Total:** 43 story files.
+**Total:** 47 story files.
 
 ## Naming
 

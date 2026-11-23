@@ -2,7 +2,7 @@
 
 Index only. Shard bodies live under `docs/shards/`.
 
-Checked against `golf_diary_app/` and `docs/stories/` on 2026-11-23 (PRD 1.13, Architecture 1.19). **Completed** means the shard’s shipped acceptance criteria are in the app. **Superseded** means a later shard replaced that plan; the story still links here when no newer shard owns the baseline. **In Progress** / **Not Started** are the open gaps.
+Checked against `golf_diary_app/` and `docs/stories/` on 2026-11-23 (PRD 1.13, Architecture 1.21). **Completed** means the shard’s shipped acceptance criteria are in the app. **Superseded** means a later shard replaced that plan; the story still links here when no newer shard owns the baseline. **In Progress** / **Not Started** are the open gaps.
 
 ## Story traceability
 
@@ -142,5 +142,5 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 - **CRSE-041** — pipeline and client cache are in the tree. Pack catalog coverage (owner upload for the remaining PH courses) is still open.
 - **RNGE-004** — 250k-token compaction in production prompts stays a known partial inside completed RNGE-023. No new shard.
 - **MGDV-501** — v1 pairing is completed. Remaining trust work moves to **MGDV-6-015** (player picker hardening, dispute, rules, redeem).
-- **MGDV-6 (pilot)** — **MGDV-6-010…015** shards ready; blocked on Watson tournament schema / Firestore rules and Eunice tournament wireframes. Ship **010 → 015** in backlog order.
+- **MGDV-6 (pilot)** — Architecture **§5.0.2** + Eunice wireframes + Quinn [`TEST_PLAN_MGDV-6-pilot.md`](../testing/TEST_PLAN_MGDV-6-pilot.md) ready. **Athena:** implement **010 → 015** (docs-only handoff complete; no test `.dart` files yet).
 - **MGDV-7** — no story file and no shard until a story exists.

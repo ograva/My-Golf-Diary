@@ -26,7 +26,8 @@ When the committee closes a pilot event, each enrolled golfer gets a structured 
 
 - [ ] **Unit/widget:** note builder from standings + round rows; asserts no `generateContent` on close path.
 - [ ] **Integration (if needed):** close event → diary thread shows system note → tap link opens Range tab.
-- [ ] **Keys:** no new composer keys; `diary-tournament-wrap` or reuse system message styling (TBD).
+- [ ] **Keys:** [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) §6 (`diary-tournament-wrap`, `diary-tournament-range-link`).
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-014.
 
 ## Dev notes
 

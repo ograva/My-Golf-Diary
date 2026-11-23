@@ -26,7 +26,8 @@ Signed-in golfers at the Intramuros pilot can browse posted club tournaments, en
 
 - [ ] **Unit/widget:** repository tests for enroll/withdraw state; gate when `FirebaseAuth.currentUser` is null.
 - [ ] **Integration (if needed):** seed two events; enroll in one; verify round start sheet offers event context.
-- [ ] **Keys:** TBD — Eunice tournament list/enroll (`tournament-event-list`, `tournament-enroll-btn`, `tournament-withdraw-btn`).
+- [ ] **Keys:** [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) §7 (`tournament-event-list`, `tournament-enroll-btn`, `tournament-withdraw-btn`, `tournament-sign-in-gate`).
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-010 — Dart files **not written** in docs-only handoff.
 
 ## Dev notes
 

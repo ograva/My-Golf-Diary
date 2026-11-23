@@ -27,7 +27,8 @@ Markers and committee volunteers can attest published player cards for the pilot
 
 - [ ] **Unit/widget:** lock window boundary tests; marker attest vs self-attest rows.
 - [ ] **Integration (if needed):** lock → golfer edit → standings row shows late flag, not silent rank change without committee action.
-- [ ] **Keys:** extend `scorecard-attest-btn`; `tournament-committee-lock-banner` (TBD).
+- [ ] **Keys:** [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) §5 (`tournament-marker-attest-btn`, `tournament-committee-lock-banner`, `tournament-late-correction-banner`).
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-013.
 
 ## Dev notes
 

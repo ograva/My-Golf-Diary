@@ -15,7 +15,7 @@ A range session has two natural rhythms:
 2. **Sitting down on the bench (Reflect, Compile, & Evaluate):** After finishing the bucket, Riley sits down, wipes the clubs, and wants to:
    - **Jot down an overall Session Note** (`range-session-note-field`) reflecting on how the day went, without losing that note if they tap a club chip to check a number.
    - **Review the Visit Summary** (`range-visit-summary-preview`) showing all the clubs, yardages, cues, and drills recorded during the visit.
-   - **Tap `Save and Evaluate Session`** (`range-save-evaluate-session-btn`) to lock those blocks and the session note into one compiled **Range Session Log** (`range_sessions`) and immediately read what **Vertex AI** (`SwingDiarySheet`) has to say about today's session compared against past practice.
+   - **Tap `Save and Evaluate Session`** (`range-save-evaluate-session-btn`) to compile the visit into **`range_sessions`**. Vertex runs only if the golfer opens the diary and taps **Send** in the composer (PRD 1.13).
 
 ---
 
@@ -62,28 +62,20 @@ flowchart TD
     CheckEmpty -->|Yes| CompileTx
   end
 
-  subgraph Phase4 [4. Review Summary & Vertex AI Evaluation]
-    DiaryReady{"SwingDiarySheet (RNGE-004)\nimplemented?"}
-    PreRNGE004["Snackbar: 'Session log saved for evaluation'\nHighlight compiled card in range-session-log-list"]
-    OpenDiary["Open SwingDiarySheet with\ndiary-session-summary-card at top"]
-    OptInGate{"AI Opt-In granted?"}
-    AskOptIn["Show privacy notice (no API key)\nContinue / Not now"]
-    NetGate{"Online & Vertex reachable?"}
-    OfflineDiary["Show compiled Session Summary card\nDisable composer with offline message"]
-    VertexCall["Send compiled session + raw history/progress brief\nto FirebaseAI.vertexAI()"]
-    ShowEval["Render Vertex AI evaluation card below Session Summary\nSave to range_evaluations(session_id)"]
-    FollowUp["Ask follow-up question in thread OR\nopen Past Evaluations Log (diary-evaluation-log-btn)"]
+  subgraph Phase4 [4. Optional diary — golfer-initiated]
+    Saved["Snackbar: session log saved on device"]
+    OpenDiary["Golfer taps diary-entry-range"]
+    Thread["Read triggered entries in thread"]
+    ComposerSend["Type in diary-composer-field → Send"]
+    OptInGate{"Opted in?"}
+    Vertex["Vertex reply in thread"]
 
-    CompileTx --> DiaryReady
-    DiaryReady -->|"Before RNGE-022 lands"| PreRNGE004
-    DiaryReady -->|"With RNGE-022"| OpenDiary
-    OpenDiary --> OptInGate
-    OptInGate -->|No| AskOptIn
-    AskOptIn -->|"Not now"| PreRNGE004
-    AskOptIn -->|"Continue"| NetGate
-    OptInGate -->|Yes| NetGate
-    NetGate -->|No| OfflineDiary
-    NetGate -->|Yes| VertexCall --> ShowEval --> FollowUp
+    CompileTx --> Saved
+    Saved --> OpenDiary
+    OpenDiary --> Thread
+    Thread --> ComposerSend
+    ComposerSend --> OptInGate
+    OptInGate -->|Yes + online| Vertex
   end
 ```
 
@@ -101,4 +93,4 @@ flowchart TD
 - **Before compiling (`range-visit-summary-preview`):** As each club block is saved during the visit, a compact summary row appears inside the **Wrap Up & Session Review** card (e.g., `7 Iron · 10 shots · 148 / 155 / 162 yds · 3:1 Tour Tempo Rhythm`). When the golfer sits down, they can see at a glance every club they hit before writing their session note.
 - **After compiling (`range-compiled-session-{sessionId}` & `diary-session-summary-card`):**
   - In the Range screen's **Session log** (`range-session-log-list`), the compiled session renders as a cohesive session card displaying the date/time, venue, the quoted **Session Note**, and the breakdown of clubs and drills hit in that session.
-  - When `SwingDiarySheet` opens (`RNGE-022`), the same compiled summary sits at the top of the sheet (`diary-session-summary-card`) right above the Vertex AI evaluation card so the golfer can read their numbers, their own note, and the AI's feedback on a single screen.
+  - Opening `SwingDiarySheet` shows the **thread** of block and session entries; compiled session is visible in Range **session log** (`range-session-log-list`). Coaching requires **composer Send** — there is no auto-evaluate on compile.

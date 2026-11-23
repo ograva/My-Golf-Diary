@@ -27,6 +27,8 @@ Golfer mints a **single-use opaque QR** (`?mode=caddy&request=<token>`) during a
 
 ## Deferred (follow-up shards)
 
+Tracked on **[MGDV-6-015](MGDV-6-015-caddy-flight-hardening.md)** for tournament pilot; remaining bullets:
+
 - [ ] **Player picker** — one caddy device scores full flight (PH norm).
 - [ ] **Hole-segment accept** — golfer accept/dispute workflow per roadmap (no hard reject).
 - [ ] **Hardened rules** — event writes bound to active session principal (not channel-id-only).

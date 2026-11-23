@@ -27,7 +27,8 @@ Players enrolled in the same pilot event see standings sorted in the event’s a
 
 - [ ] **Unit/widget:** sort order per format; audit flag rendering; empty enrolled field state.
 - [ ] **Integration (if needed):** two enrolled players, one publish → second device sees updated row after sync/pull.
-- [ ] **Keys:** `tournament-leaderboard`, `tournament-leaderboard-stale` (TBD).
+- [ ] **Keys:** [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) §4 (`tournament-leaderboard`, `tournament-leaderboard-row-{uid}`, `tournament-leaderboard-stale`).
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-012.
 
 ## Dev notes
 

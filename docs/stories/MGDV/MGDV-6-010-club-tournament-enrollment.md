@@ -23,7 +23,7 @@ As **Rory** at **Club Intramuros**, I want **to enroll in a posted club tourname
 
 ## Widget keys / telemetry
 
-- TBD — Eunice: tournament list, event detail, enroll/withdraw (see [Design_Audit](../../context/designs/Design_Audit.md)).
+- [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) §2–7 (`tournament-event-list`, `tournament-enroll-btn`, `tournament-withdraw-btn`, `tournament-sign-in-gate`).
 
 ## Notes
 

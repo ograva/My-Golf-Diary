@@ -19,7 +19,7 @@ Support the two distinct moments of a real range visit:
 
 ```
 ┌─────────────────────────────────────────┐
-│ [≡] Range Drill Instructor   [✦] [sync] │  [≡] drills · [✦] diary · [sync]
+│ [≡] Range Drill Instructor   [📖] [👤]  │  drills · diary-entry-range · avatar
 ├─────────────────────────────────────────┤
 │ Driving range or simulator              │  VenueNameField
 │ 3:1 Tour Tempo Rhythm           [Clear] │  active drill banner (when chosen)
@@ -31,7 +31,7 @@ Support the two distinct moments of a real range visit:
 │ │ 3:1 Tour Tempo Rhythm               │ │  reloads on club switch or drill tap
 │ └─────────────────────────────────────┘ │
 │                                         │
-│ Shots: 0 / 10          [ ⛳ Hit Shot ]   │  56dp button, caps at 10
+│ Balls hit: 0 / 10 (tap total)  [ Hit ]  │  range-shot-total cycles 10→3→5→10
 │ [ Min (Yds) ] [ Avg (Yds) ] [ Max (Yds)]│  tabular numeric inputs
 │                                         │
 │ [       Save Drill Session            ] │  saves 1 club block → joins visit
@@ -84,7 +84,8 @@ Support the two distinct moments of a real range visit:
 | `VenueNameField` | Driving range or simulator autocomplete |
 | Horizontal `ChoiceChip` | Non-putter clubs |
 | `Card` (amber tint) + `TextField` | Per-club **Swing Cue & Mechanics Note** (`_notesController`) |
-| `ElevatedButton.icon` | **Hit Shot** (`0 / 10` counter) |
+| `InkWell` | **Balls hit** label (`range-shot-total`; tap cycles 10 → 3 → 5 → 10) |
+| `ElevatedButton.icon` | **Hit Shot** (increments counter up to total) |
 | `TextField` × 3 | `Min (Yds)`, `Avg (Yds)`, `Max (Yds)` |
 | `ElevatedButton` | **Save Drill Session** (records single club block) |
 | `Card` (`range-visit-wrapup-card`) | Post-drill sit-down card containing active visit preview, session note, and compile CTA |
@@ -121,13 +122,14 @@ flowchart TD
   flush -->|Yes| autoSave[Auto-save pending club block] --> db[Compile & save range_sessions in SQLite]
   flush -->|No| db
   db --> log[Compiled card appears in Range Session Log]
-  db --> evalSheet[Open Session Summary & Vertex AI Evaluation sheet]
+  db --> snack[Confirm session log saved — no auto Vertex]
 ```
 
 ## 7. Key map
 
 | Element | ValueKey / Key | Widget |
 | :--- | :--- | :--- |
+| Shot total (tap) | `range-shot-total` | `InkWell` on "Balls hit: n / total" |
 | Drills button | `range-header-drills-btn` | `IconButton` leading |
 | Swing diary button | `diary-entry-range` | `IconButton` trailing (`Icons.auto_stories_outlined`, left of the avatar). Always visible. Not in an overflow |
 | Active drill clear | `range-active-drill-clear` | `TextButton` |

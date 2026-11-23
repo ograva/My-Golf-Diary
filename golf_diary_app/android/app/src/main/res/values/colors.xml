@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Matches GolfPalette.fairwayGreen / app launcher (see lib/theme/app_theme.dart). -->
     <color name="ic_launcher_background">#1A5E3A</color>
+    <color name="splash_background">#1A5E3A</color>
 </resources>

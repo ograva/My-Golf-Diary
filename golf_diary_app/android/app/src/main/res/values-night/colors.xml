@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- GolfPalette.deepForest for dark system UI behind the splash. -->
+    <color name="splash_background">#0E1611</color>
+</resources>

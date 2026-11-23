@@ -116,10 +116,6 @@ class AccountAuthController extends ChangeNotifier {
     if (auth == null) {
       return 'Firebase is not configured on this device.';
     }
-    if (kIsWeb && DefaultFirebaseOptions.googleWebClientId.isEmpty) {
-      return 'Google sign-in on web needs GOOGLE_WEB_CLIENT_ID at build time '
-          '(Firebase console → Authentication → Google → Web client ID).';
-    }
     try {
       final googleUser = await _google.signIn();
       if (googleUser == null) return kSignInCancelled;

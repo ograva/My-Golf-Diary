@@ -37,6 +37,8 @@ jobs:
         working-directory: golf_diary_app
         env:
           APP_BUILD_ID: ${{ github.sha }}
+          # Optional override; default is compiled in firebase_options.dart
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
         run: ./tool/build_web.sh --base-href /My-Golf-Diary/
 
       - name: Publish gh-pages

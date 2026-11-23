@@ -229,6 +229,13 @@ async function networkOnlyBounded(request) {
 }
 
 async function applyUpdate() {
+  // app_build.json is network-only; the shell (main.dart.js) was cache-first.
+  // Reloading without reprecache left APP_BUILD_ID stale and re-opened the dialog.
+  try {
+    await precacheShell();
+  } catch (error) {
+    console.warn('Golf Diary apply update: shell refresh failed', error);
+  }
   const clients = await self.clients.matchAll({
     type: 'window',
     includeUncontrolled: true,

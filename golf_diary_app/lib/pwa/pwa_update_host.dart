@@ -49,7 +49,10 @@ class _PwaUpdateHostState extends State<PwaUpdateHost>
     super.initState();
     if (!_enabled) return;
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _restoreDismissed();
+      await _check();
+    });
     final interval = widget.recheckInterval;
     if (interval != null) {
       _timer = Timer.periodic(interval, (_) => _check());
@@ -68,6 +71,18 @@ class _PwaUpdateHostState extends State<PwaUpdateHost>
     if (state == AppLifecycleState.resumed) _check();
   }
 
+  Future<void> _restoreDismissed() async {
+    final stored = await widget.client.readDismissedBuildId();
+    if (stored != null && stored.isNotEmpty) {
+      _dismissedBuildId = stored;
+    }
+  }
+
+  Future<void> _rememberDismissed(String buildId) async {
+    _dismissedBuildId = buildId;
+    await widget.client.writeDismissedBuildId(buildId);
+  }
+
   Future<void> _check() async {
     if (!_enabled || _checking || _dialogOpen || _applying || !mounted) return;
     _checking = true;
@@ -79,7 +94,12 @@ class _PwaUpdateHostState extends State<PwaUpdateHost>
         publishedBuildId: published.buildId,
         dismissedBuildId: _dismissedBuildId,
       );
-      if (!offer) return;
+      if (!offer) {
+        if (published.buildId == widget.runningBuildId.trim()) {
+          await widget.client.writeDismissedBuildId(null);
+        }
+        return;
+      }
       _dialogOpen = true;
       final accepted = await showDialog<bool>(
         context: context,
@@ -90,9 +110,10 @@ class _PwaUpdateHostState extends State<PwaUpdateHost>
       if (!mounted) return;
       if (accepted == true) {
         _applying = true;
+        await _rememberDismissed(published.buildId);
         await widget.client.applyUpdate();
       } else {
-        _dismissedBuildId = published.buildId;
+        await _rememberDismissed(published.buildId);
       }
     } finally {
       _checking = false;

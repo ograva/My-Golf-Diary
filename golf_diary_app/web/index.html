@@ -109,6 +109,23 @@
         }).catch(function () { return null; });
       };
 
+      window.golfDiaryReadDismissedBuildId = function () {
+        try {
+          return sessionStorage.getItem('golf-diary-dismissed-build-id') || '';
+        } catch (error) {
+          return '';
+        }
+      };
+
+      window.golfDiaryWriteDismissedBuildId = function (id) {
+        try {
+          if (!id) sessionStorage.removeItem('golf-diary-dismissed-build-id');
+          else sessionStorage.setItem('golf-diary-dismissed-build-id', String(id));
+        } catch (error) {
+          /* ignore */
+        }
+      };
+
       window.golfDiaryApplyUpdate = function () {
         var reload = function () {
           var url = new URL(window.location.href);

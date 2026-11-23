@@ -20,4 +20,13 @@ class DefaultFirebaseOptions {
     databaseURL: 'https://novusinc-8df79.firebaseio.com',
     storageBucket: 'novusinc-8df79.appspot.com',
   );
+
+  /// OAuth Web client ID (Firebase console → Authentication → Google → Web SDK).
+  ///
+  /// Required for `google_sign_in` on web/PWA. Build with:
+  /// `--dart-define=GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com`
+  static String get googleWebClientId {
+    const fromEnv = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    return fromEnv.trim();
+  }
 }

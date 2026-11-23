@@ -33,9 +33,13 @@ fi
 
 # Local CanvasKit. The CDN build fetches canvaskit.wasm from gstatic and
 # the installed PWA cannot paint with no network.
+EXTRA_DEFINES=(--dart-define=APP_BUILD_ID="$BUILD_ID")
+if [[ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]]; then
+  EXTRA_DEFINES+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+fi
 flutter build web --release --base-href "$BASE_HREF" --no-wasm-dry-run \
   --no-web-resources-cdn \
-  --dart-define=APP_BUILD_ID="$BUILD_ID"
+  "${EXTRA_DEFINES[@]}"
 
 python3 - "$BUILD_ID" <<'PY'
 import json

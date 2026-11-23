@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `showScorecardHoleEditor` / `_HoleEditorSheet` |
-| **Stories** | [SCOR-002](../../stories/SCOR/SCOR-002-hole-editor.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md) |
+| **Stories** | [SCOR-002](../../stories/SCOR/SCOR-002-hole-editor.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md), [MGDV-601](../../stories/MGDV/MGDV-601-scoring-formats-epic.md) |
 | **Persona** | Rory correcting a hole without GPS |
 | **Status** | Target v1.1 — sheet already exists; this tightens hierarchy and keys |
 
@@ -31,6 +31,8 @@ This sheet is how a player records a score **without** a GPS shot. Saving here c
 │ Strokes          −  4  +   │  56dp IconButtons
 │ Penalties        −  2  +   │
 │ Mulligans        −  0  +   │  subtitle: practice, not in gross
+│ Paid mulligan        [ ]    │  hole-editor-paid-mulligan (max 1 per nine)
+│ Molave pts on hole: 3       │  hole-editor-molave-points when Molave active
 │                             │
 │ Concede / gimme      [ ]    │  SwitchListTile
 │ Mark hole complete   [ ]    │  locked on when conceded

@@ -18,6 +18,8 @@
 | 1.5 | 2026-11-20 | Eunice (`/audit-ux all`, `/design-system`) | **As-built capture:** stat-tile My Bag (BAG-010), FWY map shell (CRSE-036), onboarding/settings wireframes; story links on all major wireframes; [Design_Audit.md](./designs/Design_Audit.md) + [designs/README.md](./designs/README.md) |
 | 1.6 | 2026-11-20 | Athena | Golfer avatar art + picker (§4 Iconography) |
 | 1.7 | 2026-11-20 | Eunice | One diary write affordance: header book icon on every shell tab. Overflow and right-edge swipe removed |
+| 1.8 | 2026-11-23 | Eunice | Align wireframes with PRD 1.13: bottom diary composer, range-shot-total cycle, MGDV-601 scorecard formats + flight sheet; refresh SwingDiary + flows |
+| 1.9 | 2026-11-23 | Eunice | MGDV-6 pilot: [Wireframe_Tournament.md](./designs/Wireframe_Tournament.md), [Wireframe_CaddyDispute.md](./designs/Wireframe_CaddyDispute.md), [Flow_ClubTournamentPilot.md](./designs/Flow_ClubTournamentPilot.md) |
 
 ---
 
@@ -180,7 +182,7 @@ See [`docs/context/designs/DesignSystem.md`](./designs/DesignSystem.md) for the 
 
 ## Wireframes
 
-**As-built layouts** aligned with `golf_diary_app/lib/screens/` (2026-11-20). Index with story IDs: [designs/README.md](./designs/README.md). Fresh audit: [Design_Audit.md](./designs/Design_Audit.md).
+**As-built layouts** aligned with `golf_diary_app/lib/screens/` (2026-11-23, PRD 1.13). Index with story IDs: [designs/README.md](./designs/README.md). Fresh audit: [Design_Audit.md](./designs/Design_Audit.md).
 
 | Screen | Widget | File | Stories (examples) |
 | :--- | :--- | :--- | :--- |
@@ -191,7 +193,7 @@ See [`docs/context/designs/DesignSystem.md`](./designs/DesignSystem.md) for the 
 | On Course (FWY) | `FairwayTrackerScreen` | [Wireframe_OnCourse.md](./designs/Wireframe_OnCourse.md) | CRSE-036 |
 | On Course (SIM) | `FairwayTrackerScreen` | [Wireframe_OnCourse-Simulator.md](./designs/Wireframe_OnCourse-Simulator.md) | CRSE-035 |
 | On Course flows | Mode loops | [Flow_OnCourse-Modes.md](./designs/Flow_OnCourse-Modes.md) | CRSE-* |
-| Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md) | SCOR-001 |
+| Scorecard | `ScorecardScreen` | [Wireframe_Scorecard.md](./designs/Wireframe_Scorecard.md), [Wireframe_ScorecardFormats.md](./designs/Wireframe_ScorecardFormats.md), [Wireframe_Flight.md](./designs/Wireframe_Flight.md) | SCOR-001, MGDV-601 |
 | Hole editor | `showScorecardHoleEditor` | [Wireframe_HoleEditor.md](./designs/Wireframe_HoleEditor.md) | SCOR-002 |
 | Range | `RangeDrillScreen` | [Wireframe_Range.md](./designs/Wireframe_Range.md) | RNGE-005 |
 | Practice drills | Range sheet | [Wireframe_PracticeDrills.md](./designs/Wireframe_PracticeDrills.md) | RNGE-003 |
@@ -202,6 +204,9 @@ See [`docs/context/designs/DesignSystem.md`](./designs/DesignSystem.md) for the 
 | New round | Scorecard dialogs | [Wireframe_NewRound.md](./designs/Wireframe_NewRound.md) | SCOR-001 |
 | Club editor | Bag dialogs | [Wireframe_ClubEditor.md](./designs/Wireframe_ClubEditor.md) | BAG-001 |
 | PWA update | `PwaUpdateHost` | [Wireframe_PwaUpdate.md](./designs/Wireframe_PwaUpdate.md) | PWA-001 |
+| Tournaments (pilot) | `TournamentListScreen` (planned) | [Wireframe_Tournament.md](./designs/Wireframe_Tournament.md) | MGDV-6-010…014 |
+| Caddy dispute | `CaddyShell` | [Wireframe_CaddyDispute.md](./designs/Wireframe_CaddyDispute.md) | MGDV-6-015 |
+| Tournament flow | — | [Flow_ClubTournamentPilot.md](./designs/Flow_ClubTournamentPilot.md) | MGDV-6 |
 
 ### Optional improvements (not redesign)
 

@@ -26,7 +26,8 @@ Starting a round from an enrolled event locks scoring policies to the event conf
 
 - [ ] **Unit/widget:** `ScoringFormat` + event policy overlay tests; attestation gate when marker required.
 - [ ] **Integration (if needed):** enrolled round → complete → submit blocked until policy satisfied.
-- [ ] **Keys:** Reuse `scorecard-format-toggle`, `scorecard-attest-btn`; add `scorecard-event-badge` (TBD wireframe).
+- [ ] **Keys:** [Wireframe_Tournament.md](../../context/designs/Wireframe_Tournament.md) — `scorecard-event-badge`, `scorecard-event-policy-banner`, `tournament-submit-btn`; reuse MGDV-601 attest/format keys.
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-011.
 
 ## Dev notes
 

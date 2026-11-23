@@ -2,8 +2,8 @@
 
 | Field | Value |
 | :--- | :--- |
-| **Version** | 1.1 |
-| **Date** | 2026-11-20 |
+| **Version** | 1.2 |
+| **Date** | 2026-11-23 |
 | **Author** | Eunice (UI/UX Designer cohort) |
 | **Implements** | `golf_diary_app/lib/theme/app_theme.dart` |
 
@@ -13,16 +13,39 @@
 | :--- | :--- | :--- |
 | 1.0 | 2026-11-06 | Initial design system — palette, typography, component recipes, Do/Don't |
 | 1.1 | 2026-11-20 | Shipped components: map palette tokens, bag stat tile, FWY rail/overlays; Key conventions cross-ref |
+| 1.2 | 2026-11-23 | Diary bottom composer, scorecard format bar, range shot-total control |
 
 ---
 
-## Shipped components (v1.1)
+## Shipped components (v1.2)
 
 Reference implementations — do not duplicate literals outside `app_theme.dart` / shared widgets.
 
 ### Map palette (`GolfPalette.map*`)
 
 Tokens in `app_theme.dart` match `tools/map_pack/render.py`. Use for `FwyHoleMap`, vector fallbacks, and pack tooling only — not form surfaces.
+
+### Swing diary composer (`SwingDiarySheet._chatBox`)
+
+| Property | Value |
+| :--- | :--- |
+| Position | Pinned bottom of sheet `Column` (below `Expanded` thread) |
+| Field | `diary-composer-field`, multiline 1–6 lines, `surfaceContainerHigh` |
+| Send | `diary-send-btn`; busy → `diary-send-busy` (20dp spinner) |
+| Do not | Feedback / Summarize buttons in main thread |
+
+### Scorecard format bar (`ScorecardFormatBar`)
+
+| Property | Value |
+| :--- | :--- |
+| Control | `SegmentedButton` Gross / Molave / System 36 (`scorecard-format-toggle`) |
+| Summary | `scorecard-format-total` — tabular-friendly line under toggle |
+| Attest | `scorecard-attest-badge` + text button; unofficial handicap uses `scorecard-handicap-estimate` label prefix |
+| Flight entry | `scorecard-flight-btn` opens modal sheet |
+
+### Range shot total (`range-shot-total`)
+
+Tap **Balls hit: counter / total** cycles preset totals **10 → 3 → 5 → 10**; counter clamps when total shrinks.
 
 ### Bag stat tile (`_StatTile`)
 

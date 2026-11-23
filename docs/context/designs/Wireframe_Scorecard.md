@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **Widget** | `ScorecardScreen` / `ScorecardScreenState` |
-| **Stories** | [SCOR-001](../../stories/SCOR/SCOR-001-view-rounds-grid.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md) |
+| **Stories** | [SCOR-001](../../stories/SCOR/SCOR-001-view-rounds-grid.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md), [SCOR-004](../../stories/SCOR/SCOR-004-cart-scoring.md), [MGDV-601](../../stories/MGDV/MGDV-601-scoring-formats-epic.md) |
 | **Persona** | Rory verifying the card after the hole |
-| **Status** | Target v1.1 |
+| **Status** | As-built + format extensions ([Wireframe_ScorecardFormats.md](./Wireframe_ScorecardFormats.md)) |
 
 ## 1. Screen purpose
 
@@ -25,6 +25,8 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 │ │ +2  │ +4  │ +6  │         │  positive / negative / E
 │ └─────┴─────┴─────┘         │
 │ Penalties 2 · Mulligans 1   │  mulligans labeled "practice"
+│ [ Gross | Molave | System 36 ]              │  see ScorecardFormats wireframe
+│ [ Attest card ]  [ Flight ]                 │  scorecard-attest-btn, scorecard-flight-btn
 │ FRONT 9                     │
 │ ┌───┬───┬───┐               │
 │ │ 1 │ 2 │ 3 │               │  tile ≥ 72×64, tap target ≥48

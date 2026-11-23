@@ -2,9 +2,9 @@
 
 | Field | Value |
 | :--- | :--- |
-| **Date** | 2026-11-20 |
+| **Date** | 2026-11-23 |
 | **Author** | Eunice |
-| **Baseline** | `origin/main` after PR #76 (43 stories), `golf_diary_app/lib/` |
+| **Baseline** | PRD 1.13 / 53 stories, `golf_diary_app/lib/` |
 | **Compared to** | [UI_UX_Design_Guide.md](../UI_UX_Design_Guide.md), [DesignSystem.md](./DesignSystem.md), wireframes in this folder |
 
 This pass **documents shipped UI** and records gaps. It does not change Flutter code.
@@ -20,8 +20,11 @@ This pass **documents shipped UI** and records gaps. It does not change Flutter 
 | Range drill + session compile | Yes | [Wireframe_Range.md](./Wireframe_Range.md) | RNGE-001–005 |
 | On Course FWY map shell | Yes | [Wireframe_OnCourse.md](./Wireframe_OnCourse.md) | CRSE-036 |
 | On Course Simulator HUD | Yes | [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) | CRSE-035 |
-| Scorecard + hole editor | Yes | [Wireframe_Scorecard.md](./Wireframe_Scorecard.md) | SCOR-001–002 |
-| Caddy / cart surfaces | Partial | — | MGDV-401, MGDV-501 (no wireframes yet) |
+| Scorecard + formats + flight | Yes | [Wireframe_Scorecard.md](./Wireframe_Scorecard.md), [Wireframe_ScorecardFormats.md](./Wireframe_ScorecardFormats.md), [Wireframe_Flight.md](./Wireframe_Flight.md) | SCOR-001–004, MGDV-601 |
+| Swing diary (thread + composer) | Yes | [Wireframe_SwingDiary.md](./Wireframe_SwingDiary.md) | RNGE-004 |
+| Range shot-total cycle | Yes | [Wireframe_Range.md](./Wireframe_Range.md) | RNGE-001 |
+| Caddy multi-player + dispute | Partial | [Wireframe_CaddyDispute.md](./Wireframe_CaddyDispute.md) | MGDV-6-015 design spec; shell still partial in code |
+| Club tournament pilot | Spec | [Wireframe_Tournament.md](./Wireframe_Tournament.md), [Flow_ClubTournamentPilot.md](./Flow_ClubTournamentPilot.md) | MGDV-6-010…014 |
 
 Full index: [README.md](./README.md).
 
@@ -47,7 +50,8 @@ Full index: [README.md](./README.md).
 | FWY rail uses white shadow text on map | `fwyOverlayText` | Low | Acceptable for contrast; not in cream-surface rules |
 | Simulator still scroll + dual penalties UI | `FairwayTrackerScreen` SIM branch | Low | Matches SIM wireframe; differs from FWY rail pattern |
 | Some legacy keys vs rail summaries | FWY mode | Low | e.g. `oncourse-club-summary` on rail tile |
-| Caddy flows unrunnable in wireframes | `caddy_*` screens | Medium | Stories MGDV-501 — document later |
+| Caddy shell wireframe | `CaddyShell` | Medium | MGDV-501; player strip keys documented in MGDV-601 shard |
+| Club tournament UI | Spec only | — | Wireframes ready; implementation pending shards |
 | Historical UX_Audit “two gold CTAs” | FWY dock | **Resolved** | Finish moved to overflow / chips; single filled Record |
 
 ## Optional improvements (prioritized)

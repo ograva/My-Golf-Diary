@@ -2,10 +2,10 @@
 
 | Field | Value |
 | :--- | :--- |
-| **Date** | 2026-11-20 |
-| **Author** | Jason (PM cohort) |
-| **PRD** | [PRD.md](./PRD.md) v1.9 |
-| **Architecture** | [Architecture.md](./Architecture.md) v1.16 |
+| **Date** | 2026-11-23 (MGDV-6 addendum) |
+| **Author** | Jason / Watson / Eunice / Quinn (cohorts) |
+| **PRD** | [PRD.md](./PRD.md) v1.13 |
+| **Architecture** | [Architecture.md](./Architecture.md) v1.21 |
 | **Method** | Section-by-section compare after `graphify query` orientation and shipped-code audit (`golf_diary_app/`, `docs/shards/`) |
 
 ## Executive summary
@@ -106,7 +106,7 @@
 | :--- | :--- | :--- | :--- |
 | Onboarding | MGDV-2-001 shipped | `OnboardingGate` §3.1 | **Aligned** |
 | Skill tier / disclosure | MGDV-2-002, BAG-010 | MGDV-203, `yardage_display_copy` | **Aligned** |
-| Diary not a tab | MGDV-2-003 | `SwingDiarySheet`, edge swipe | **Aligned** |
+| Diary not a tab | MGDV-2-003 | `SwingDiarySheet`, header `diary-entry-*` only | **Aligned** (edge swipe retired) |
 | Caddy PWA | Journey step 11 | MGDV-5 §6, `CaddyShell` | **Aligned** — rules hardening deferred per Arch |
 | Tab state | — (implicit) | `IndexedStack` SHELL-001 | **Story added** |
 | PWA publish | NFR + deps | Workflow §6 | **Story PWA-001 added** |
@@ -160,6 +160,21 @@
 
 ---
 
+## 13. MGDV-6 club tournament pilot (2026-11-23 addendum)
+
+| Check | PRD | Architecture | Design / QA | Finding |
+| :--- | :--- | :--- | :--- | :--- |
+| Stories MGDV-6-010…015 | §3 full AC | §5.0.2 planned v18 + Firestore paths | [Wireframe_Tournament.md](./designs/Wireframe_Tournament.md) | **Aligned** — spec ready, not implemented |
+| Enrollment auth gate | SYNC-006 durable account | §5.0.2 anonymous until enroll | `tournament-sign-in-gate` | **Aligned** |
+| Leaderboard scope | Event enrollees only | `tournament_standing_cache` | `tournament-leaderboard` | **Aligned** |
+| No Gscore / payments | Out of scope §6 | No payment tables | fee copy only | **Aligned** |
+| Caddy hardening | MGDV-6-015 | §5.0.2 dispute rows + rules upgrade | [Wireframe_CaddyDispute.md](./designs/Wireframe_CaddyDispute.md) | **Aligned** |
+| Initial tests | — | §8 testing | [TEST_PLAN_MGDV-6-pilot.md](../testing/TEST_PLAN_MGDV-6-pilot.md) | **Documented** — no Dart tests yet (docs-only pass) |
+
+**Open for implementation:** DB v18 migration, `firestore.rules` tournament match blocks, UI screens.
+
+---
+
 ## Sign-off
 
-PRD v1.9 and Architecture v1.16 are **suitable for story extraction and Eunice wireframe pass**. File-per-story narratives live under [`docs/stories/`](../stories/README.md).
+PRD v1.13 and Architecture v1.21 support **MGDV-6 pilot implementation** (stories, shards, wireframes, test plan). Earlier sections (v1.9 ↔ v1.16) remain directionally valid for shipped modules; prefer Architecture **1.21** and PRD **1.13** for MGDV-6 and recent UX.

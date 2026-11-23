@@ -27,7 +27,8 @@ Closes MGDV-501 deferred items needed for trustworthy club pilots: flight-wide p
 
 - [ ] **Unit/widget:** dispute flag on merge host; picker switches active player; redeem rejects expired/revoked tokens.
 - [ ] **Integration (if needed):** caddy scores hole for player B → golfer dispute → leaderboard publish shows audit.
-- [ ] **Keys:** `caddy-player-strip`, `caddy-attest-card`, `caddy-hole-dispute` (TBD), existing invite QR keys.
+- [ ] **Keys:** [Wireframe_CaddyDispute.md](../../context/designs/Wireframe_CaddyDispute.md); existing invite QR keys.
+- [ ] **Test plan:** [`TEST_PLAN_MGDV-6-pilot.md`](../../testing/TEST_PLAN_MGDV-6-pilot.md) § MGDV-6-015.
 
 ## Dev notes
 

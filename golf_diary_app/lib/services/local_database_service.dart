@@ -13,6 +13,7 @@ import '../models/golfer_profile.dart';
 import '../models/practice_drill.dart';
 import '../models/range_session.dart';
 import '../models/round_summary.dart';
+import '../models/scoring_format.dart';
 import 'sync_merge.dart';
 
 const kEmptyRangeSessionMessage =
@@ -50,7 +51,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 16,
+      version: 17,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -127,6 +128,54 @@ class LocalDatabaseService {
         'avatar_choice',
         "TEXT NOT NULL DEFAULT ''",
       );
+    }
+    if (oldVersion < 17) {
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'scoring_format',
+        "TEXT NOT NULL DEFAULT 'gross'",
+      );
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'molave_double_eagle_pts',
+        'INTEGER NOT NULL DEFAULT 7',
+      );
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'paid_mulligan_fee_php',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _addColumnIfMissing(db, 'golf_rounds', 'course_rating', 'REAL');
+      await _addColumnIfMissing(db, 'golf_rounds', 'slope_rating', 'INTEGER');
+      await _addColumnIfMissing(db, 'golf_rounds', 'attested_at_ms', 'INTEGER');
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'attested_by_name',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'attested_role',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      await _addColumnIfMissing(
+        db,
+        'golf_rounds',
+        'edited_after_attest_count',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _addColumnIfMissing(
+        db,
+        'round_scores',
+        'paid_mulligans',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _createCaddyPlayerTables(db);
     }
   }
 
@@ -228,6 +277,7 @@ class LocalDatabaseService {
         strokes INTEGER NOT NULL DEFAULT 0,
         penalties INTEGER NOT NULL DEFAULT 0,
         mulligans INTEGER NOT NULL DEFAULT 0,
+        paid_mulligans INTEGER NOT NULL DEFAULT 0,
         conceded INTEGER NOT NULL DEFAULT 0,
         final_score INTEGER NOT NULL DEFAULT 0,
         is_synced INTEGER NOT NULL DEFAULT 0,
@@ -262,6 +312,7 @@ class LocalDatabaseService {
     await _createDiaryTables(db);
     await _createGolferProfileTable(db);
     await _createCaddyTables(db);
+    await _createCaddyPlayerTables(db);
 
     final starterBag = [
       Club(id: 'driver', name: 'Driver', category: 'wood', avgDistance: 220),
@@ -932,12 +983,22 @@ class LocalDatabaseService {
     required bool holeComplete,
     bool conceded = false,
     int mulligans = 0,
+    int paidMulligans = 0,
   }) async {
     final existing = await getHoleScore(roundId, holeNumber);
     final strokeCount = conceded ? par * 2 : strokes.clamp(0, 99);
     final penCount = penalties.clamp(0, 99);
     final gross = computeFinalScore(strokes: strokeCount, penalties: penCount);
     final finalScore = holeComplete || conceded ? gross : 0;
+    final mates = await getScoresForRound(roundId);
+    final paidByHole = {
+      for (final hole in mates) hole.holeNumber: hole.paidMulligans,
+    };
+    final paid = clampPaidMulligan(
+      holeNumber: holeNumber,
+      requested: paidMulligans,
+      paidByHole: paidByHole,
+    );
 
     final score = RoundScore(
       id: existing?.id ?? '${roundId}_h$holeNumber',
@@ -948,11 +1009,137 @@ class LocalDatabaseService {
       strokes: strokeCount,
       penalties: penCount,
       mulligans: mulligans,
+      paidMulligans: paid,
       conceded: conceded ? 1 : 0,
       finalScore: finalScore,
       isSynced: 0,
     );
     await upsertHoleScore(score);
+  }
+
+  Future<RoundFormatSettings> getRoundFormat(String roundId) async {
+    final db = await database;
+    final rows = await db.query(
+      'golf_rounds',
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return RoundFormatSettings(roundId: roundId);
+    final row = rows.first;
+    final attested = row['attested_at_ms'] as int?;
+    return RoundFormatSettings(
+      roundId: roundId,
+      format: ScoringFormat.parse(row['scoring_format'] as String?),
+      molaveDoubleEaglePoints:
+          row['molave_double_eagle_pts'] as int? ?? 7,
+      paidMulliganFeePhp: row['paid_mulligan_fee_php'] as int? ?? 0,
+      courseRating: (row['course_rating'] as num?)?.toDouble(),
+      slopeRating: row['slope_rating'] as int?,
+      attestedAtMs: attested == 0 ? null : attested,
+      attestedByName: row['attested_by_name'] as String? ?? '',
+      attestedRole: row['attested_role'] as String? ?? '',
+      editedAfterAttestCount: row['edited_after_attest_count'] as int? ?? 0,
+    );
+  }
+
+  Future<void> saveRoundFormat(RoundFormatSettings settings) async {
+    final db = await database;
+    await db.update(
+      'golf_rounds',
+      _dirty({
+        'scoring_format': settings.format.storageValue,
+        'molave_double_eagle_pts':
+            normalizeDoubleEaglePoints(settings.molaveDoubleEaglePoints),
+        'paid_mulligan_fee_php': settings.paidMulliganFeePhp,
+        'course_rating': settings.courseRating,
+        'slope_rating': settings.slopeRating,
+      }),
+      where: 'round_id = ?',
+      whereArgs: [settings.roundId],
+    );
+  }
+
+  Future<void> attestRound({
+    required String roundId,
+    required String name,
+    required String role,
+  }) async {
+    final db = await database;
+    await db.update(
+      'golf_rounds',
+      _dirty({
+        'attested_at_ms': _nowMs(),
+        'attested_by_name': name.trim(),
+        'attested_role': role,
+        'edited_after_attest_count': 0,
+      }),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  /// Clears the lock and counts the edit. The attestor name stays for the badge.
+  Future<void> invalidateAttestation(String roundId) async {
+    final current = await getRoundFormat(roundId);
+    if (!current.isAttested && current.editedAfterAttestCount == 0 &&
+        current.attestedByName.isEmpty) {
+      return;
+    }
+    final db = await database;
+    await db.update(
+      'golf_rounds',
+      _dirty({
+        'attested_at_ms': null,
+        'edited_after_attest_count': current.editedAfterAttestCount +
+            (current.isAttested ? 1 : 0),
+      }),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  /// Newest-first unofficial differentials for completed 18-hole rated rounds.
+  Future<List<double>> handicapDifferentials({int limit = 20}) async {
+    final db = await database;
+    final rows = await db.query(
+      'golf_rounds',
+      where:
+          'deleted = 0 AND completed_at_ms IS NOT NULL AND course_rating IS NOT NULL AND slope_rating IS NOT NULL',
+      orderBy: 'completed_at_ms DESC',
+      limit: limit,
+    );
+    final diffs = <double>[];
+    for (final row in rows) {
+      final roundId = row['round_id'] as String;
+      final rating = (row['course_rating'] as num).toDouble();
+      final slope = row['slope_rating'] as int;
+      final holes = await getScoresForRound(roundId);
+      final inputs = [
+        for (final hole in holes)
+          holeInputFromScore(
+            holeNumber: hole.holeNumber,
+            par: hole.par,
+            strokes: hole.strokes,
+            penalties: hole.penalties,
+            conceded: hole.conceded,
+            paidMulligans: hole.paidMulligans,
+            finalScore: hole.finalScore,
+          ),
+      ];
+      final played = inputs.where((hole) => hole.played).length;
+      if (played < 18 || slope <= 0) continue;
+      diffs.add(scoreDifferential(
+        adjustedGross: adjustedRoundGross(inputs),
+        courseRating: rating,
+        slopeRating: slope,
+      ));
+    }
+    return diffs;
+  }
+
+  Future<double?> unofficialHandicapEstimate() async {
+    return unofficialHandicapIndex(await handicapDifferentials());
   }
 
   /// Highest hole row on the round. Finish Hole creates that row, so On Course resumes there.
@@ -1353,6 +1540,103 @@ class LocalDatabaseService {
         updated_at_ms INTEGER NOT NULL
       )
     ''');
+  }
+
+  Future<void> _createCaddyPlayerTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS caddy_flight_players (
+        channel_id TEXT NOT NULL,
+        player_id TEXT NOT NULL,
+        player_name TEXT NOT NULL,
+        PRIMARY KEY (channel_id, player_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS caddy_player_holes (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        player_id TEXT NOT NULL,
+        hole_number INTEGER NOT NULL,
+        par INTEGER NOT NULL,
+        gross INTEGER NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> addCaddyFlightPlayer({
+    required String channelId,
+    required String playerId,
+    required String playerName,
+  }) async {
+    final db = await database;
+    await db.insert(
+      'caddy_flight_players',
+      {
+        'channel_id': channelId,
+        'player_id': playerId,
+        'player_name': playerName,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<({String id, String name})>> listCaddyFlightPlayers(
+    String channelId,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_flight_players',
+      where: 'channel_id = ?',
+      whereArgs: [channelId],
+      orderBy: 'player_name ASC',
+    );
+    return [
+      for (final row in rows)
+        (
+          id: row['player_id'] as String,
+          name: row['player_name'] as String,
+        ),
+    ];
+  }
+
+  Future<void> saveCaddyPlayerHole({
+    required String channelId,
+    required String playerId,
+    required int holeNumber,
+    required int par,
+    required int gross,
+  }) async {
+    final db = await database;
+    await db.insert(
+      'caddy_player_holes',
+      {
+        'id': '${channelId}_${playerId}_$holeNumber',
+        'channel_id': channelId,
+        'player_id': playerId,
+        'hole_number': holeNumber,
+        'par': par,
+        'gross': gross,
+        'updated_at_ms': _nowMs(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<Map<int, int>> caddyPlayerGrossByHole({
+    required String channelId,
+    required String playerId,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      'caddy_player_holes',
+      where: 'channel_id = ? AND player_id = ?',
+      whereArgs: [channelId, playerId],
+    );
+    return {
+      for (final row in rows)
+        row['hole_number'] as int: row['gross'] as int,
+    };
   }
 
   Future<void> upsertCaddySession(CaddySessionRecord session) async {
@@ -1822,6 +2106,15 @@ class LocalDatabaseService {
         course_name TEXT NOT NULL,
         started_at_ms INTEGER NOT NULL,
         completed_at_ms INTEGER,
+        scoring_format TEXT NOT NULL DEFAULT 'gross',
+        molave_double_eagle_pts INTEGER NOT NULL DEFAULT 7,
+        paid_mulligan_fee_php INTEGER NOT NULL DEFAULT 0,
+        course_rating REAL,
+        slope_rating INTEGER,
+        attested_at_ms INTEGER,
+        attested_by_name TEXT NOT NULL DEFAULT '',
+        attested_role TEXT NOT NULL DEFAULT '',
+        edited_after_attest_count INTEGER NOT NULL DEFAULT 0,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
         deleted INTEGER NOT NULL DEFAULT 0
@@ -1953,6 +2246,7 @@ class LocalDatabaseService {
       'strokes',
       'penalties',
       'mulligans',
+      'paid_mulligans',
       'conceded',
       'final_score',
       'is_synced',

@@ -45,7 +45,10 @@ class _CaddyShellState extends State<CaddyShell> {
             session: widget.session,
             pairing: widget.pairing,
           ),
-          CaddyScorecardScreen(session: widget.session),
+          CaddyScorecardScreen(
+            session: widget.session,
+            pairing: widget.pairing,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(

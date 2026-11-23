@@ -127,6 +127,8 @@ class CaddyRoundEvent {
     required this.updatedAtMs,
     this.delta = 1,
     this.conceded = false,
+    this.targetPlayerId,
+    this.holeScore,
   });
 
   final String id;
@@ -138,6 +140,8 @@ class CaddyRoundEvent {
   final int updatedAtMs;
   final int delta;
   final bool conceded;
+  final String? targetPlayerId;
+  final int? holeScore;
 
   Map<String, Object?> toFirestore() => {
         'channel_id': channelId,
@@ -149,6 +153,8 @@ class CaddyRoundEvent {
         'updatedAtMs': updatedAtMs,
         'delta': delta,
         'conceded': conceded,
+        'target_player_id': targetPlayerId,
+        'hole_score': holeScore,
       };
 
   static CaddyRoundEvent fromFirestore(String id, Map<String, dynamic> data) {
@@ -164,6 +170,8 @@ class CaddyRoundEvent {
           0,
       delta: data['delta'] as int? ?? 1,
       conceded: data['conceded'] == true,
+      targetPlayerId: data['target_player_id'] as String?,
+      holeScore: data['hole_score'] as int?,
     );
   }
 }
@@ -173,7 +181,9 @@ enum CaddyEventType {
   penaltyAdd,
   mulliganAdd,
   concede,
-  revoke;
+  revoke,
+  setHoleScore,
+  attestPlayerCard;
 
   String get wire => switch (this) {
         CaddyEventType.strokeAdd => 'stroke_add',
@@ -181,6 +191,8 @@ enum CaddyEventType {
         CaddyEventType.mulliganAdd => 'mulligan_add',
         CaddyEventType.concede => 'concede',
         CaddyEventType.revoke => 'revoke',
+        CaddyEventType.setHoleScore => 'set_hole_score',
+        CaddyEventType.attestPlayerCard => 'attest_player_card',
       };
 
   static CaddyEventType fromWire(String value) {
@@ -190,6 +202,8 @@ enum CaddyEventType {
       'mulligan_add' => CaddyEventType.mulliganAdd,
       'concede' => CaddyEventType.concede,
       'revoke' => CaddyEventType.revoke,
+      'set_hole_score' => CaddyEventType.setHoleScore,
+      'attest_player_card' => CaddyEventType.attestPlayerCard,
       _ => CaddyEventType.strokeAdd,
     };
   }

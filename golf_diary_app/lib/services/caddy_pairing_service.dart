@@ -131,6 +131,8 @@ class CaddyPairingService {
     required String authorUid,
     int delta = 1,
     bool conceded = false,
+    String? targetPlayerId,
+    int? holeScore,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final event = CaddyRoundEvent(
@@ -143,6 +145,8 @@ class CaddyPairingService {
       updatedAtMs: now,
       delta: delta,
       conceded: conceded,
+      targetPlayerId: targetPlayerId,
+      holeScore: holeScore,
     );
 
     try {

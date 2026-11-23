@@ -184,6 +184,7 @@ class RoundScore {
   final int strokes;
   final int penalties;
   final int mulligans;
+  final int paidMulligans;
   final int conceded;
   final int finalScore;
   final int isSynced;
@@ -197,6 +198,7 @@ class RoundScore {
     this.strokes = 0,
     this.penalties = 0,
     this.mulligans = 0,
+    this.paidMulligans = 0,
     this.conceded = 0,
     this.finalScore = 0,
     this.isSynced = 0,
@@ -207,6 +209,7 @@ class RoundScore {
     int? strokes,
     int? penalties,
     int? mulligans,
+    int? paidMulligans,
     int? conceded,
     int? finalScore,
     int? isSynced,
@@ -220,6 +223,7 @@ class RoundScore {
       strokes: strokes ?? this.strokes,
       penalties: penalties ?? this.penalties,
       mulligans: mulligans ?? this.mulligans,
+      paidMulligans: paidMulligans ?? this.paidMulligans,
       conceded: conceded ?? this.conceded,
       finalScore: finalScore ?? this.finalScore,
       isSynced: isSynced ?? this.isSynced,
@@ -236,6 +240,7 @@ class RoundScore {
       'strokes': strokes,
       'penalties': penalties,
       'mulligans': mulligans,
+      'paid_mulligans': paidMulligans,
       'conceded': conceded,
       'final_score': finalScore,
       'is_synced': isSynced,
@@ -252,6 +257,7 @@ class RoundScore {
       strokes: map['strokes'] as int? ?? 0,
       penalties: map['penalties'] as int? ?? 0,
       mulligans: map['mulligans'] as int? ?? 0,
+      paidMulligans: map['paid_mulligans'] as int? ?? 0,
       conceded: map['conceded'] as int? ?? 0,
       finalScore: map['final_score'] as int? ?? 0,
       isSynced: map['is_synced'] as int? ?? 0,

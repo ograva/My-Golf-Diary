@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/ph_golf_catalog.dart';
 import '../models/golf_models.dart';
+import '../models/scoring_format.dart';
 import '../services/local_database_service.dart';
 import '../theme/app_theme.dart';
 
@@ -11,6 +12,8 @@ Future<void> showScorecardHoleEditor({
   required String courseName,
   required int holeNumber,
   RoundScore? existing,
+  ScoringFormat format = ScoringFormat.gross,
+  int doubleEaglePoints = 7,
 }) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -23,6 +26,8 @@ Future<void> showScorecardHoleEditor({
         courseName: courseName,
         holeNumber: holeNumber,
         existing: existing,
+        format: format,
+        doubleEaglePoints: doubleEaglePoints,
       ),
     ),
   );
@@ -34,12 +39,16 @@ class _HoleEditorSheet extends StatefulWidget {
     required this.courseName,
     required this.holeNumber,
     required this.existing,
+    required this.format,
+    required this.doubleEaglePoints,
   });
 
   final String roundId;
   final String courseName;
   final int holeNumber;
   final RoundScore? existing;
+  final ScoringFormat format;
+  final int doubleEaglePoints;
 
   @override
   State<_HoleEditorSheet> createState() => _HoleEditorSheetState();
@@ -52,6 +61,7 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
   late int _mulligans;
   late bool _holeComplete;
   late bool _conceded;
+  late bool _paidMulligan;
 
   @override
   void initState() {
@@ -67,6 +77,7 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
     _penalties = row?.penalties ?? 0;
     _mulligans = row?.mulligans ?? 0;
     _conceded = row?.conceded == 1;
+    _paidMulligan = (row?.paidMulligans ?? 0) > 0;
     _holeComplete = row != null && (row.finalScore > 0 || _conceded);
   }
 
@@ -86,14 +97,50 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
       holeComplete: _holeComplete,
       conceded: _conceded,
       mulligans: _mulligans,
+      paidMulligans: _paidMulligan ? 1 : 0,
     );
     if (mounted) Navigator.of(context).pop();
   }
 
-  void _adjustStrokes(int delta) {
+  Future<void> _adjustStrokes(int delta) async {
+    final next = (_strokes + delta).clamp(0, 20);
+    if (widget.format == ScoringFormat.molave &&
+        delta > 0 &&
+        readyForMolavePickup(par: _par, strokes: next, penalties: _penalties)) {
+      final pickup = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Pick up?'),
+          content: const Text(
+            'Triple bogey or worse is 0 Molave points. Record the pickup?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Keep counting'),
+            ),
+            FilledButton(
+              key: const ValueKey('scorecard-molave-pickup'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Pick up'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (pickup == true) {
+        setState(() {
+          _conceded = false;
+          _strokes = _par + 3 - _penalties;
+          if (_strokes < 0) _strokes = 0;
+          _holeComplete = true;
+        });
+        return;
+      }
+    }
     setState(() {
       _conceded = false;
-      _strokes = (_strokes + delta).clamp(0, 20);
+      _strokes = next;
     });
   }
 
@@ -199,6 +246,19 @@ class _HoleEditorSheetState extends State<_HoleEditorSheet> {
               onIncrement: () =>
                   setState(() => _mulligans = (_mulligans + 1).clamp(0, 20)),
             ),
+            SwitchListTile(
+              key: const ValueKey('hole-editor-paid-mulligan'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Paid tournament mulligan'),
+              subtitle: const Text('One per nine. Not a hole-in-one.'),
+              value: _paidMulligan,
+              onChanged: (value) => setState(() => _paidMulligan = value),
+            ),
+            if (widget.format == ScoringFormat.molave)
+              Text(
+                'Molave ${molaveHolePoints(HoleScoreInput(par: _par, strokes: _strokes, penalties: _penalties, conceded: _conceded, paidMulligans: _paidMulligan ? 1 : 0, played: _strokes > 0 || _conceded), doubleEaglePoints: widget.doubleEaglePoints) ?? 0}',
+                key: const ValueKey('hole-editor-molave-points'),
+              ),
             const SizedBox(height: 8),
             SwitchListTile(
               key: const ValueKey('hole-editor-concede-switch'),

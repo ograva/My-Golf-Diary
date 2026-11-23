@@ -4,11 +4,14 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
+| 1.12 | Approved (MGDV-6 epic) | 2026-11-23 | Jason (PM cohort) |
 | 1.11 | Approved (diary thread) | 2026-11-20 | Jason (PM cohort) |
 | 1.9 | Approved (shipped-features audit) | 2026-11-20 | Jason (PM cohort) |
 | 1.8 | Approved (On Course dual-mode) | 2026-11-19 | Jason (PM cohort) |
 | 1.7 | Approved | 2026-11-15 | Jason (PM cohort) |
 | 1.6 | Approved (V2 epics additive) | 2026-11-15 | Jason (PM cohort) |
+
+**PRD revision note (1.12):** **MGDV-6** is defined in §3: **shipped** individual/group scoring (`MGDV-601` — Gross, Molave, System 36, paid mulligans, unofficial handicap estimate, local attestation, flight QR, caddy hole scores); **planned** club tournament pilot at Intramuros (enrollment, event-scoped leaderboard, committee attestation, post-tournament diary). Philippine format rules are normative in this PRD; full scoring engine behavior is in shard [`MGDV-601`](../shards/MGDV/MGDV-601-scoring-formats.md). Club back-office scoring (Gscore-class) stays out of scope per [`Roadmap-V3.md`](./Roadmap-V3.md) §5.3.
 
 **PRD revision note (1.11):** `RNGE-004` is one ongoing diary thread: a personal log and an AI sounding board. The existing coach prompt stays and reads diary entries as context. A saved range club block, and a **FWY** or **SIM** round that is finished or left, each write an entry and do not call the model. **Feedback** in the diary submits recent entries and saves the analysis in the thread. A note typed in the diary is saved, then the model replies in that same thread. `RNGE-005` still compiles the range session log and does not start a model call. Architecture §5.7 still describes the previous auto-evaluate path; Watson owns that alignment (§7).
 
@@ -22,7 +25,7 @@
 
 ## 1. Executive Summary
 
-My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub Pages): **My Bag** (skill-tier **stat-tile** club cards—shortest / usual / best / trend, swing notes, range session history—no Details sheet), **Range** (drill catalog, tier-aware yardage entry, block saves, session note, **Save and evaluate session** → compiled session log), **On Course** (**FWY** vs **SIM** dual mode—SIM uses a compact scroll + bottom sheets [`CRSE-035`]; **FWY** uses a full-bleed stylized hole map with side rail, Live/Manual GPS, aim ring, and stand-in holes when unsurveyed [`CRSE-036`]), and **Scorecard** (classic grid or **cart** scoring for sun-friendly use). **Diary** (`RNGE-004`) is one ongoing thread: a personal log and an AI sounding board. Range blocks and finished or left **FWY**/**SIM** rounds write entries without a model call. **Feedback** and notes typed in the diary use the existing coach prompt, with those entries as context, and save the reply in the same thread. **Account avatar** in every tab AppBar (`SYNC-005`) replaces the legacy cloud icon; Google and email/password sign-in (`SYNC-006`) ship for durable accounts, with linking behavior per `SYNC-008`. Anonymous Firestore sync remains the default until the player signs in. V2 epics **MGDV-2…7** extend the same core (onboarding wizard, caddy PWA pairing, tournaments). Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
+My Golf Diary is a **local-first** Flutter companion (mobile + **PWA** on GitHub Pages): **My Bag** (skill-tier **stat-tile** club cards—shortest / usual / best / trend, swing notes, range session history—no Details sheet), **Range** (drill catalog, tier-aware yardage entry, block saves, session note, **Save and evaluate session** → compiled session log), **On Course** (**FWY** vs **SIM** dual mode—SIM uses a compact scroll + bottom sheets [`CRSE-035`]; **FWY** uses a full-bleed stylized hole map with side rail, Live/Manual GPS, aim ring, and stand-in holes when unsurveyed [`CRSE-036`]), and **Scorecard** (classic grid or **cart** scoring for sun-friendly use). **Diary** (`RNGE-004`) is one ongoing thread: a personal log and an AI sounding board. Range blocks and finished or left **FWY**/**SIM** rounds write entries without a model call. **Feedback** and notes typed in the diary use the existing coach prompt, with those entries as context, and save the reply in the same thread. **Account avatar** in every tab AppBar (`SYNC-005`) replaces the legacy cloud icon; Google and email/password sign-in (`SYNC-006`) ship for durable accounts, with linking behavior per `SYNC-008`. Anonymous Firestore sync remains the default until the player signs in. V2 epics **MGDV-2…7** extend the same core (onboarding wizard, caddy PWA pairing, **Philippine tournament and flight scoring** via **MGDV-6**). Prefixes **BAG**, **CRSE**, **SCOR**, **RNGE**, **SYNC**, **MGDV** bind requirements to [`Architecture.md`](./Architecture.md) code map.
 
 ---
 
@@ -57,7 +60,10 @@ Rory, Riley, and Blake all keep one diary if they switch phones or open the PWA.
 | :--- | :--- | :--- |
 | **MGDV-2** | Starter wizard (age, years playing, gender); **skill tier** (beginner / amateur / seasoned pro) for UI density; Bag/Range progressive disclosure; optional cross-tab swing diary chat | New stories below; shards MGDV-201–203, MGDV-205 |
 | **MGDV-3** | Putting & approach drills; putter on Range when drill category requires it; distances in **yards** | Extends RNGE-003 seed |
-| **MGDV-4–7** | Scorecard cart view, caddy QR PWA pairing, tournament/attestation, barefoot tab | See Project store V2 roadmap; shards when epic opens |
+| **MGDV-4** | Scorecard **cart** scoring view | SCOR-004 / MGDV-401 *(shipped)* |
+| **MGDV-5** | Caddy **QR** PWA pairing; per-stroke sync to golfer diary | [`MGDV-501`](../stories/MGDV/MGDV-501-caddy-pairing.md) *(v1 shipped; flight hole-score extensions in MGDV-6)* |
+| **MGDV-6** | **Philippine formats**, attestation, **flight** sync, **pilot club tournament** | §3 **MGDV-6** stories; [`MGDV-601`](../shards/MGDV/MGDV-601-scoring-formats.md) *(shipped)*; MGDV-602+ planned |
+| **MGDV-7** | Barefoot / no-glove practice tab | Roadmap only until storage architecture; no PRD stories yet |
 
 **MGDV-2-001 — Onboarding & skill tier** *(shipped)*  
 As **any new golfer**, I want a **short wizard** that records my experience and **skill tier** so the app shows **simpler yardages and friendlier copy** by default.  
@@ -153,7 +159,7 @@ As **Rory**, I want **full scoring when coordinates or packs are missing** so **
 
 ### SCOR — Scorecard
 
-**Overview:** Round picker, **18-hole (or 9-hole) grid** or **cart scoring** mode (`MGDV-401`), totals vs par, **hole editor**, **new round**, conceded markers. View mode stored on `golfer_profile.scorecard_view_mode`; cart mode may use wakelock during an active round.
+**Overview:** Round picker, **18-hole (or 9-hole) grid** or **cart scoring** mode (`MGDV-401`), **format totals** (Gross, Molave, System 36 — `MGDV-6`), optional **unofficial handicap** line, **local attestation**, **flight** sheet, totals vs par, **hole editor** (paid tournament mulligan), **new round**, conceded markers. View mode stored on `golfer_profile.scorecard_view_mode`; cart mode may use wakelock during an active round.
 
 **SCOR-001 — View rounds + grid**  
 As **Rory**, I want **recent rounds + hole grid + totals** so **I verify the card**.  
@@ -170,6 +176,56 @@ As **Rory**, I want **gimmes visible** on the grid.
 **SCOR-004 — Cart scoring view** *(shipped — MGDV-401)*  
 As **Rory**, I want **large tap targets for riding in a cart** so **I can update the card without reading a tiny grid**.  
 **AC:** (1) Segmented **Classic** / **Cart** toggle on Scorecard when a round is active or in progress. (2) Cart panel (`scorecard_cart_panel.dart`) shows hole strip, stroke count, +1 stroke, penalty, mulligan, gimme, totals banner (`scorecard-cart-*` keys). (3) Optional **high contrast** switch (`scorecard-cart-high-contrast-switch`) persists on profile. (4) Classic grid + hole editor unchanged.
+
+### MGDV-6 — Tournament & group scoring (Philippines)
+
+**Overview:** **MGDV-6** lets a golfer **practise and play** the formats common in PH club, corporate, and charity tournaments **on their own diary first**, then **sync a flight** without merging private shots or diary threads, and **later** join a **pilot club event** at **Club Intramuros** with an **event-scoped leaderboard** and **committee/marker attestation**. Scoring is **derived from stored strokes** (Gross, Molave, System 36); changing format does not rewrite stroke counts. **NGAP** remains the official handicap body; any in-app index is labeled **unofficial estimate**. **B2B club tournament operations** (registration desks, Gscore-class back office) stay **out of scope** — we are the golfer’s diary that feeds the game.
+
+**Philippine format reference** (normative for product; engine in `scoring_format.dart`):
+
+| Format | Hole points / net rule | Product notes |
+| :--- | :--- | :--- |
+| **Gross** | Strokes + penalties vs par | Default; net may use unofficial index when 18 holes played |
+| **Molave** (modified Stableford) | HIO 6; double eagle 7 (club option 6); eagle 5; birdie 4; par 3; bogey 2; double 1; triple+ 0 (even par → 54 on any 18-hole card) | Configurable double-eagle points; confirm pick-up at triple in Molave |
+| **System 36** | Par+ 2, bogey 1, double+ 0; after 18 holes daily handicap = 36 − points; net = gross − daily handicap | Running points during round; net hidden until 18 played holes |
+| **Paid tournament mulligan** | Excluded from gross and HIO eligibility; max **one per nine** | Separate from practice mulligans; optional fee field (PHP) for diary/settlement copy |
+
+**Epic boundaries**
+
+| In MGDV-6 | Not MGDV-6 (deferred / other) |
+| :--- | :--- |
+| Individual + flight scoring, attestation, unofficial handicap from **entered** rating/slope | Official NGAP posting, stroke index allocation, GHIN |
+| Flight QR: **hole gross summaries** for up to 4 players | Full shot-level multiplayer sync, public social feed |
+| Caddy **hole-score** mode for additional flight players | Production caddy token hardening (`MGDV-501` deferrals) |
+| Pilot **club tournament**: enroll, locked format, standings for enrollees | Club POS, tee-sheet ERP, Gscore replacement |
+
+**MGDV-601 — Individual & flight scoring foundation** *(shipped)*  
+As **Rory**, I want **Molave, System 36, and gross on one card**, **attest my card**, **share a flight by QR**, and let my **caddy score others by hole** so **I can practise tournament math and audit a group round without a second app**.  
+**AC:** (1) **Format selector** on Scorecard (`scorecard-format-toggle`) switches Gross / Molave / System 36; totals recalculate live from par, strokes, penalties, concede, and paid mulligans without altering stored strokes. (2) **Molave:** double-eagle points 7 or 6 per round setting (`scorecard-double-eagle-7` / `scorecard-double-eagle-6`); HIO 6 when gross is 1 and no paid mulligan and not conceded; triple-bogey pick-up prompts in Molave (`scorecard-molave-pickup`). (3) **System 36:** running format points in UI; **net** and daily handicap only after 18 **played** holes. (4) **Paid mulligan** toggle in hole editor (`hole-editor-paid-mulligan`); clamp one per nine; excluded from HIO points. (5) Optional **course rating** and **slope** (`scorecard-course-rating`, `scorecard-slope`); after **three** completed rated 18-hole rounds show **Unofficial estimate** handicap (`scorecard-handicap-estimate`). (6) **Attest card** (`scorecard-attest-btn`) with name and role (self, marker, caddy, committee); edits after attest require confirm and clear attest (`scorecard-attest-edit-confirm`); badge shows edited-after-attest. (7) **Flight** sheet (`scorecard-flight-btn`): mint/join QR (`flight-qr`, `flight-code`); publish **hole grosses only**; partner **attest** flags mismatches on later publish. (8) **Caddy** scorecard: player strip (`caddy-player-strip`); `setHoleScore` for non-primary players stays off golfer `round_scores`; caddy may **attest** primary card (`caddy-attest-card`). (9) Finish-round **diary** note includes format summary and attestation label (no model call). **Shard:** [`MGDV-601`](../shards/MGDV/MGDV-601-scoring-formats.md).
+
+**MGDV-6-010 — Club tournament enrollment (pilot)** *(planned)*  
+As **Rory** at **Club Intramuros**, I want **to enroll in a posted club tournament** from the app so **my diary round is tied to that event** without giving up local-first play.  
+**AC:** (1) Tournament list shows **pilot** events only (seed or Firestore doc per Architecture); each event shows name, date, course, **locked scoring format**, and fee copy when configured. (2) **Enroll** requires a **durable account** (Google or email per `SYNC-006`) — aligns with ProjectBrief “anonymous until tournament enrollment.” (3) Enrolling creates a local `tournament_enrollment` row linking `userId`, `eventId`, and optional flight assignment; play remains offline until publish/sync. (4) Golfer can **withdraw** before committee lock with confirm; withdrawn rounds stay personal-only.
+
+**MGDV-6-011 — Tournament round under event rules** *(planned)*  
+As **Rory**, I want **my scorecard to follow the event’s format and lock window** so **committee rules match what I see**.  
+**AC:** (1) Starting a round **from an enrolled event** pre-selects format, double-eagle policy, and paid-mulligan policy from the event; golfer cannot switch to a conflicting format mid-round without leaving the event round. (2) **Diary silence** optional flag per event (no model calls during competition window) — implementation pairs with `MGDV-205` follow-on when event demands it. (3) **Attestation** on completion follows event policy: self-only vs marker-required before submit. (4) Unenrolled personal rounds behave exactly as `MGDV-601`.
+
+**MGDV-6-012 — Event-scoped leaderboard** *(planned)*  
+As **a flight member**, I want **standings in my tournament** in the event’s format so **we see order of play without a public social network**.  
+**AC:** (1) Leaderboard shows **only players enrolled in the same event**; sort by active format total (Molave points, System 36 net, or gross). (2) Updates when a player **publishes** from flight channel or committee **imports** attested card — no live shot stream. (3) Mismatch / edited-after-attest surfaced as audit state, not silent overwrite. (4) Not a global or friend-graph leaderboard (see §6). (5) Readable offline from last sync snapshot with stale banner.
+
+**MGDV-6-013 — Marker and committee attestation** *(planned)*  
+As **a marker or committee volunteer**, I want **to attest a player’s card for the event** so **disputes have a named record**.  
+**AC:** (1) Marker role can attest another golfer’s **published** hole summary or full card per event rules; stores `attested_by_name`, role, and timestamp. (2) **Committee lock** freezes standings for the event after published close time; further golfer edits flag **late correction** workflow (notify only — no auto prize logic in app). (3) Caddy attest from `MGDV-601` remains valid for non-event rounds; event may require marker in addition. (4) No payment settlement or GCash integration in v1 pilot — copy-only fee reminders allowed.
+
+**MGDV-6-014 — Post-tournament handoff to practice** *(planned)*  
+As **Riley**, I want **a short tournament wrap in the diary** so **I know what to work on at the range**.  
+**AC:** (1) When committee **closes** an event, enrolled golfers receive a **diary context note** (format total, vs field median if available, biggest leak holes) — **no automatic Vertex call** unless player taps **Feedback**. (2) Note links to **Range** drill suggestions by tag (putting, approach) per Roadmap A2 — prescription detail in shard when built. (3) Personal rounds unaffected.
+
+**MGDV-6-015 — Extend caddy flight hardening** *(planned — bridges MGDV-5 deferrals)*  
+As **operations**, I want **production-safe caddy redeem and accept/dispute** when tournaments rely on caddy entry so **flight audit is trustworthy**.  
+**AC:** (1) Document overlap with [`MGDV-501`](../shards/MGDV/MGDV-501-caddy-pairing-v1.md) deferrals: player picker for one device scoring full flight, accept/dispute golfer vs caddy hole, hardened token redeem. (2) Tournament events may **require** caddy-attested submit before leaderboard publish. (3) Architecture defines Firestore rules upgrade path (pilot uses same loose auth as caddy v1 until hardened).
 
 ### RNGE — Range
 
@@ -279,8 +335,11 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 8. **Range — Session note and compile** → jot an overall **session note** and tap **Save and evaluate session** to compile the visit into one **session log** (`RNGE-005`). The compile stores the log and does not call the model.  
 9. **Diary** → open the one thread from the header or, on On Course, the edge swipe. Read triggered entries offline. Tap **Feedback** to send recent entries and keep the analysis in the thread. Type a note to save it and receive a reply in the same thread.  
 10. **Account & backup** → **Account avatar** on any tab: sign in (Google/email), Sync, Profile, Settings; anonymous play still works. Map packs download from Firebase Storage when online. **PWA** at `https://<owner>.github.io/My-Golf-Diary/` via CI publish.  
-11. **Caddy (pilot)** → golfer invites caddy QR; caddy opens PWA `?mode=caddy` (On Course + Scorecard tabs).  
-12. **Next round** → new round from scorecard or active round on On Course.
+11. **Caddy (pilot)** → golfer invites caddy QR; caddy opens PWA `?mode=caddy` (On Course + Scorecard tabs); caddy may pick a flight player and enter **hole scores** on Scorecard tab.  
+12. **Flight (shipped)** → from Scorecard, open **Flight**; mint or join code/QR; publish hole gross summaries; partner may attest; audit highlights edits after attest.  
+13. **Formats & attest (shipped)** → choose Gross / Molave / System 36; optional rating/slope; attest card; finish writes diary summary.  
+14. **Tournament (planned — MGDV-6-010+)** → enroll in pilot club event (signed-in); play under event-locked format; submit attested card; view **event-only** leaderboard; post-event diary note.  
+15. **Next round** → new round from scorecard or active round on On Course.
 
 ---
 
@@ -300,9 +359,9 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 
 ## 6. Out of Scope (Current v1 Baseline)
 
-1. Official **handicap** / GHIN / competition compliance mode.  
+1. Official **handicap posting** / GHIN / NGAP substitution. *(Unofficial estimate from self-entered rating/slope is in scope — MGDV-601.)*  
 2. **3D flyover animations** or full commercial CAD course modeling (FWY map is **2D stylized OSM-derived art** + GPS overlay, not live satellite tiles).  
-3. **Social** / live leaderboards / multiplayer real-time sync.  
+3. **Public social** feeds, friend graphs, live broadcast, and **global** leaderboards. *(**In scope:** up to four diaries on a **flight** QR sharing **hole totals**; **event-scoped** standings for enrolled pilot tournaments — MGDV-6.)*  
 4. **Auto** launch-monitor **Bluetooth** hardware ingest (manual/sim entry v1).  
 5. **Watch-first** capture.  
 6. A separate non-Flutter web client. The Flutter PWA is in scope for sync.  
@@ -331,6 +390,12 @@ As **Blake**, I want **settings beside sync** so I can **see whether the cloud h
 | If iOS App Store review requires Sign in with Apple whenever Google sign-in is offered, add it before the iOS ship of `SYNC-006`. Product decision until then: Google and email/password only | Jason + Watson |
 | Email-verification copy and how long an unverified account may keep playing local-only (`SYNC-006`) | Jason |
 | Analytics for Brief KPIs | Jason + Watson |
+| MGDV-6 tournament enrollment: minimum auth (Google/email only vs club guest code) | Jason + Watson |
+| Event and leaderboard Firestore schema vs stay SQLite-first with optional publish | Watson |
+| Marker/committee roles: in-app only vs import from club spreadsheet at pilot | Jason + pilot club |
+| Wording guardrails so unofficial handicap and event standings are never confused with NGAP | Jason |
+| Whether `golf_rounds` format/attestation columns join `syncFull` at enrollment (`SYNC-007`) | Watson |
+| Gscore / club POS boundary for Intramuros pilot — manual committee workflow vs API | Mary + Jason |
 
 **Dependencies:**
 - Firebase project `novusinc-8df79`, Firestore database `my-golf-diary`, Anonymous Auth enabled, and `firestore.rules` deployed to that database. `initializeFirebase` in `main.dart`.
@@ -375,3 +440,4 @@ Interim: **5+ interviews** on “log at cart/bag” and “card matches round.�
 | 1.9 | 2026-11-20 | **Shipped-features audit (Jason):** document **CRSE-035/036** layouts, **CRSE-041** OSM map packs, holing stroke, **BAG-010** stat tiles, **SCOR-004** cart, **SYNC-005/006** avatar + sign-in, partial **RNGE-004**, **MGDV-201/203**, PWA publish; FWY/SIM naming; flag Architecture map-provider drift |
 | 1.10 | 2026-11-20 | `SYNC-005` AC(1): illustrated golfer avatars (gender × tier, amateur alternates, Settings picker); Google photo keeps precedence |
 | 1.11 | 2026-11-20 | **Diary thread (`RNGE-004`):** one ongoing personal log and AI sounding board. Triggered entries on each range club block and when a FWY or SIM round is finished or left, with no model call. **Feedback** and typed notes use the existing coach prompt with diary entries as context, and the reply is saved in the same thread. `RNGE-005` compile does not start evaluation |
+| 1.12 | 2026-11-23 | **MGDV-6 epic:** Philippine format table; shipped **MGDV-601** story; planned **MGDV-6-010…015** (Intramuros pilot enrollment, event rules, event leaderboard, committee attestation, post-tournament diary, caddy hardening); SCOR overview and journey updated; §6 carve-outs for flight sync and unofficial handicap |

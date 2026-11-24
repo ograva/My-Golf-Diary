@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/models/diary_context_note.dart';
 import 'package:golf_diary_app/models/golf_models.dart';
 import 'package:golf_diary_app/services/cloud_sync_service.dart';
 import 'package:golf_diary_app/services/diary_remote.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/services/remote_diary_state.dart';
+import 'package:golf_diary_app/services/swing_diary_service.dart';
 import 'package:golf_diary_app/services/sync_merge.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -187,6 +189,157 @@ void main() {
     expect(result.refused, isFalse);
     expect(await db.hasLiveRow('shots', 'shot-local'), isFalse);
     expect(await db.hasLiveRow('shots', 'shot-cloud'), isTrue);
+  });
+
+  group('swing diary sync', () {
+    test('a second browser downloads the thread, replies, notes, and sessions',
+        () async {
+      final remote = MemoryDiaryRemote();
+      final diary = SwingDiaryService(database: db);
+      await diary.setOptedIn(true);
+      await diary.appendContextNote(
+        content: 'Range: 7i felt flushed',
+        source: DiaryContextSource.diary,
+        now: DateTime(2026, 11, 20, 9),
+      );
+      final exchange = await diary.ask(
+        prompt: 'prompt',
+        reply: 'Keep the tempo.',
+        userText: 'How was my 7 iron?',
+        now: DateTime(2026, 11, 20, 10),
+      );
+      await db.compileRangeSession(sessionNote: 'Windy bay');
+      final first = await CloudSyncService(
+        userId: 'uid',
+        database: db,
+        remote: remote,
+      ).uploadLocalThenDownload();
+      expect(first.failed, 0);
+      expect(
+          remote.docs.keys
+              .where((k) => k.startsWith('uid/swing_diary_messages/')),
+          hasLength(3));
+
+      await LocalDatabaseService.debugClose();
+      LocalDatabaseService.debugSetFileName('golf_diary_sync_b.db');
+      await deleteDatabase(
+          join(await getDatabasesPath(), 'golf_diary_sync_b.db'));
+      final browserB = SwingDiaryService(database: db);
+      expect(await browserB.isOptedIn(), isFalse);
+
+      final pulled = await CloudSyncService(
+        userId: 'uid',
+        database: db,
+        remote: remote,
+      ).downloadAndSync();
+
+      expect(pulled.failed, 0);
+      final messages = await browserB.listMessages();
+      expect(
+          messages.map((m) => m.content),
+          containsAll([
+            'Range: 7i felt flushed',
+            'How was my 7 iron?',
+            'Keep the tempo.'
+          ]));
+      final evaluations = await browserB.listEvaluations();
+      expect(evaluations.single.id, exchange.evaluationId);
+      expect((await browserB.listContextNotes()).single.content,
+          'Range: 7i felt flushed');
+      expect((await db.listRangeSessions()).single.sessionNote, 'Windy bay');
+      expect(await browserB.isOptedIn(), isTrue);
+      expect(await db.getUnsynced('swing_diary_messages'), isEmpty);
+    });
+
+    test('an empty account uploads diary rows and ignores their tombstones',
+        () async {
+      final remote = MemoryDiaryRemote();
+      final diary = SwingDiaryService(database: db);
+      final exchange = await diary.ask(
+        prompt: 'prompt',
+        reply: 'Reply',
+        userText: 'Question',
+        now: DateTime(2026, 11, 21, 8),
+      );
+      await remote
+          .setDocument('uid', 'range_evaluations', exchange.evaluationId, {
+        'id': exchange.evaluationId,
+        'updatedAtMs': 9000000000000,
+        'deleted': true,
+      });
+
+      final result = await CloudSyncService(
+        userId: 'uid',
+        database: db,
+        remote: remote,
+      ).downloadAndSync();
+
+      expect(result.failed, 0);
+      expect(await db.hasLiveRow('range_evaluations', exchange.evaluationId),
+          isTrue);
+      expect(
+          remote.docs['uid/range_evaluations/${exchange.evaluationId}']
+              ?['deleted'],
+          isFalse);
+      expect((await diary.listMessages()), hasLength(2));
+    });
+
+    test('a newer tombstone on a live account removes the diary message',
+        () async {
+      final remote = MemoryDiaryRemote();
+      final sync =
+          CloudSyncService(userId: 'uid', database: db, remote: remote);
+      final diary = SwingDiaryService(database: db);
+      final exchange = await diary.ask(
+        prompt: 'prompt',
+        reply: 'Reply',
+        userText: 'Question',
+        now: DateTime(2026, 11, 22, 8),
+      );
+      await sync.syncAll();
+      await remote
+          .setDocument('uid', 'swing_diary_messages', exchange.reply.id, {
+        'id': exchange.reply.id,
+        'updatedAtMs': 9000000000000,
+        'deleted': true,
+      });
+
+      await sync.downloadAndSync();
+
+      expect(await db.hasLiveRow('swing_diary_messages', exchange.reply.id),
+          isFalse);
+      expect((await diary.listMessages()).single.content, 'Question');
+    });
+
+    test('an older remote diary row does not overwrite a local edit', () async {
+      final remote = MemoryDiaryRemote();
+      final sync =
+          CloudSyncService(userId: 'uid', database: db, remote: remote);
+      final diary = SwingDiaryService(database: db);
+      final exchange = await diary.ask(
+        prompt: 'prompt',
+        reply: 'Local reply',
+        userText: 'Question',
+        now: DateTime(2026, 11, 22, 8),
+      );
+      await remote
+          .setDocument('uid', 'swing_diary_messages', exchange.reply.id, {
+        'id': exchange.reply.id,
+        'role': 'model',
+        'content': 'Stale reply',
+        'timestamp': 1,
+        'updatedAtMs': 1,
+        'deleted': false,
+      });
+
+      await sync.downloadAndSync();
+
+      expect((await diary.listMessages()).last.content, 'Local reply');
+      expect(
+          remote.docs['uid/swing_diary_messages/${exchange.reply.id}']
+              ?['content'],
+          'Local reply');
+    });
   });
 }
 

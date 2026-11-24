@@ -4,7 +4,8 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.21 | Active | 2026-11-23 | Watson |
+| 1.22 | Active | 2026-11-24 | Athena |
+| 1.21 | Superseded | 2026-11-23 | Watson |
 | 1.20 | Superseded | 2026-11-23 | Watson |
 | 1.19 | Active | 2026-11-23 | Athena |
 
@@ -16,7 +17,7 @@
 
 **My Golf Diary** is a **local-first** Flutter app (mobile + **PWA** on GitHub Pages) under [`golf_diary_app/`](../../golf_diary_app/). The **system of record** is **SQLite** (`sqflite`, **v17**). **On Course** splits **FWY** (fairway / outdoor) vs **SIM** (simulator): FWY uses a full-bleed **`FwyHoleMap`** shell (`CRSE-036`) with GPS shot capture, Live/Manual ball position, aim ring, and OSM stylized packs when cached (`CRSE-006` / `CRSE-041`); SIM keeps a compact scroll + bottom sheets (`CRSE-035`). Each **`ShotRecord`** stores ball position (or typed sim yards); segment distance is **Haversine** → yards. Live yards-to-green (`CRSE-005`) uses a filtered `geolocator` stream when surveyed coords exist and mode is FWY.
 
-**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **`MGDV-601`** adds derived **Gross / Molave / System 36** totals, optional rating/slope → unofficial handicap estimate, local **attestation** on `golf_rounds`, **flight** hole-gross publish (`flights/{flightId}`), and caddy **hole-score** rows for non-primary players. **Range** ships compiled **`range_sessions`** (`RNGE-005`) and tap-cycled shot totals (`range-shot-total` **10 → 3 → 5**). The **diary** (`RNGE-004`) is one ongoing thread: triggered writes stay local; **composer Send** (`diary-send-btn`) is the only UI model path. **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`). Optional **Firebase**: Firestore LWW sync for core tables; **Firebase Storage** `course_maps/`; **`AccountAvatarAppBarMenu`** (`SYNC-006` partial). **PWA-002:** precached shell; `runApp` before optional Firebase init. Web: `sqflite_common_ffi_web` (IndexedDB).
+**Scoring** is **`round_scores`** per hole with **`finishHole`** holing-stroke rules (`CRSE-004`). **`MGDV-601`** adds derived **Gross / Molave / System 36** totals, optional rating/slope → unofficial handicap estimate, local **attestation** on `golf_rounds`, **flight** hole-gross publish (`flights/{flightId}`), and caddy **hole-score** rows for non-primary players. **Range** ships compiled **`range_sessions`** (`RNGE-005`) and tap-cycled shot totals (`range-shot-total` **10 → 3 → 5**). The **diary** (`RNGE-004`) is one ongoing thread: triggered writes stay local; **composer Send** (`diary-send-btn`) is the only UI model path. **My Bag** uses skill-tier **stat-tile** cards (`MGDV-203`). Optional **Firebase**: Firestore LWW sync for core and swing diary tables; **Firebase Storage** `course_maps/`; **`AccountAvatarAppBarMenu`** (`SYNC-006` partial). **PWA-002:** precached shell; `runApp` before optional Firebase init. Web: `sqflite_common_ffi_web` (IndexedDB).
 
 ```mermaid
 flowchart LR
@@ -135,7 +136,9 @@ golf_diary_app/ios/Runner/Info.plist
 
 **DB:** `golf_diary.db`, currently **version 17** (`LocalDatabaseService._initDB`). Migration chain through **v16** unchanged (see v1.17 history); **v17** adds `golf_rounds` scoring format + attestation + rating/slope columns, `round_scores.paid_mulligans`, and caddy flight tables `caddy_flight_players`, `caddy_player_holes`.
 
-**Still outside `syncFull` today:** `practice_drills`, `range_sessions`, swing-diary tables, `golfer_profile`, caddy queue — expand when `SYNC-007` lands (PRD).
+**Swing diary in `syncFull` (v1.22):** `range_sessions`, `diary_context_notes`, `swing_diary_messages`, `range_evaluations` (`kSwingDiarySyncTables`).
+
+**Still outside `syncFull` today:** `practice_drills`, `golf_rounds`, `golfer_profile`, `diary_settings`, caddy queue — expand when the rest of `SYNC-007` lands (PRD).
 
 ### Tables (current)
 
@@ -371,7 +374,7 @@ sequenceDiagram
   App->>App: Save model entry in same thread
 ```
 
-**Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`. There is no second persona.
+**Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`; pulling a live `swing_diary_messages` row sets it, because the golfer opted in where that thread was written. There is no second persona.
 
 **What each call contains**, in order. The existing coach prompt stays. Diary entries are its context. A compiled `range_sessions` row is not attached and does not start the call.
 
@@ -434,11 +437,13 @@ Do not add an embedding index in this phase. A question about a specific older d
 
 **CloudSyncService.syncFull**
 
-1. **Pull** every doc in `users/{uid}/{table}` for `clubs`, `shots`, `round_scores`, `range_drills`, `golf_rounds` (and `practice_drills` / `range_sessions` once enabled for sync).
+1. **Pull** every doc in `users/{uid}/{table}` for each table in `kSyncTables`: `clubs`, `shots`, `round_scores`, `range_drills`, plus the swing diary tables `range_sessions`, `diary_context_notes`, `swing_diary_messages` (the chat thread), and `range_evaluations`. `golf_rounds` and `practice_drills` are not synced yet.
 2. **Last-write-wins:** remote `updatedAtMs` newer than local `updated_at_ms` replaces the row (`is_synced = 1`). A remote `deleted: true` tombstone removes the local row (or marks seeded `practice_drills` hidden with `deleted = 1`). An equal or older remote leaves the local row.
 3. **Push** rows with `is_synced = 0`. A failed write stays dirty. A pushed tombstone is then removed locally (except seeded `practice_drills` rows, which retain `deleted = 1` locally so the seed is not re-inserted on next launch); the cloud doc stays so other devices can see the delete.
 
 Club delete is a tombstone (`deleted = 1`), not an immediate local `DELETE`, so the next sync can tell other devices.
+
+**Empty or unreadable account (`downloadAndSync`, `uploadLocalThenDownload`):** push first, then pull with tombstones ignored, so a new account cannot delete local rows (swing diary included). `replaceLocalWithRemote` deletes local rows missing from the account only when it has live rows. Diary rows count toward `RemoteDiaryState.hasEntries`.
 
 ### MGDV-5 — Caddy round channel (v1)
 
@@ -520,7 +525,7 @@ Background location **not** required for current flows.
 | Gap | Notes |
 | :--- | :--- |
 | Manual scorecard strokes vs `syncStrokeCountFromShots` | GPS/caddy/holing path can overwrite manual entry (§5.2) |
-| `SYNC-007` table expansion | `range_sessions`, diary tables, profile still local-only in `syncFull` |
+| `SYNC-007` table expansion | `golfer_profile`, `golf_rounds`, `practice_drills` still local-only in `syncFull` (swing diary synced since v1.22) |
 | Pack catalog coverage | CRSE-041 pipeline shipped; not all PH courses uploaded |
 | RNGE-004 production ceiling | 250k-token compaction policy partial in live prompts |
 | MGDV-6 tournament schema | §5.0.2 spec ready; **DB v18 not migrated** — Athena implements per shards 6-010→015 |
@@ -572,3 +577,4 @@ Background location **not** required for current flows.
 | 1.19 | 2026-11-23 | Athena | DB **v17**: round scoring format, paid tournament mulligans, course rating/slope, local attestation, and caddy flight player tables. Formats and the unofficial handicap estimate are derived. `golf_rounds` stays out of `syncFull`. |
 | 1.20 | 2026-11-23 | Watson | Align with **PRD v1.12–1.13**: §5.0.1 **MGDV-601** formats/flight/attestation; §5.7 composer-only Vertex path (no Feedback UI); **MGDV-206** diary header (no edge swipe); **PWA-002** precache + async Firebase; flight Firestore notes; DB v17 in overview; gaps for tournament schema |
 | 1.21 | 2026-11-23 | Watson | **MGDV-6 pilot data design:** §5.0.2 planned v18 tables, Firestore `tournament_events/*` paths, pilot rules sketch, caddy hardening notes; links Eunice [`Wireframe_Tournament.md`](./designs/Wireframe_Tournament.md). Spec only — no app migration in this revision. |
+| 1.22 | 2026-11-24 | Athena | Swing diary joins `syncFull`: `range_sessions`, `diary_context_notes`, `swing_diary_messages`, `range_evaluations` upload, download, and LWW-merge under `users/{uid}`. Empty-account and tombstone guards cover them. Pulling a live diary message marks the local opt-in. `diary_settings` stays local. No DB migration |

@@ -13,6 +13,9 @@ class HoleMapPack {
   });
 
   final HoleMapManifestEntry entry;
+
+  /// The cache service's instance for this image, so repeat loads share one
+  /// `MemoryImage` key.
   final Uint8List imageBytes;
   final String attribution;
 }
@@ -28,8 +31,8 @@ abstract class HoleMapPackSource {
   static HoleMapPackSource instance = const CachedHoleMapPackSource();
 }
 
-/// Reads packs through [CourseMapCacheService] (disk on native, memory on
-/// web), downloading the course on first use.
+/// Reads packs through [CourseMapCacheService] (disk on native, Cache API on
+/// web), downloading the requested hole first on first use.
 class CachedHoleMapPackSource implements HoleMapPackSource {
   const CachedHoleMapPackSource();
 
@@ -39,26 +42,19 @@ class CachedHoleMapPackSource implements HoleMapPackSource {
     if (coords == null) return null;
     final cache = CourseMapCacheService.instance;
     try {
-      var result = await cache.resolveHoleMap(
-          courseName: courseName, holeNumber: holeNumber, coords: coords);
-      if (result.kind == CourseMapResolveKind.downloading) {
-        result = await cache.resolveHoleMap(
-          courseName: courseName,
-          holeNumber: holeNumber,
-          coords: coords,
-          allowDownload: true,
-        );
-      }
+      final result = await cache.resolveHoleMap(
+        courseName: courseName,
+        holeNumber: holeNumber,
+        coords: coords,
+        allowDownload: true,
+      );
       final frame = result.frame;
       if (result.kind != CourseMapResolveKind.satellite ||
           frame == null ||
           frame.entry.frame == null) {
         return null;
       }
-      final file = frame.imageFile;
-      final bytes = file != null && file.existsSync()
-          ? await file.readAsBytes()
-          : cache.cachedImageBytes(frame);
+      final bytes = cache.cachedImageBytes(frame);
       if (bytes == null) return null;
       return HoleMapPack(entry: frame.entry, imageBytes: bytes);
     } catch (error) {

@@ -310,9 +310,12 @@ flowchart TD
 **Client (`CourseMapCacheService`):**
 
 - **`courseId`:** `ph-crse-*` map in `kCourseMapPackIds` (must match `courses.py`).
-- **Fetch:** `SyncIdentity.ensureSignedIn()` then `FirebaseStorage.instance.ref(path).getData()` (10 MB cap); reads `index.json` once per session, compares versions, downloads manifest + hole PNGs.
-- **Native cache:** `<appDocDir>/course_maps/{courseId}/`.
-- **Web PWA:** in-memory `_memoryPacks` for the session; repeat fetches rely on browser HTTP cache (`Cache-Control` at upload) — **no** per-hole SQLite `course_map_cache` table today.
+- **Fetch:** `SyncIdentity.ensureSignedIn()` then, on native, `FirebaseStorage.instance.ref(path).getData()` (10 MB cap); on web, a per-session cached `getDownloadURL()` plus one HTTP GET (web `getData` would add `getMetadata` + `getDownloadURL` round trips per object). Remote packs live at `course_maps/{courseId}/v{version}/` (immutable), with the unversioned layout as fallback.
+- **Versions:** the newest **stored** version opens at once (offline too); `index.json` is read once per session in the background, and a changed version is downloaded in full, switched to, and the old one pruned. The new manifest is stored last so a partial download never hides a complete pack.
+- **Order:** the requested hole is fetched first and rendered; the rest of the pack follows in the background (4 parallel reads).
+- **Native cache:** `<appDocDir>/course_maps/{courseId}/v{version}/` (`DiskCourseMapPackStore`); pre-versioning packs in `course_maps/{courseId}/` are read as their manifest version until replaced.
+- **Web PWA:** browser **Cache API** cache `golf-diary-course-maps-v1` (`CacheApiCourseMapPackStore`), keyed by course + version + file; `pwa_service_worker.js` keeps it across shell updates. **No** SQLite `course_map_cache` table.
+- **Decode:** one `Uint8List` per image for stable `MemoryImage` keys; `ResizeImage` to display width when smaller than the source; FWY precaches the next hole.
 - **Manifest:** `CourseMapManifest` / `HoleMapFrame` with `frame.centerLat/Lon`, `bearingDeg`, `metersPerPixel`, `holes[].markers[]` for aim snap (`CRSE-039`).
 - **Attribution:** `oncourse-map-attribution` — **© OpenStreetMap contributors (ODbL)** when pack image visible.
 
@@ -321,8 +324,8 @@ flowchart TD
 | Tier | Location | Writer | Reader |
 | :--- | :--- | :--- | :--- |
 | 1 | OSM Overpass + `build_pack.py` | Owner laptop/CI | — |
-| 2 | `gs://…/course_maps/{courseId}/manifest.json`, `hole_{n}.png` | `upload_packs.py` (service account) | Authenticated app `getData` |
-| 3 | App doc dir or web memory | App after download | `FwyHoleMap` / `fwy_hole_map.dart` |
+| 2 | `gs://…/course_maps/{courseId}/v{version}/manifest.json`, `hole_{n}.png` (immutable; `index.json` no-cache) | `upload_packs.py` (service account) | Authenticated app read |
+| 3 | App doc dir (native) or Cache API (web), per version | App after download | `FwyHoleMap` / `fwy_hole_map.dart` |
 
 **Coverage gap:** Pipeline exists; not every catalog course has a published pack yet — FWY falls back to vector or stand-in without error (PRD `CRSE-011`).
 

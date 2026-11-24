@@ -35,12 +35,12 @@ Produce the hole map packs that the full-screen Fairway map shows, without Googl
 ### Paths (default Firebase Storage bucket)
 
 ```
-course_maps/index.json
-course_maps/{courseId}/manifest.json
-course_maps/{courseId}/hole_{n}.png        # or .webp; name must match imagePath
+course_maps/index.json                                   # Cache-Control: no-cache
+course_maps/{courseId}/v{version}/manifest.json          # Cache-Control: public, max-age=31536000, immutable
+course_maps/{courseId}/v{version}/hole_{n}.png           # or .webp; name must match imagePath; immutable
 ```
 
-Upload exactly what `build_pack.py` writes under `out/`. Upload images first, then `manifest.json`, then `index.json` last, so a client never sees a version whose files are missing.
+Upload exactly what `build_pack.py` writes under `out/`. Upload images first, then `manifest.json`, then `index.json` last, so a client never sees a version whose files are missing. A version's folder is never rewritten; a change ships as a new `v{version}` folder and an `index.json` bump. The pre-versioning layout (`course_maps/{courseId}/manifest.json`, `hole_{n}.png`) is still read as a fallback and kept for older builds; `upload_packs.py --migrate-legacy` copies it into `v{version}/`.
 
 ### `courseId`
 
@@ -52,7 +52,7 @@ The established ID from `docs/context/PH_Golf_Venues.md` when one exists (all 17
 { "schema": 1, "courses": [ { "courseId": "ph-crse-villamor", "version": 2 } ] }
 ```
 
-The app fetches this once per online session and re-downloads a pack when the remote `version` is higher than the local one. Bump `version` (`--version N`) on **any** change to images, markers, or the manifest.
+The app fetches this once per online session and downloads a pack again only when the remote `version` differs from the stored one. Bump `version` (`--version N`) on **any** change to images, markers, or the manifest.
 
 ### `manifest.json`
 

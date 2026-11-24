@@ -25,6 +25,7 @@ import '../widgets/course_round_dialog.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/fwy_hole_map.dart';
 import '../widgets/fwy_overlays.dart';
+import '../widgets/hole_map_image.dart';
 import '../widgets/shared_header_actions.dart';
 import '../theme/app_theme.dart';
 
@@ -206,10 +207,22 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         _packLoading = false;
         _aimTarget = const FwyAimTarget.pin();
       });
+      if (pack != null) _precacheNextHole(course, hole, token);
     }, onError: (_) {
       if (!mounted || token != _packToken) return;
       setState(() => _packLoading = false);
     });
+  }
+
+  /// Fetches and decodes the next hole's pack image so changing holes paints
+  /// without waiting on Storage or the decoder.
+  void _precacheNextHole(String course, int hole, int token) {
+    if (holeCoordinates(course, hole + 1) == null) return;
+    HoleMapPackSource.instance.loadHole(course, hole + 1).then((next) {
+      if (next == null || !mounted || token != _packToken) return;
+      precacheImage(holeMapImageProvider(next.imageBytes), context)
+          .ignore();
+    }, onError: (_) {});
   }
 
   void _syncPinWatch() {

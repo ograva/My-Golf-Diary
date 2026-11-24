@@ -1,15 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 
 import '../data/ph_golf_hole_coords.dart';
 import '../models/course_map_manifest.dart';
 import '../on_course/hole_map_geo.dart';
+import 'course_map_pack_store.dart';
 import 'sync_identity.dart';
 
 enum CourseMapResolveKind { satellite, vector, downloading }
@@ -71,38 +71,50 @@ class FirebaseCourseMapPackSource implements CourseMapPackSource {
   const FirebaseCourseMapPackSource();
 
   static const _maxBytes = 10 * 1024 * 1024;
+  static const _fetchTimeout = Duration(seconds: 20);
+
+  /// Download URLs carry a stable token, so each object costs one metadata
+  /// call per session on web.
+  static final Map<String, Future<String>> _downloadUrls = {};
 
   @override
   Future<Uint8List?> read(String path) async {
     try {
       if (Firebase.apps.isEmpty) return null;
       await SyncIdentity.ensureSignedIn();
-      return await FirebaseStorage.instance.ref(path).getData(_maxBytes);
+      final ref = FirebaseStorage.instance.ref(path);
+      if (!kIsWeb) return await ref.getData(_maxBytes);
+      // Web getData() issues getMetadata + getDownloadURL + GET for every
+      // call; the GET alone is what the browser HTTP cache can serve.
+      final url = await (_downloadUrls[path] ??= ref.getDownloadURL());
+      final response = await http.get(Uri.parse(url)).timeout(_fetchTimeout);
+      if (response.statusCode == 200) return response.bodyBytes;
+      _downloadUrls.remove(path);
+      return null;
     } catch (_) {
+      _downloadUrls.remove(path);
       return null;
     }
   }
 }
 
-class _MemoryPack {
-  _MemoryPack(this.manifest, this.images);
-
-  final CourseMapManifest manifest;
-  final Map<String, Uint8List> images;
-}
-
 /// Local + Firebase Storage tier for course map packs (Architecture §5.5).
 ///
-/// Native builds cache packs under `<appDocDir>/course_maps/{courseId}/`.
-/// Web has no file system, so packs are held in memory for the session and
-/// repeat fetches are served by the browser HTTP cache (`Cache-Control` set
-/// at upload).
+/// Packs are stored per `courseId` + version in [store]: disk on native
+/// (`<appDocDir>/course_maps/{courseId}/v{n}/`), the Cache API on web, so a
+/// pack is downloaded once per version and opens offline. The newest stored
+/// version is used straight away; `course_maps/index.json` is checked in the
+/// background and a changed version is downloaded, switched to, and the old
+/// one pruned. Remote objects live at `course_maps/{courseId}/v{n}/…`, with
+/// the unversioned `course_maps/{courseId}/…` layout as a fallback.
 class CourseMapCacheService {
   CourseMapCacheService._();
 
   static final CourseMapCacheService instance = CourseMapCacheService._();
 
   static const _prefix = 'course_maps';
+  static const _manifestName = 'manifest.json';
+  static const _parallelDownloads = 4;
 
   /// Widget tests inject a resolved frame without disk or Storage.
   @visibleForTesting
@@ -112,17 +124,33 @@ class CourseMapCacheService {
   @visibleForTesting
   bool? debugHasPack;
 
-  /// Forces the web (in-memory) cache path on the VM.
+  /// Uses a session-only [MemoryCourseMapPackStore] instead of disk / Cache
+  /// API (set before the first read).
   @visibleForTesting
   bool? debugUseMemoryCache;
 
   CourseMapPackSource source = const FirebaseCourseMapPackSource();
 
-  final Map<String, _MemoryPack> _memoryPacks = {};
-  final Map<String, Future<bool>> _inFlight = {};
-  Future<Map<String, int>?>? _remoteIndex;
+  CourseMapPackStore? _store;
 
-  bool get _useMemoryCache => debugUseMemoryCache ?? kIsWeb;
+  CourseMapPackStore get store => _store ??= debugUseMemoryCache == true
+      ? MemoryCourseMapPackStore()
+      : CourseMapPackStore.platformDefault();
+
+  set store(CourseMapPackStore value) => _store = value;
+
+  /// Version in use per course this session.
+  final Map<String, int> _active = {};
+  final Map<String, CourseMapManifest> _manifests = {};
+
+  /// One [Uint8List] per stored image so `MemoryImage` keys stay equal.
+  final Map<String, Uint8List> _images = {};
+  final Map<String, Future<Uint8List?>> _inFlight = {};
+
+  /// `courseId/vN` packs only found at the unversioned remote path.
+  final Set<String> _legacyRemote = {};
+  final Map<String, Future<void>> _syncs = {};
+  Future<Map<String, int>?>? _remoteIndex;
 
   @visibleForTesting
   void debugReset() {
@@ -130,15 +158,30 @@ class CourseMapCacheService {
     debugHasPack = null;
     debugUseMemoryCache = null;
     source = const FirebaseCourseMapPackSource();
-    _memoryPacks.clear();
+    _store = null;
+    _active.clear();
+    _manifests.clear();
+    _images.clear();
     _inFlight.clear();
+    _legacyRemote.clear();
+    _syncs.clear();
     _remoteIndex = null;
   }
 
-  /// Image bytes for a frame resolved from the in-memory (web) cache.
+  /// Completes when background version checks and pack downloads finish.
+  @visibleForTesting
+  Future<void> debugSettle() async {
+    while (true) {
+      final pending = _syncs.values.toList();
+      await Future.wait(pending);
+      if (_syncs.length == pending.length) return;
+    }
+  }
+
+  /// Image bytes for a resolved frame, the same instance on every call.
   Uint8List? cachedImageBytes(HoleMapFrame frame) {
-    final id = p.posix.basename(frame.packDirectory);
-    return _memoryPacks[id]?.images[frame.entry.imagePath];
+    final key = frame.imageKey;
+    return key == null ? null : _images[key];
   }
 
   String? _courseId(String courseName) {
@@ -148,14 +191,13 @@ class CourseMapCacheService {
   }
 
   /// `courseId → version` from `course_maps/index.json`, fetched once per
-  /// session; null when offline or not published.
+  /// session; null when offline or not published (retried on next call).
   Future<Map<String, int>?> _fetchRemoteIndex() {
-    return _remoteIndex ??= () async {
+    final pending = _remoteIndex;
+    if (pending != null) return pending;
+    final fetch = () async {
       final bytes = await source.read('$_prefix/index.json');
-      if (bytes == null) {
-        _remoteIndex = null;
-        return null;
-      }
+      if (bytes == null) return null;
       try {
         final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
         final courses = json['courses'] as List<dynamic>? ?? const [];
@@ -167,48 +209,113 @@ class CourseMapCacheService {
         return null;
       }
     }();
+    _remoteIndex = fetch;
+    fetch.then((index) {
+      if (index == null && identical(_remoteIndex, fetch)) _remoteIndex = null;
+    });
+    return fetch;
   }
 
-  Future<Directory> _rootDir() async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(docs.path, _prefix));
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
-    }
-    return dir;
-  }
-
-  Future<Directory?> _packDir(String courseName) async {
+  /// Newest stored version, else the remote index version, else null.
+  Future<int?> _activeVersion(String courseId) async {
+    final known = _active[courseId];
+    if (known != null) return known;
+    int? version;
     try {
-      final id = _courseId(courseName);
-      if (id == null) return null;
-      return Directory(p.join((await _rootDir()).path, id));
-    } catch (_) {
-      return null;
-    }
+      version = await store.latestVersion(courseId);
+    } catch (_) {}
+    version ??= (await _fetchRemoteIndex())?[courseId];
+    if (version != null) _active[courseId] ??= version;
+    return _active[courseId];
   }
 
-  bool _hasLocalPackSync(Directory? dir) {
-    if (dir == null || !dir.existsSync()) return false;
-    return File(p.join(dir.path, 'manifest.json')).existsSync();
-  }
-
-  /// True when a pack is cached locally or listed in the remote index.
+  /// True when a pack is stored locally or listed in the remote index.
   Future<bool> hasPackForCourse(String courseName) async {
     if (debugHasPack != null) return debugHasPack!;
     final id = _courseId(courseName);
     if (id == null) return false;
     try {
-      if (_useMemoryCache) {
-        if (_memoryPacks.containsKey(id)) return true;
-      } else if (_hasLocalPackSync(await _packDir(courseName))) {
-        return true;
-      }
-      final index = await _fetchRemoteIndex();
-      return index?.containsKey(id) ?? false;
+      return await _activeVersion(id) != null;
     } catch (_) {
       return false;
     }
+  }
+
+  Future<Uint8List?> _fetchRemote(String courseId, int version, String name) {
+    final key = '$courseId/v$version/$name';
+    return _inFlight[key] ??= () async {
+      final pack = '$courseId/v$version';
+      Uint8List? bytes;
+      if (!_legacyRemote.contains(pack)) {
+        bytes = await source.read('$_prefix/$pack/$name');
+      }
+      if (bytes == null) {
+        bytes = await source.read('$_prefix/$courseId/$name');
+        if (bytes != null) _legacyRemote.add(pack);
+      }
+      return bytes;
+    }()
+        .whenComplete(() {
+      _inFlight.remove(key);
+    });
+  }
+
+  Future<void> _persist(
+      String courseId, int version, String name, Uint8List bytes) async {
+    try {
+      await store.write(courseId, version, name, bytes);
+    } catch (error) {
+      debugPrint('Map pack cache write failed for $courseId $name: $error');
+    }
+  }
+
+  Future<CourseMapManifest?> _manifest(
+    String courseId,
+    int version, {
+    required bool download,
+  }) async {
+    final key = '$courseId/v$version';
+    final cached = _manifests[key];
+    if (cached != null) return cached;
+    var bytes = await store.read(courseId, version, _manifestName);
+    final fromStore = bytes != null;
+    if (bytes == null && download) {
+      bytes = await _fetchRemote(courseId, version, _manifestName);
+    }
+    if (bytes == null) return null;
+    final manifest = _parseManifest(bytes, version);
+    if (manifest == null) return null;
+    if (!fromStore) await _persist(courseId, version, _manifestName, bytes);
+    return _manifests[key] ??= manifest;
+  }
+
+  CourseMapManifest? _parseManifest(Uint8List bytes, int version) {
+    try {
+      final manifest = CourseMapManifest.fromJson(
+        jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>,
+      );
+      return manifest.version == version ? manifest : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _image(
+    String courseId,
+    int version,
+    String imagePath, {
+    required bool download,
+  }) async {
+    final key = '$courseId/v$version/$imagePath';
+    final cached = _images[key];
+    if (cached != null) return cached;
+    var bytes = await store.read(courseId, version, imagePath);
+    if (bytes == null && download) {
+      bytes = await _fetchRemote(courseId, version, imagePath);
+      if (bytes != null) await _persist(courseId, version, imagePath, bytes);
+    }
+    if (bytes == null) return null;
+    return _images.putIfAbsent(key, () => bytes!);
   }
 
   HoleMapManifestEntry _entryFor(
@@ -231,100 +338,80 @@ class CourseMapCacheService {
     );
   }
 
-  Future<HoleMapFrame?> _loadLocalFrame({
-    required String courseName,
-    required int holeNumber,
-    required HoleCoordinates coords,
+  Future<HoleMapFrame?> _frame(
+    String courseId,
+    int version,
+    int holeNumber,
+    HoleCoordinates coords, {
+    required bool download,
   }) async {
-    if (debugHoleFrame != null &&
-        debugHoleFrame!.entry.holeNumber == holeNumber) {
-      return debugHoleFrame;
-    }
-    if (_useMemoryCache) {
-      final id = _courseId(courseName);
-      final pack = id == null ? null : _memoryPacks[id];
-      if (pack == null) return null;
-      return HoleMapFrame(
-        entry: _entryFor(pack.manifest, holeNumber, coords),
-        packDirectory: '$_prefix/$id',
-      );
-    }
-    final dir = await _packDir(courseName);
-    if (dir == null) return null;
-    final manifestFile = File(p.join(dir.path, 'manifest.json'));
-    if (!manifestFile.existsSync()) return null;
-    final manifest = CourseMapManifest.parseFile(manifestFile);
+    final manifest = await _manifest(courseId, version, download: download);
     if (manifest == null) return null;
     final entry = _entryFor(manifest, holeNumber, coords);
-    final image = File(p.join(dir.path, entry.imagePath));
+    final bytes = await _image(courseId, version, entry.imagePath,
+        download: download);
+    if (bytes == null) return null;
     return HoleMapFrame(
       entry: entry,
-      packDirectory: dir.path,
-      imageFile: image.existsSync() ? image : null,
+      packDirectory: '$_prefix/$courseId/v$version',
+      imageKey: '$courseId/v$version/${entry.imagePath}',
     );
   }
 
-  Future<bool> _downloadPackToMemory(String courseId) async {
-    final prefix = '$_prefix/$courseId';
-    final manifestBytes = await source.read('$prefix/manifest.json');
-    if (manifestBytes == null) return false;
-    final CourseMapManifest manifest;
-    try {
-      manifest = CourseMapManifest.fromJson(
-        jsonDecode(utf8.decode(manifestBytes)) as Map<String, dynamic>,
-      );
-    } catch (_) {
-      return false;
-    }
-    final images = <String, Uint8List>{};
-    await Future.wait(manifest.holes.map((hole) async {
-      final bytes = await source.read('$prefix/${hole.imagePath}');
-      if (bytes != null) images[hole.imagePath] = bytes;
-    }));
-    if (images.isEmpty && manifest.holes.isNotEmpty) return false;
-    _memoryPacks[courseId] = _MemoryPack(manifest, images);
-    return true;
-  }
-
-  Future<bool> _downloadPackToDisk(String courseName, String courseId) async {
-    try {
-      if (Firebase.apps.isEmpty) return false;
-    } catch (_) {
-      return false;
-    }
-    final packDir = await _packDir(courseName);
-    if (packDir == null) return false;
-
-    try {
-      await SyncIdentity.ensureSignedIn();
-      final storage = FirebaseStorage.instance;
-      final prefix = '$_prefix/$courseId';
-      if (!packDir.existsSync()) packDir.createSync(recursive: true);
-      final manifestRef = storage.ref('$prefix/manifest.json');
-      final manifestFile = File(p.join(packDir.path, 'manifest.json'));
-      await manifestRef.writeToFile(manifestFile);
-      final manifest = CourseMapManifest.parseFile(manifestFile);
-      if (manifest == null) return false;
-      for (final hole in manifest.holes) {
-        final imageRef = storage.ref('$prefix/${hole.imagePath}');
-        final dest = File(p.join(packDir.path, hole.imagePath));
-        await imageRef.writeToFile(dest);
+  /// Downloads every hole of [version] that is not stored yet; true when the
+  /// whole pack is stored.
+  Future<bool> _fillPack(String courseId, int version) async {
+    final manifest = await _manifest(courseId, version, download: true);
+    if (manifest == null) return false;
+    final paths = [for (final h in manifest.holes) h.imagePath];
+    var complete = true;
+    var next = 0;
+    Future<void> worker() async {
+      while (next < paths.length) {
+        final path = paths[next++];
+        final bytes = await _image(courseId, version, path, download: true);
+        if (bytes == null) complete = false;
       }
-      return true;
-    } catch (_) {
-      return false;
     }
+
+    await Future.wait([
+      for (var i = 0; i < _parallelDownloads; i++) worker(),
+    ]);
+    return complete;
   }
 
-  Future<bool> _downloadPackFromStorage(String courseName) {
-    final courseId = _courseId(courseName);
-    if (courseId == null) return Future.value(false);
-    return _inFlight[courseId] ??= (_useMemoryCache
-            ? _downloadPackToMemory(courseId)
-            : _downloadPackToDisk(courseName, courseId))
-        .whenComplete(() {
-      _inFlight.remove(courseId);
+  /// Once per course per session: switch to a changed index version, fill
+  /// the rest of the pack, and prune superseded versions.
+  void _scheduleSync(String courseId) {
+    _syncs[courseId] ??= _sync(courseId).catchError((Object error) {
+      debugPrint('Map pack sync failed for $courseId: $error');
     });
+  }
+
+  Future<void> _sync(String courseId) async {
+    final current = _active[courseId];
+    if (current == null) return;
+    final remote = (await _fetchRemoteIndex())?[courseId];
+    if (remote != null && remote != current) {
+      // The new manifest is stored last: the store treats a stored manifest
+      // as the newest usable version, and a half-fetched one would hide the
+      // complete old pack offline.
+      final bytes = await _fetchRemote(courseId, remote, _manifestName);
+      final manifest = bytes == null ? null : _parseManifest(bytes, remote);
+      if (manifest == null) return;
+      _manifests['$courseId/v$remote'] = manifest;
+      if (await _fillPack(courseId, remote)) {
+        await _persist(courseId, remote, _manifestName, bytes!);
+        _active[courseId] = remote;
+        _images.removeWhere((key, _) => key.startsWith('$courseId/v$current/'));
+        _manifests.remove('$courseId/v$current');
+        await store.prune(courseId, remote);
+      }
+      return;
+    }
+    if (await _fillPack(courseId, current)) {
+      await store.prune(courseId, current);
+    }
   }
 
   Future<CourseMapResolveResult> resolveHoleMap({
@@ -339,43 +426,34 @@ class CourseMapCacheService {
         frame: debugHoleFrame,
       );
     }
+    const vector = CourseMapResolveResult(kind: CourseMapResolveKind.vector);
+    final id = _courseId(courseName);
+    if (id == null) return vector;
+    final version = await _activeVersion(id);
+    if (version == null) return vector;
 
-    final local = await _loadLocalFrame(
-      courseName: courseName,
-      holeNumber: holeNumber,
-      coords: coords,
-    );
+    final local = await _frame(id, version, holeNumber, coords, download: false);
     if (local != null) {
+      _scheduleSync(id);
       return CourseMapResolveResult(
         kind: CourseMapResolveKind.satellite,
         frame: local,
       );
     }
-
     if (!allowDownload) {
-      final hasPack = await hasPackForCourse(courseName);
-      if (!hasPack) {
-        return const CourseMapResolveResult(kind: CourseMapResolveKind.vector);
-      }
       return const CourseMapResolveResult(
         kind: CourseMapResolveKind.downloading,
       );
     }
 
-    final downloaded = await _downloadPackFromStorage(courseName);
-    if (downloaded) {
-      final after = await _loadLocalFrame(
-        courseName: courseName,
-        holeNumber: holeNumber,
-        coords: coords,
-      );
-      if (after != null) {
-        return CourseMapResolveResult(
-          kind: CourseMapResolveKind.satellite,
-          frame: after,
-        );
-      }
-    }
-    return const CourseMapResolveResult(kind: CourseMapResolveKind.vector);
+    // This hole first; the rest of the pack follows in the background.
+    final fetched =
+        await _frame(id, version, holeNumber, coords, download: true);
+    _scheduleSync(id);
+    if (fetched == null) return vector;
+    return CourseMapResolveResult(
+      kind: CourseMapResolveKind.satellite,
+      frame: fetched,
+    );
   }
 }

@@ -20,6 +20,16 @@ void main() {
     expect(worker, contains('AbortController'));
     expect(worker, contains("new Response('{\"buildId\":\"\"}'"));
     expect(worker, isNot(contains('caches.delete(key);\n')));
+    // Activate must keep CacheApiCourseMapPackStore's cache.
+    expect(
+      worker,
+      contains("const COURSE_MAP_CACHE_PREFIX = 'golf-diary-course-maps'"),
+    );
+    expect(worker, contains('!key.startsWith(COURSE_MAP_CACHE_PREFIX)'));
+    expect(
+      File('lib/services/course_map_pack_store_web.dart').readAsStringSync(),
+      contains("cacheName = 'golf-diary-course-maps-"),
+    );
     expect(worker, contains("pathname.endsWith('/app_build.json')"));
     final applyIdx = worker.indexOf('async function applyUpdate');
     expect(applyIdx, greaterThan(-1));

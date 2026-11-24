@@ -7,6 +7,9 @@
 // the precached shell; it does not drop the cache the next open needs.
 
 const CACHE_NAME = 'golf-diary-shell-v2';
+// Course map packs written by the app (CacheApiCourseMapPackStore); they are
+// versioned by the app and must survive shell updates.
+const COURSE_MAP_CACHE_PREFIX = 'golf-diary-course-maps';
 const MANIFEST = 'precache_manifest.json';
 const BUILD_TIMEOUT_MS = 4000;
 
@@ -71,7 +74,12 @@ async function installShell() {
 async function activateShell() {
   const keys = await caches.keys();
   await Promise.all(
-    keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+    keys
+      .filter(
+        (key) =>
+          key !== CACHE_NAME && !key.startsWith(COURSE_MAP_CACHE_PREFIX),
+      )
+      .map((key) => caches.delete(key)),
   );
   await self.clients.claim();
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../on_course/hole_projection.dart';
 import '../services/hole_map_pack_source.dart';
 import '../theme/app_theme.dart';
+import 'hole_map_image.dart';
 
 /// Suggested aim point drawn as ■ (CRSE-041 manifest marker).
 class FwyMapMarker {
@@ -89,6 +90,18 @@ class FwyHoleMap extends StatelessWidget {
           HoleViewport.fit(tee: scene.tee, green: scene.green, free: free);
       final pack = this.pack;
       final frame = pack?.entry.frame;
+      final imageRect = pack == null || frame == null
+          ? null
+          : Rect.fromPoints(
+              viewport.toScreen(Offset(
+                -pack.entry.widthPx * frame.metersPerPixel / 2,
+                pack.entry.heightPx * frame.metersPerPixel / 2,
+              )),
+              viewport.toScreen(Offset(
+                pack.entry.widthPx * frame.metersPerPixel / 2,
+                -pack.entry.heightPx * frame.metersPerPixel / 2,
+              )),
+            );
 
       Widget marker(String key, Offset local, Widget child) {
         final at = viewport.toScreen(local);
@@ -124,18 +137,16 @@ class FwyHoleMap extends StatelessWidget {
             ),
             if (pack != null && frame != null)
               Positioned.fromRect(
-                rect: Rect.fromPoints(
-                  viewport.toScreen(Offset(
-                    -pack.entry.widthPx * frame.metersPerPixel / 2,
-                    pack.entry.heightPx * frame.metersPerPixel / 2,
-                  )),
-                  viewport.toScreen(Offset(
-                    pack.entry.widthPx * frame.metersPerPixel / 2,
-                    -pack.entry.heightPx * frame.metersPerPixel / 2,
-                  )),
-                ),
-                child: Image.memory(
-                  pack.imageBytes,
+                rect: imageRect!,
+                child: Image(
+                  image: holeMapImageProvider(
+                    pack.imageBytes,
+                    decodeWidth: holeMapDecodeWidth(
+                      imageRect.width,
+                      MediaQuery.devicePixelRatioOf(context),
+                      pack.entry.widthPx,
+                    ),
+                  ),
                   key: const ValueKey('oncourse-map-pack-image'),
                   fit: BoxFit.fill,
                   gaplessPlayback: true,

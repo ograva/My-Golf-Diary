@@ -28,6 +28,7 @@ dependencies:
   qr_flutter: ^4.1.0
   path_provider: ^2.1.5
   firebase_storage: ^14.1.0
+  web: ^1.1.2
 
 dev_dependencies:
   flutter_test:

@@ -187,11 +187,16 @@ class HoleMapFrame {
     required this.entry,
     required this.packDirectory,
     this.imageFile,
+    this.imageKey,
   });
 
   final HoleMapManifestEntry entry;
   final String packDirectory;
   final File? imageFile;
+
+  /// `{courseId}/v{version}/{imagePath}`; looks up the bytes held by
+  /// `CourseMapCacheService`, so one image keeps one decoded cache entry.
+  final String? imageKey;
 
   bool get hasSatelliteImage =>
       imageFile != null && imageFile!.existsSync();

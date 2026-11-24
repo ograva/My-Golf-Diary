@@ -8,6 +8,7 @@ import '../services/golfer_profile_service.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import 'diary_markdown_body.dart';
+import 'golf_ball_loader.dart';
 import 'golfer_avatar_circle.dart';
 import 'golfer_baseline_sheet.dart';
 
@@ -161,7 +162,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   void _applyLeadIn(LeadInPrompt prompt) {
     final current = _composer.text.trim();
     if (!current.contains(prompt.prefix)) {
-      _composer.text = current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
+      _composer.text =
+          current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
     }
   }
 
@@ -189,10 +191,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   }
 
   Widget _chatBox(bool available) {
-    final canSend = _optedIn &&
-        available &&
-        !_busy &&
-        _composer.text.trim().isNotEmpty;
+    final canSend =
+        _optedIn && available && !_busy && _composer.text.trim().isNotEmpty;
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHigh,
@@ -224,11 +224,9 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
             style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
             onPressed: canSend ? () => _send(_composer.text) : null,
             icon: _busy
-                ? const SizedBox(
+                ? const GolfBallLoader(
                     key: ValueKey('diary-send-busy'),
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    size: 28,
                   )
                 : const Icon(Icons.arrow_upward),
           ),
@@ -330,12 +328,14 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                 if (_baselineUpdated) ...[
                                   Text(
                                     _baselineSummary ?? 'Baseline updated',
-                                    key: const ValueKey('diary-baseline-updated'),
+                                    key: const ValueKey(
+                                        'diary-baseline-updated'),
                                   ),
                                   Align(
                                     alignment: Alignment.centerLeft,
                                     child: TextButton(
-                                      key: const ValueKey('diary-baseline-review'),
+                                      key: const ValueKey(
+                                          'diary-baseline-review'),
                                       onPressed: _openBaseline,
                                       child: const Text('Review'),
                                     ),

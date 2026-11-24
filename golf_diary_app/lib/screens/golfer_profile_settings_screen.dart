@@ -95,6 +95,17 @@ class _GolferProfileSettingsScreenState
     );
   }
 
+  Future<void> _selectAvatar(String id) async {
+    setState(() => _avatarChoice = id);
+    final next = _draft().copyWith(avatarChoice: id);
+    final store = GolferProfileScope.maybeOf(context);
+    if (store != null) {
+      await store.persist(next);
+    }
+    if (!mounted) return;
+    setState(() => _base = next);
+  }
+
   bool _validateDemographics() {
     _ageError = validateOnboardingAge(_ageController.text);
     _yearsError = validateOnboardingYears(_yearsController.text);
@@ -253,8 +264,8 @@ class _GolferProfileSettingsScreenState
           Text('Avatar', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
-            'Auto matches your gender and skill tier. A signed-in Google photo '
-            'still shows in the header.',
+            'Auto uses your Google photo when you are signed in, and an illustrated golfer otherwise. '
+            'A preset you pick replaces the Google photo in the header.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
@@ -262,7 +273,7 @@ class _GolferProfileSettingsScreenState
             gender: _gender,
             skillTier: _skillTier,
             selected: _avatarChoice,
-            onSelected: (id) => setState(() => _avatarChoice = id),
+            onSelected: _selectAvatar,
           ),
           const Divider(height: 32),
           Text('Yardage display', style: theme.textTheme.titleMedium),

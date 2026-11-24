@@ -11,13 +11,13 @@ import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/account_avatar_app_bar_menu.dart';
+import '../widgets/course_round_dialog.dart';
+import '../widgets/diary_launcher.dart';
 import '../widgets/flight_sheet.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
-import '../widgets/scorecard_format_bar.dart';
-import '../ui/header_action_policy.dart';
 import '../widgets/shared_header_actions.dart';
-import '../widgets/venue_name_field.dart';
 import 'scorecard_hole_editor.dart';
 
 class ScorecardScreen extends StatefulWidget {
@@ -186,17 +186,21 @@ class ScorecardScreenState extends State<ScorecardScreen> {
 
     final recentCourses = await db.distinctCourseNames();
     if (!mounted) return;
-    final courseName = await showDialog<String>(
+    final result = await showCourseRoundDialog(
       context: context,
-      builder: (context) => _NewRoundDialog(recentNames: recentCourses),
+      initial: const CourseRoundValues(courseName: 'Local Course'),
+      recentNames: recentCourses,
     );
-    if (courseName == null || !mounted) return;
+    if (result == null || !mounted) return;
     final roundId = await db.startNewRound(
-      courseName: courseName,
-      par: PhGolfCatalog.parForHole(courseName, 1) ?? 4,
+      courseName: result.courseName,
+      par: PhGolfCatalog.parForHole(result.courseName, 1) ?? 4,
     );
     await db.saveRoundFormat(
-      RoundFormatSettings(roundId: roundId, format: ScoringFormat.gross),
+      applyCourseRoundValues(
+        RoundFormatSettings(roundId: roundId),
+        result,
+      ),
     );
     if (!mounted) return;
     setState(() => _selectedRoundId = roundId);
@@ -204,9 +208,44 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text('Started round at $courseName'),
+          content: Text('Started round at ${result.courseName}'),
           backgroundColor: AppColors.green),
     );
+  }
+
+  Future<void> _editCourse() async {
+    final roundId = _selectedRoundId;
+    final settings = _format;
+    if (roundId == null || settings == null) return;
+    final recent =
+        await LocalDatabaseService.instance.distinctCourseNames();
+    if (!mounted) return;
+    final result = await showCourseRoundDialog(
+      context: context,
+      initial: CourseRoundValues(
+        courseName: _courseName,
+        format: settings.format,
+        molaveDoubleEaglePoints: settings.molaveDoubleEaglePoints,
+        courseRating: settings.courseRating,
+        slopeRating: settings.slopeRating,
+      ),
+      recentNames: recent,
+    );
+    if (result == null || !mounted) return;
+    if (!courseRoundChanged(
+      courseName: _courseName,
+      settings: settings,
+      next: result,
+    )) {
+      return;
+    }
+    if (!await _allowAttestedEdit()) return;
+    final db = LocalDatabaseService.instance;
+    if (result.courseName != _courseName) {
+      await db.applyCoursePar(roundId, result.courseName);
+    }
+    await db.saveRoundFormat(applyCourseRoundValues(settings, result));
+    await loadScorecard();
   }
 
   RoundScore? _holeRow(int holeNumber) {
@@ -221,6 +260,37 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       (_holes.isNotEmpty ? _holes.first.courseName : 'Local Course');
 
   int get _holesOnCard => PhGolfCatalog.holeCount(_courseName);
+
+  bool get _fullyScored {
+    if (_selectedRoundId == null) return false;
+    final holes = _holesOnCard;
+    if (holes <= 0) return false;
+    for (var hole = 1; hole <= holes; hole++) {
+      final row = _holeRow(hole);
+      if (row == null || !isHolePlayed(row)) return false;
+    }
+    return true;
+  }
+
+  String _formatIndicator(RoundFormatSettings settings) {
+    if (settings.format == ScoringFormat.molave) {
+      final points =
+          normalizeDoubleEaglePoints(settings.molaveDoubleEaglePoints);
+      return '${settings.format.label} · double eagle $points';
+    }
+    return settings.format.label;
+  }
+
+  String? _ratingIndicator(RoundFormatSettings settings) {
+    final parts = <String>[];
+    final rating = settings.courseRating;
+    if (rating != null) parts.add('CR ${rating.toStringAsFixed(1)}');
+    if (settings.slopeRating != null) {
+      parts.add('Slope ${settings.slopeRating}');
+    }
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
 
   int? _unplayedPar(int hole) {
     if (PhGolfCatalog.matchCourse(_courseName)?.holePars == null) return null;
@@ -287,34 +357,10 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     if (settings == null || roundId == null || !settings.isAttested) {
       return true;
     }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit attested card?'),
-        content: const Text(
-          'This clears the attestation until the card is attested again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const ValueKey('scorecard-attest-edit-confirm'),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Edit'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return false;
+    final ok = await showAttestedEditConfirm(context);
+    if (!ok || !mounted) return false;
     await LocalDatabaseService.instance.invalidateAttestation(roundId);
     return true;
-  }
-
-  Future<void> _saveFormat(RoundFormatSettings settings) async {
-    await LocalDatabaseService.instance.saveRoundFormat(settings);
-    await loadScorecard();
   }
 
   Future<void> _attest() async {
@@ -474,21 +520,38 @@ class ScorecardScreenState extends State<ScorecardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final courseName = _totals?.courseName ?? 'No round selected';
+    final format = _format;
+    final ratingLine = format == null ? null : _ratingIndicator(format);
 
     return Scaffold(
       appBar: AppBar(
+        leading: PlayHeaderOverflowButton(
+          showCaddy: _selectedRoundId != null,
+          roundId: _selectedRoundId,
+          courseName: _selectedRoundId == null ? '' : _courseName,
+          caddyInviteKey: 'scorecard-invite-caddy',
+          extraActions: [
+            if (_selectedRoundId != null)
+              PlayHeaderMenuAction(
+                id: 'flight',
+                key: 'scorecard-flight-btn',
+                icon: Icons.groups_outlined,
+                label: 'Flight',
+                dividerBefore: true,
+                onSelected: () {
+                  _openFlight();
+                },
+              ),
+          ],
+        ),
         title: const Text('Scorecard'),
         actions: [
-          SharedHeaderActions(
-            tab: HeaderTabContext.scorecard,
-            roundId: _selectedRoundId,
-            courseName: courseName,
+          DiaryEntryButton(
+            entryKey: 'diary-entry-scorecard',
             diary: widget.diary,
-            diaryEntryKey: 'diary-entry-scorecard',
-            diarySource: DiaryContextSource.scorecard,
-            caddyInviteKey: 'scorecard-invite-caddy',
+            entrySource: DiaryContextSource.scorecard,
           ),
+          const AccountAvatarAppBarMenu(),
         ],
       ),
       body: _loading
@@ -524,13 +587,97 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                     )
                   else ...[
-                    Text(courseName,
-                        style: Theme.of(context).textTheme.headlineSmall),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            key: const ValueKey('scorecard-course-summary'),
+                            onTap: _editCourse,
+                            borderRadius: BorderRadius.circular(8),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 40),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        _courseName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.edit_outlined,
+                                      size: 20,
+                                      semanticLabel: 'Edit course',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SegmentedButton<String>(
+                          key: const ValueKey('scorecard-view-mode-toggle'),
+                          style: const ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          segments: const [
+                            ButtonSegment(
+                              value: ScorecardViewMode.classic,
+                              label: Text('Classic'),
+                            ),
+                            ButtonSegment(
+                              value: ScorecardViewMode.cart,
+                              label: Text('Cart'),
+                            ),
+                          ],
+                          selected: {_viewMode},
+                          onSelectionChanged: (selection) {
+                            _persistViewMode(selection.first);
+                          },
+                          showSelectedIcon: false,
+                        ),
+                      ],
+                    ),
                     if (PhGolfCatalog.courseCaption(_courseName) != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 4, left: 4),
                         child: Text(
                           PhGolfCatalog.courseCaption(_courseName)!,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    if (format != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          _formatIndicator(format),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    if (ratingLine != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          ratingLine,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    if (_handicap != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          'Unofficial estimate $_handicap',
+                          key: const ValueKey('scorecard-handicap-estimate'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -538,7 +685,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         _recentRounds.any((r) =>
                             r.roundId == _selectedRoundId && !r.isCompleted))
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 4, left: 4),
                         child: Text(
                           'In progress — finish holes on On Course or save via Start new round',
                           style: Theme.of(context).textTheme.bodySmall,
@@ -570,61 +717,12 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
-                    SegmentedButton<String>(
-                      key: const ValueKey('scorecard-view-mode-toggle'),
-                      segments: [
-                        ButtonSegment(
-                          value: ScorecardViewMode.classic,
-                          label: const Text('Classic'),
-                          icon: const Icon(Icons.grid_view),
-                        ),
-                        ButtonSegment(
-                          value: ScorecardViewMode.cart,
-                          label: const Text('Cart scoring'),
-                          icon: const Icon(Icons.sports_golf),
-                        ),
-                      ],
-                      selected: {_viewMode},
-                      onSelectionChanged: (selection) {
-                        _persistViewMode(selection.first);
-                      },
-                      showSelectedIcon: false,
-                    ),
-                    if (_format != null && _card != null) ...[
-                      const SizedBox(height: 12),
-                      ScorecardFormatBar(
-                        settings: _format!,
-                        summary: _card!.summary,
-                        handicap: _handicap,
-                        onFormat: (format) => _saveFormat(
-                          _format!.copyWith(format: format),
-                        ),
-                        onDoubleEagle: (points) => _saveFormat(
-                          _format!.copyWith(molaveDoubleEaglePoints: points),
-                        ),
-                        onRating: (rating, slope) => _saveFormat(
-                          _format!.copyWith(
-                            courseRating: rating,
-                            slopeRating: slope,
-                            clearCourseRating: rating == null,
-                            clearSlope: slope == null,
-                          ),
-                        ),
-                        onAttest: _attest,
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          key: const ValueKey('scorecard-flight-btn'),
-                          onPressed: _openFlight,
-                          child: const Text('Flight'),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
                     if (_viewMode == ScorecardViewMode.classic) ...[
                       const SizedBox(height: 8),
-                      _SummaryBanner(totals: _totals),
+                      _SummaryBanner(
+                        totals: _totals,
+                        formatSummary: _card?.summary,
+                      ),
                       const SizedBox(height: 16),
                     ],
                     if (_viewMode == ScorecardViewMode.cart &&
@@ -664,6 +762,22 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         onHoleTap: _editHole,
                       ),
                     ],
+                    if (_fullyScored && format != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        format.attestationLabel,
+                        key: const ValueKey('scorecard-attest-badge'),
+                      ),
+                      if (!format.isAttested)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            key: const ValueKey('scorecard-attest-btn'),
+                            onPressed: _attest,
+                            child: const Text('Attest card'),
+                          ),
+                        ),
+                    ],
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       key: const ValueKey('scorecard-new-round-btn'),
@@ -679,56 +793,11 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   }
 }
 
-class _NewRoundDialog extends StatefulWidget {
-  const _NewRoundDialog({required this.recentNames});
-
-  final List<String> recentNames;
-
-  @override
-  State<_NewRoundDialog> createState() => _NewRoundDialogState();
-}
-
-class _NewRoundDialogState extends State<_NewRoundDialog> {
-  final _controller = TextEditingController(text: 'Local Course');
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    Navigator.pop(context, name.isEmpty ? 'Local Course' : name);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Start new round'),
-      content: VenueNameField(
-        controller: _controller,
-        labelText: 'Course name',
-        recentNames: widget.recentNames,
-        catalogNames: PhGolfCatalog.courseNames,
-        captionFor: PhGolfCatalog.courseCaption,
-        autofocus: true,
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
-        ElevatedButton(onPressed: _submit, child: const Text('Start')),
-      ],
-    );
-  }
-}
-
 class _SummaryBanner extends StatelessWidget {
-  const _SummaryBanner({required this.totals});
+  const _SummaryBanner({required this.totals, this.formatSummary});
 
   final RoundTotals? totals;
+  final String? formatSummary;
 
   @override
   Widget build(BuildContext context) {
@@ -757,6 +826,14 @@ class _SummaryBanner extends StatelessWidget {
                     toPar: t.totalToPar),
               ],
             ),
+            if (formatSummary != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                formatSummary!,
+                key: const ValueKey('scorecard-format-total'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             if (t.penaltiesTotal > 0 || t.mulligansTotal > 0) ...[
               const SizedBox(height: 8),
               Text(

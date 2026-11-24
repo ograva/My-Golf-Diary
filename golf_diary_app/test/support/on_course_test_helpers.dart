@@ -12,23 +12,29 @@ Future<void> openCourseSheet(WidgetTester tester) async {
   await settleSheet(tester);
 }
 
-/// Types [name] into the course sheet and submits it with the keyboard action.
-Future<void> submitCourseName(WidgetTester tester, String name) async {
-  await openCourseSheet(tester);
-  await tester.enterText(find.widgetWithText(TextField, 'Course name'), name);
-  await tester.testTextInput.receiveAction(TextInputAction.done);
-  FocusManager.instance.primaryFocus?.unfocus();
+Future<void> saveCourseDialog(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('scorecard-new-round-start')));
   await settleSheet(tester);
 }
 
-/// Types [query] into the course sheet and taps the [option] suggestion.
+/// Types [name] into the shared course dialog and saves it.
+Future<void> submitCourseName(WidgetTester tester, String name) async {
+  await openCourseSheet(tester);
+  await tester.enterText(find.widgetWithText(TextField, 'Course name'), name);
+  FocusManager.instance.primaryFocus?.unfocus();
+  await settleSheet(tester);
+  await saveCourseDialog(tester);
+}
+
+/// Types [query] into the shared course dialog and saves the [option].
 Future<void> pickCourse(
     WidgetTester tester, String query, String option) async {
   await openCourseSheet(tester);
   await tester.enterText(find.widgetWithText(TextField, 'Course name'), query);
   await tester.pump();
-  await tester.tap(find.text(option));
+  await tester.tap(find.text(option).last);
   await settleSheet(tester);
+  await saveCourseDialog(tester);
 }
 
 Future<void> _selectMode(WidgetTester tester, String key) async {

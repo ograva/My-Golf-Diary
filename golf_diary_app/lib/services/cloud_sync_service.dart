@@ -4,6 +4,7 @@ import '../app_check_config.dart';
 import '../firebase_options.dart';
 import 'diary_remote.dart';
 import 'local_database_service.dart';
+import 'remote_diary_state.dart';
 import 'sync_constants.dart';
 import 'sync_identity.dart';
 import 'sync_merge.dart';
@@ -13,6 +14,20 @@ class SyncResult {
 
   final int pushed;
   final int failed;
+  final int pulled;
+}
+
+/// Outcome of replacing this device with the account diary.
+class ReplaceResult {
+  const ReplaceResult({
+    required this.refused,
+    this.removed = 0,
+    this.pulled = 0,
+  });
+
+  /// True when the remote copy is empty or unreadable, so local rows stay.
+  final bool refused;
+  final int removed;
   final int pulled;
 }
 
@@ -40,17 +55,110 @@ class CloudSyncService {
     return SyncResult(pushed: push.pushed, failed: push.failed, pulled: pulled);
   }
 
-  Future<int> pullAll() async {
+  /// Live remote rows, ignoring tombstones. Unreadable clouds are [RemoteDiaryState.unclear].
+  Future<RemoteDiaryState> inspectRemote() async {
+    try {
+      final listed = await _listAll();
+      if (listed == null) return RemoteDiaryState.unclear;
+      if (listed.liveCount == 0) return RemoteDiaryState.empty;
+      return RemoteDiaryState.hasEntries;
+    } catch (_) {
+      return RemoteDiaryState.unclear;
+    }
+  }
+
+  /// Pushes this device, then pulls. An empty or unreadable account does not
+  /// apply tombstones, so a new account cannot delete local rows.
+  Future<SyncResult> uploadLocalThenDownload() async {
+    final state = await inspectRemote();
+    final pushed = await syncAll();
+    if (state != RemoteDiaryState.hasEntries) {
+      final pulled = await pullAll(applyTombstones: false);
+      return SyncResult(
+        pushed: pushed.pushed,
+        failed: pushed.failed,
+        pulled: pulled,
+      );
+    }
+    final pulled = await pullAll();
+    final rest = await syncAll();
+    return SyncResult(
+      pushed: pushed.pushed + rest.pushed,
+      failed: pushed.failed + rest.failed,
+      pulled: pulled,
+    );
+  }
+
+  /// Download-and-sync. Local rows are removed only by an explicit replace
+  /// of a remote diary that has live entries.
+  ///
+  /// When the account has no live rows, this pushes first and ignores
+  /// tombstones. Pull-first used to delete local ids whose `updated_at_ms`
+  /// was still 0, including the seeded bag, whenever a newer tombstone existed.
+  Future<SyncResult> downloadAndSync() async {
+    final state = await inspectRemote();
+    if (state != RemoteDiaryState.hasEntries) {
+      final pushed = await syncAll();
+      final pulled = await pullAll(applyTombstones: false);
+      return SyncResult(
+        pushed: pushed.pushed,
+        failed: pushed.failed,
+        pulled: pulled,
+      );
+    }
+    final pulled = await pullAll();
+    final pushed = await syncAll();
+    return SyncResult(
+      pushed: pushed.pushed,
+      failed: pushed.failed,
+      pulled: pulled,
+    );
+  }
+
+  /// Pulls a live remote diary, then deletes local rows that are not in it.
+  ///
+  /// Refuses when the remote copy has no live rows or could not be read.
+  Future<ReplaceResult> replaceLocalWithRemote() async {
+    final listed = await _listAll();
+    if (listed == null || listed.liveCount == 0) {
+      return const ReplaceResult(refused: true);
+    }
+    final pulled = await pullAll();
+    final removed = await _db.deleteLocalRowsMissingFrom(listed.liveIds);
+    return ReplaceResult(refused: false, removed: removed, pulled: pulled);
+  }
+
+  Future<int> pullAll({bool applyTombstones = true}) async {
     if (!isAvailable) return 0;
     var applied = 0;
     for (final table in kSyncTables) {
       final remoteRows = await _store.listDocuments(userId, table);
       for (final remote in remoteRows) {
+        if (!applyTombstones && readDeleted(remote)) continue;
         if (await _db.applyRemoteRow(table, remote)) applied += 1;
       }
     }
     await _db.setLastPulledAt(DateTime.now().millisecondsSinceEpoch);
     return applied;
+  }
+
+  Future<_RemoteListing?> _listAll() async {
+    if (!isAvailable) return null;
+    final liveIds = <String, Set<String>>{};
+    var liveCount = 0;
+    for (final table in kSyncTables) {
+      final rows = await _store.listDocuments(userId, table);
+      final ids = <String>{};
+      for (final row in rows) {
+        if (readDeleted(row)) continue;
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        ids.add(id);
+        liveCount += 1;
+      }
+      liveIds[table] = ids;
+    }
+    return _RemoteListing(liveIds: liveIds, liveCount: liveCount);
   }
 
   Future<SyncResult> syncAll() async {
@@ -88,6 +196,13 @@ class CloudSyncService {
     }
     return SyncResult(pushed: pushed, failed: failed);
   }
+}
+
+class _RemoteListing {
+  const _RemoteListing({required this.liveIds, required this.liveCount});
+
+  final Map<String, Set<String>> liveIds;
+  final int liveCount;
 }
 
 /// How long a Firebase startup step may wait before the app continues local-only.

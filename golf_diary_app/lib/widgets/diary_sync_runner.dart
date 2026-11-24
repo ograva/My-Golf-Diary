@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/account_session.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/remote_diary_state.dart';
 import '../services/sync_identity.dart';
 
 /// Manual pull-then-push used by the account menu and settings.
@@ -36,6 +37,19 @@ Future<void> runDiarySync(
     return;
   }
   if (!session.canPushToCloud) {
+    final pullOnly = CloudSyncService(userId: uid);
+    final state = await pullOnly.inspectRemote();
+    if (!context.mounted) return;
+    if (state != RemoteDiaryState.hasEntries) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No diary entries on this account yet. Verify your email to upload this device. Local data was kept.',
+          ),
+        ),
+      );
+      return;
+    }
     messenger.showSnackBar(
       const SnackBar(
         content: Text(
@@ -43,8 +57,6 @@ Future<void> runDiarySync(
         ),
       ),
     );
-    // Allow pull-only when unverified
-    final pullOnly = CloudSyncService(userId: uid);
     final pulled = await pullOnly.pullAll();
     if (!context.mounted) return;
     messenger.showSnackBar(
@@ -57,7 +69,8 @@ Future<void> runDiarySync(
   final failure = result.failed == 0 ? '' : ' ${result.failed} failed.';
   messenger.showSnackBar(
     SnackBar(
-      content: Text('Synced ${result.pulled} down, ${result.pushed} up.$failure'),
+      content:
+          Text('Synced ${result.pulled} down, ${result.pushed} up.$failure'),
     ),
   );
 }

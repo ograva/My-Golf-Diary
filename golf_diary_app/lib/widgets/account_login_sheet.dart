@@ -2,15 +2,39 @@ import 'package:flutter/material.dart';
 
 import '../services/account_auth_controller.dart';
 import '../services/account_link_conflict.dart';
+import '../services/sync_identity.dart';
 import 'account_link_conflict_dialog.dart';
+import 'diary_sync_runner.dart';
 
-Future<bool?> showAccountLoginSheet(BuildContext context) {
-  return showModalBottomSheet<bool>(
+Future<bool?> showAccountLoginSheet(BuildContext context) async {
+  final signedIn = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (context) => const AccountLoginSheet(),
   );
+  if (signedIn == true && context.mounted) {
+    await acknowledgeAccountSignIn(context);
+  }
+  return signedIn;
+}
+
+/// Snackbar after the sheet closes, then a sync when the account can upload.
+Future<void> acknowledgeAccountSignIn(BuildContext context) async {
+  final session = AccountAuthController.instance.session;
+  final messenger = ScaffoldMessenger.of(context);
+  final canSyncNow = session.canPushToCloud && SyncIdentity.canSync;
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        canSyncNow
+            ? 'Signed in. Syncing your diary…'
+            : 'Signed in. Your diary is ready to sync.',
+      ),
+    ),
+  );
+  if (!canSyncNow || !context.mounted) return;
+  await runDiarySync(context, session: session);
 }
 
 class AccountLoginSheet extends StatefulWidget {
@@ -25,6 +49,7 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
   final _passwordController = TextEditingController();
   bool _createAccount = false;
   bool _busy = false;
+  bool _googlePending = false;
   String? _error;
 
   @override
@@ -47,10 +72,29 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
   }
 
   Future<void> _google() async {
-    await _withBusy(() async {
-      final err = await AccountAuthController.instance.signInWithGoogle();
-      await _finishSignIn(err);
+    setState(() {
+      _googlePending = true;
+      _busy = true;
+      _error = null;
     });
+    try {
+      final err = await AccountAuthController.instance.signInWithGoogle();
+      if (!mounted) return;
+      if (isSignInCancelled(err)) {
+        setState(() => _googlePending = false);
+        return;
+      }
+      if (err != null && !isAccountLinkConflict(err)) {
+        setState(() {
+          _googlePending = false;
+          _error = err;
+        });
+        return;
+      }
+      await _finishSignIn(err);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _emailSubmit() async {
@@ -144,6 +188,29 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    if (_googlePending) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(24, 8, 24, 24 + bottom),
+        child: const Column(
+          key: Key('account-login-google-waiting'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 12),
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Signing you in with Google…',
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Finish in the Google window. This form stays hidden until you come back.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 8, 24, 24 + bottom),
       child: Column(

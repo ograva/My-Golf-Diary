@@ -28,7 +28,7 @@ Scrollable form mirroring onboarding fields plus yardage display mode and baseli
 │ Gender chips                │
 │ Skill tier chips            │  drives BAG labels + on-course density
 │ Yardage display mode        │  beginner/amateur/full labels
-│ Swing diary coach           │  golf-pro · golf-buddy · golf-lady
+│ Swing diary coach           │  Golf Pro · Golf Buddy · Golf Lady
 │ [ Open baseline sheet ]     │
 │ [ Reset onboarding ]        │
 │ [ Save ]                    │
@@ -46,7 +46,15 @@ Scrollable form mirroring onboarding fields plus yardage display mode and baseli
 | Save | `profile-save-btn` | `FilledButton` |
 | Menu entry | `settings-golfer-profile-entry` | `PopupMenuItem` |
 
-**Swing diary coach:** the default is golf-pro. A choice saves right away, on this device only (`shared_preferences`, not SQLite or sync). Every coach gives the same advice at the same depth. Only the wording and references change.
+**Swing diary coach:** the default is Golf Pro (`golf-pro`). Each option is a `RadioListTile` with this title and subtitle:
+
+| Key suffix | Title | Subtitle |
+| :--- | :--- | :--- |
+| `golf-pro` | Golf Pro | Tour-level coaching with the full technical detail: sequencing, swing plane and ball-flight physics. |
+| `golf-buddy` | Golf Buddy | Tour-level advice from a playing partner, in plain range-and-fairway talk. |
+| `golf-lady` | Golf Lady | Tour-level coaching from a woman pro who's played your tees, precise but conversational, built around your tempo, speed and strategy. |
+
+A choice saves right away, on this device only (`shared_preferences`, not SQLite or sync). Every coach gives the same advice at the same depth. Only the wording and references change.
 
 ## 3. Account sync settings
 

@@ -49,6 +49,14 @@ void main() {
     }
     expect(isChecked(tester, CoachPersona.golfPro), isTrue);
     expect(isChecked(tester, CoachPersona.golfBuddy), isFalse);
+    expect(find.text('Golf Pro'), findsOneWidget);
+    expect(find.text('Golf Buddy'), findsOneWidget);
+    expect(find.text('Golf Lady'), findsOneWidget);
+    expect(
+      find.text('Tour-level advice from a playing partner, in plain '
+          'range-and-fairway talk.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('picking a coach saves it on this device', (tester) async {

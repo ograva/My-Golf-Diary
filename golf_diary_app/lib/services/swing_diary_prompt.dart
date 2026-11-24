@@ -60,20 +60,20 @@ Your voice is a woman Tour-level teaching professional. Your wording sits betwee
 enum CoachPersona {
   golfPro(
     'golf-pro',
-    'Golf pro',
-    'Technical Tour coach for the amateur who wants every detail.',
+    'Golf Pro',
+    'Tour-level coaching with the full technical detail: sequencing, swing plane and ball-flight physics.',
     _golfProVoice,
   ),
   golfBuddy(
     'golf-buddy',
-    'Golf buddy',
-    'A friend who plays at a pro level and talks like a fellow amateur.',
+    'Golf Buddy',
+    'Tour-level advice from a playing partner, in plain range-and-fairway talk.',
     _golfBuddyVoice,
   ),
   golfLady(
     'golf-lady',
-    'Golf lady',
-    'A woman golf pro with references suited to women golfers.',
+    'Golf Lady',
+    "Tour-level coaching from a woman pro who's played your tees, precise but conversational, built around your tempo, speed and strategy.",
     _golfLadyVoice,
   );
 

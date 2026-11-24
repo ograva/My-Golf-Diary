@@ -23,6 +23,26 @@ bool isSignInCancelled(String? message) => message == kSignInCancelled;
 
 bool isAccountLinkConflict(String? message) => message == kAccountLinkConflict;
 
+/// Web [GoogleSignIn.signIn] ends the account popup with an access token and
+/// no ID token. The plugin then calls the People API for a synthetic profile.
+/// That call throws, or Firebase rejects the token-less credential, and the
+/// sheet shows "Google sign-in failed." Web sign-in uses
+/// [FirebaseAuth.signInWithPopup], which receives Google's ID token.
+bool googleSignInPluginReturnsIdToken({required bool isWeb}) => !isWeb;
+
+/// Popup outcomes that are not a failed Google account.
+String? googlePopupFailure(String code) {
+  switch (code) {
+    case 'popup-closed-by-user':
+    case 'cancelled-popup-request':
+      return kSignInCancelled;
+    case 'popup-blocked':
+      return 'The browser blocked the Google sign-in window. Allow pop-ups and try again.';
+    default:
+      return null;
+  }
+}
+
 /// Firebase Auth + Google sign-in; passwords never touch SQLite.
 class AccountAuthController extends ChangeNotifier {
   AccountAuthController({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
@@ -173,7 +193,11 @@ class AccountAuthController extends ChangeNotifier {
     if (auth != null) {
       await auth.signOut();
     }
-    await _google.signOut();
+    try {
+      await _google.signOut();
+    } catch (e, stack) {
+      debugPrint('Google sign-out failed: $e\n$stack');
+    }
     _clearPending();
     _conflictAdopted = false;
     _binder.adopt(null);
@@ -190,13 +214,20 @@ class AccountAuthController extends ChangeNotifier {
       return 'Firebase is not configured on this device.';
     }
     _ensureListening();
+    if (!googleSignInPluginReturnsIdToken(isWeb: kIsWeb)) {
+      return _signInWithGooglePopup(auth);
+    }
     try {
       final googleUser = await _google.signIn();
       if (googleUser == null) return kSignInCancelled;
       final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return 'Google did not return a sign-in token. Try again.';
+      }
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        idToken: idToken,
       );
       final current = auth.currentUser;
       if (current != null && current.isAnonymous) {
@@ -217,6 +248,39 @@ class AccountAuthController extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       if (_isLinkConflict(e)) {
+        return kAccountLinkConflict;
+      }
+      return _messageForAuthError(e);
+    } catch (e, stack) {
+      debugPrint('signInWithGoogle failed: $e\n$stack');
+      if (kDebugMode) {
+        return 'Google sign-in failed: $e';
+      }
+      return 'Google sign-in failed. Try again.';
+    }
+  }
+
+  /// Web Google sign-in. The popup credential includes the ID token Firebase needs.
+  Future<String?> _signInWithGooglePopup(FirebaseAuth auth) async {
+    final provider = GoogleAuthProvider()
+      ..setCustomParameters(<dynamic, dynamic>{'prompt': 'select_account'});
+    try {
+      final current = auth.currentUser;
+      final UserCredential signedIn;
+      if (current != null && current.isAnonymous) {
+        signedIn = await current.linkWithPopup(provider);
+      } else {
+        signedIn = await auth.signInWithPopup(provider);
+      }
+      _clearPending();
+      await _adoptSignedInUser(signedIn.user ?? auth.currentUser);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      final popup = googlePopupFailure(e.code);
+      if (popup != null) return popup;
+      if (_isLinkConflict(e)) {
+        final pending = e.credential;
+        if (pending != null) _rememberCredential(pending);
         return kAccountLinkConflict;
       }
       return _messageForAuthError(e);

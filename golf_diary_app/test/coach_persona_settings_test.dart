@@ -1,0 +1,66 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:golf_diary_app/models/golfer_profile.dart';
+import 'package:golf_diary_app/screens/golfer_profile_settings_screen.dart';
+import 'package:golf_diary_app/services/coach_persona_store.dart';
+import 'package:golf_diary_app/services/swing_diary_prompt.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  bool isChecked(WidgetTester tester, CoachPersona persona) {
+    final tile = tester.widget<RadioListTile<CoachPersona>>(
+      find.byKey(ValueKey('profile-coach-persona-${persona.id}')),
+    );
+    // ignore: deprecated_member_use
+    return tile.checked;
+  }
+
+  Future<void> pumpSettings(WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: GolferProfileSettingsScreen(
+          initialProfile: GolferProfile(skillTier: GolferSkillTier.amateur),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('profile-coach-persona-golf-lady')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test('store defaults to golf-pro and round-trips a choice', () async {
+    const store = CoachPersonaStore();
+    expect(await store.load(), CoachPersona.golfPro);
+    await store.save(CoachPersona.golfLady);
+    expect(await store.load(), CoachPersona.golfLady);
+  });
+
+  testWidgets('Settings lists three coaches with golf-pro selected by default',
+      (tester) async {
+    await pumpSettings(tester);
+    for (final persona in CoachPersona.values) {
+      expect(find.byKey(ValueKey('profile-coach-persona-${persona.id}')),
+          findsOneWidget);
+    }
+    expect(isChecked(tester, CoachPersona.golfPro), isTrue);
+    expect(isChecked(tester, CoachPersona.golfBuddy), isFalse);
+  });
+
+  testWidgets('picking a coach saves it on this device', (tester) async {
+    await pumpSettings(tester);
+    await tester
+        .tap(find.byKey(const ValueKey('profile-coach-persona-golf-buddy')));
+    await tester.pumpAndSettle();
+    expect(isChecked(tester, CoachPersona.golfBuddy), isTrue);
+    expect(await const CoachPersonaStore().load(), CoachPersona.golfBuddy);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSettings(tester);
+    expect(isChecked(tester, CoachPersona.golfBuddy), isTrue);
+  });
+}

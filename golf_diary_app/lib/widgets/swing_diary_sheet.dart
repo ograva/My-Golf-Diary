@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/diary_context_note.dart';
 import '../models/golfer_profile.dart';
 import '../services/account_auth_controller.dart';
+import '../services/coach_persona_store.dart';
 import '../services/diary_model.dart';
 import '../services/golfer_profile_service.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
 import 'diary_markdown_body.dart';
+import 'golf_putt_loader.dart';
 import 'golfer_avatar_circle.dart';
 import 'golfer_baseline_sheet.dart';
 
@@ -19,10 +21,12 @@ class SwingDiarySheet extends StatefulWidget {
     required this.diary,
     required this.store,
     this.entrySource,
+    this.personaStore = const CoachPersonaStore(),
   });
 
   final DiaryModel diary;
   final SwingDiaryService store;
+  final CoachPersonaStore personaStore;
 
   /// Tab that opened the diary. The thread is shared; callers still name the source.
   final DiaryContextSource? entrySource;
@@ -99,7 +103,11 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
       _errorMessage = null;
     });
     try {
-      final plan = await widget.store.preparePrompt(question: question);
+      final persona = await widget.personaStore.load();
+      final plan = await widget.store.preparePrompt(
+        question: question,
+        persona: persona,
+      );
       if (cancel.isCancelled) throw const DiaryCancelled();
       if (!mounted) return;
       final buffer = StringBuffer();
@@ -224,11 +232,10 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
             style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
             onPressed: canSend ? () => _send(_composer.text) : null,
             icon: _busy
-                ? const SizedBox(
+                ? const GolfPuttLoader(
                     key: ValueKey('diary-send-busy'),
-                    width: 20,
+                    width: 32,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.arrow_upward),
           ),
@@ -321,6 +328,21 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                                       : Text(message.content),
                                 ),
                               if (_optedIn) ...[
+                                if (_busy && _draft.isEmpty)
+                                  const ListTile(
+                                    key: ValueKey('diary-golf-loader'),
+                                    title: Text('Evaluation'),
+                                    subtitle: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(top: 8),
+                                        child: GolfPuttLoader(
+                                          width: 120,
+                                          height: 32,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 if (_draft.isNotEmpty)
                                   ListTile(
                                     key: const ValueKey('diary-eval-draft'),

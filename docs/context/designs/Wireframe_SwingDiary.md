@@ -34,7 +34,9 @@ Compile from Range (**Save and evaluate session**) does **not** auto-open this s
 └─────────────────────────────────────────┘
 ```
 
-Composer: `surfaceContainerHigh`, 24dp radius, `minLines: 1`, `maxLines: 6`, wrap while typing. Send disabled when empty or `_busy`; busy state shows 20dp `CircularProgressIndicator` (`diary-send-busy`).
+Composer: `surfaceContainerHigh`, 24dp radius, `minLines: 1`, `maxLines: 6`, wrap while typing. Send disabled when empty or `_busy`; busy state shows a 32×20dp `GolfPuttLoader` in the send button (`diary-send-busy`): a ball rolls along a `primary` line and drops into the cup beside a pin flag. Until the first streamed chunk arrives, a larger 120×32dp loader sits in an **Evaluation** row in the thread (`diary-golf-loader`).
+
+Coach voice comes from Settings → Golfer profile → **Swing diary coach** (golf-pro default). The sheet has no persona control.
 
 ### Opt-in gate (first model use)
 
@@ -56,7 +58,8 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 | :--- | :--- |
 | `ListView` | Thread messages |
 | `TextField` | `diary-composer-field` |
-| `IconButton` | `diary-send-btn` / busy spinner |
+| `IconButton` | `diary-send-btn` / busy putt loader |
+| `GolfPuttLoader` | `diary-send-busy`, `diary-golf-loader` |
 | `TextButton` | `diary-evaluation-log-btn`, baseline, lead-ins |
 | `_EvaluationLog` | `diary-evaluation-log` reader |
 
@@ -78,7 +81,7 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 | Shell entry | `diary-entry-bag`, `diary-entry-range`, `diary-entry-on-course`, `diary-entry-scorecard` |
 | Composer | `diary-composer-field` |
 | Send | `diary-send-btn` |
-| Busy | `diary-send-busy` |
+| Busy | `diary-send-busy` (send button), `diary-golf-loader` (thread row before first chunk) |
 | Message | `diary-message-{id}` |
 | Eval log | `diary-evaluation-log-btn`, `diary-evaluation-log` |
 | Opt-in | `diary-opt-in-continue`, `diary-opt-in-dismiss` |

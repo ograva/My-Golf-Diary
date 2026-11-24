@@ -15,13 +15,15 @@ const kDiaryTokenCeiling = 250000;
 const kDiaryRecentWindowDays = 30;
 const kDiaryRecentWindowLogs = 36;
 
-/// Universal coaching method. The golfer's own baseline is assembled separately.
-const String kCoachMethodologyPrompt = r'''
+/// Shared coach role. Every persona carries the same expertise.
+const String kCoachRolePrompt = r'''
 # Role & Persona
 You are an elite, empathetic Golf Biomechanics Coach, Performance Physiotherapist, and Caddie Strategist. Your primary purpose is to process, analyze, and structure the golfer's practice logs, compiled range sessions, bag yardages, and swing notes into actionable mechanical refinements, injury-prevention protocols, and mental anchors.
+''';
 
-Your tone is grounded, analytical, encouraging, and practical—like a trusted Tour caddie combined with a sports biomechanist. Avoid generic beginner clichés; connect every swing feel directly to physics, kinetic sequencing, logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
-
+/// Shared technical core. Personas never edit this text, so the depth of
+/// advice is identical whichever voice is selected.
+const String kCoachCorePrompt = r'''
 # Data Grounding & Units
 - Report all distances in **yards**.
 - Base every yardage, shot count, dispersion spread, venue observation, and trend strictly on the golfer's logged SQLite records and the Golfer Profile below. Never fabricate unlogged numbers, sessions, venues, clubs, injuries, or swing methods.
@@ -41,6 +43,64 @@ Whenever the golfer submits a session evaluation request, diary note, follow-up 
 - Use compact Markdown tables (2–4 columns) for club adjustments, yardage deltas, and fault-to-fix matrices.
 - Keep drills to 3–5 minutes, doable in a low-ceiling room or on a range mat.
 ''';
+
+const String _golfProVoice = r'''
+Your tone is grounded, analytical, encouraging, and practical—like a trusted Tour caddie combined with a sports biomechanist. Avoid generic beginner clichés; connect every swing feel directly to physics, kinetic sequencing, logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
+''';
+
+const String _golfBuddyVoice = r'''
+Your voice is the golfer's playing partner who happens to play at a Tour level: a friend on the next mat, not a lecturer. Explain in fellow-amateur language—"your hips are beating your arms to the ball" rather than "early pelvic rotation without thoracic lag". When a technical term matters (kinetic sequence, face-to-path, low point), say it once and unpack it in a short plain phrase. Reach for shared amateur moments: weekend rounds, a bucket at the range, first-tee nerves, the swing thought that works for three holes and then vanishes. Stay warm and direct, a little banter is fine, but keep the same diagnosis, numbers, drills, and Diary Anchor a Tour coach would give: connect every swing feel to cause-and-effect mechanics, the logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
+''';
+
+const String _golfLadyVoice = r'''
+Your voice is a woman Tour-level teaching professional. Your wording sits between a fellow amateur and a technical Tour coach: name the precise mechanic, then explain it in one clear, conversational sentence. Draw on references that resonate with women golfers when they fit the logged data: LPGA and women's tour swings and tempo, building clubhead speed through sequencing, ground force, and turn rather than muscle, fairway woods and hybrids in the long game, forward-tee course strategy, flexibility and joint care, and equipment fit (shaft flex and weight, grip size). Never assume the golfer's gender, speed, or equipment beyond what is recorded. Keep the same diagnosis, numbers, drills, and Diary Anchor as any Tour coach: connect every swing feel to physics, kinetic sequencing, the logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
+''';
+
+/// Selectable swing diary coach. Only the voice section differs.
+enum CoachPersona {
+  golfPro(
+    'golf-pro',
+    'Golf pro',
+    'Technical Tour coach for the amateur who wants every detail.',
+    _golfProVoice,
+  ),
+  golfBuddy(
+    'golf-buddy',
+    'Golf buddy',
+    'A friend who plays at a pro level and talks like a fellow amateur.',
+    _golfBuddyVoice,
+  ),
+  golfLady(
+    'golf-lady',
+    'Golf lady',
+    'A woman golf pro with references suited to women golfers.',
+    _golfLadyVoice,
+  );
+
+  const CoachPersona(this.id, this.label, this.blurb, this.voice);
+
+  final String id;
+  final String label;
+  final String blurb;
+  final String voice;
+
+  static const CoachPersona defaultPersona = CoachPersona.golfPro;
+
+  static CoachPersona fromId(String? id) => CoachPersona.values.firstWhere(
+        (persona) => persona.id == id,
+        orElse: () => defaultPersona,
+      );
+}
+
+/// Coach role, persona voice, then the shared technical core.
+String coachMethodologyPrompt([
+  CoachPersona persona = CoachPersona.defaultPersona,
+]) =>
+    '${kCoachRolePrompt.trim()}\n\n${persona.voice.trim()}\n\n${kCoachCorePrompt.trim()}\n';
+
+/// Universal coaching method in the default golf-pro voice. The golfer's own
+/// baseline is assembled separately.
+final String kCoachMethodologyPrompt = coachMethodologyPrompt();
 
 String _recorded(String value) {
   final trimmed = value.trim();
@@ -65,9 +125,10 @@ String buildDiarySystemInstruction({
   required GolferProfile profile,
   required List<Club> clubs,
   required List<String> frequentVenues,
+  CoachPersona persona = CoachPersona.defaultPersona,
 }) {
   final buffer = StringBuffer()
-    ..writeln(kCoachMethodologyPrompt.trim())
+    ..writeln(coachMethodologyPrompt(persona).trim())
     ..writeln()
     ..writeln('# Golfer Profile & Established Baseline')
     ..writeln(
@@ -147,6 +208,7 @@ class DiaryPromptInput {
     this.progressBrief,
     this.question = '',
     this.systemPrompt,
+    this.persona = CoachPersona.defaultPersona,
     this.tokenCeiling = kDiaryTokenCeiling,
   });
 
@@ -164,6 +226,7 @@ class DiaryPromptInput {
 
   /// When null, the system text is built from [profile], [clubs], and [frequentVenues].
   final String? systemPrompt;
+  final CoachPersona persona;
   final int tokenCeiling;
 }
 
@@ -191,6 +254,7 @@ DiaryPromptPlan planDiaryPrompt(DiaryPromptInput input) {
             profile: input.profile,
             clubs: input.clubs,
             frequentVenues: input.frequentVenues,
+            persona: input.persona,
           ))
       .trim();
   final systemTokens = estimateDiaryTokens(system);

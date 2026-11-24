@@ -15,10 +15,13 @@ import 'package:golf_diary_app/screens/home_shell.dart';
 import 'package:golf_diary_app/services/diary_model.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/services/golfer_profile_store.dart';
+import 'package:golf_diary_app/services/swing_diary_prompt.dart';
 import 'package:golf_diary_app/services/swing_diary_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+import 'package:golf_diary_app/widgets/golf_putt_loader.dart';
 import 'package:golf_diary_app/widgets/swing_diary_sheet.dart';
 import 'package:path/path.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class FakeDiaryModel implements DiaryModel {
@@ -400,6 +403,9 @@ void main() {
 
     await askDiary(tester);
     expect(find.byKey(const ValueKey('diary-send-busy')), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-golf-loader')), findsOneWidget);
+    expect(find.byType(GolfPuttLoader), findsNWidgets(2));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byKey(const ValueKey('diary-eval-debug')), findsNothing);
     expect(find.text('Waiting for Vertex'), findsNothing);
     expect(find.byKey(const ValueKey('diary-eval-cancel')), findsOneWidget);
@@ -411,6 +417,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('diary-send-busy')), findsNothing);
+    expect(find.byKey(const ValueKey('diary-golf-loader')), findsNothing);
     expect(find.textContaining('phase='), findsNothing);
     final evaluations =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
@@ -418,6 +425,30 @@ void main() {
     final send = tester
         .widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNotNull);
+  });
+
+  testWidgets('send uses the coach persona saved in Settings', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues(
+        {'swing_diary_coach_persona': 'golf-buddy'});
+    addTearDown(() => SharedPreferences.setMockInitialValues({}));
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(seedTodayDrill);
+    final model = FakeDiaryModel();
+    await pumpRange(tester, model);
+    await openDiary(tester);
+
+    await askDiary(tester);
+
+    expect(model.calls, 1);
+    expect(model.lastSystemInstruction, contains('playing partner'));
+    expect(model.lastSystemInstruction, contains(kCoachCorePrompt.trim()));
+    expect(model.lastSystemInstruction,
+        isNot(contains('like a trusted Tour caddie combined')));
   });
 
   testWidgets('a failed evaluation can be tried again', (tester) async {

@@ -4,8 +4,8 @@ import 'package:golf_diary_app/data/ph_golf_catalog.dart';
 import 'package:golf_diary_app/models/caddy_session.dart';
 import 'package:golf_diary_app/models/scoring_format.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
+import 'package:golf_diary_app/widgets/course_round_dialog.dart';
 import 'package:golf_diary_app/widgets/scorecard_cart_panel.dart';
-import 'package:golf_diary_app/widgets/scorecard_format_bar.dart';
 import 'package:golf_diary_app/services/caddy_event_applier.dart';
 import 'package:golf_diary_app/services/caddy_pairing_service.dart';
 import 'package:golf_diary_app/services/caddy_round_channel_store.dart';
@@ -307,8 +307,7 @@ void main() {
     expect((await db.getRoundFormat(roundId)).attestedRole, 'caddy');
   });
 
-  testWidgets('scorecard shows the format total', (tester) async {
-    ScoringFormat selected = ScoringFormat.gross;
+  testWidgets('course dialog holds the format controls', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -316,53 +315,59 @@ void main() {
       MaterialApp(
         theme: buildGolfTheme(),
         home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setLocal) => ListView(
-              children: [
-                ScorecardFormatBar(
-                  settings: RoundFormatSettings(
-                    roundId: 'round',
-                    format: selected,
-                  ),
-                  summary: selected == ScoringFormat.molave ? 'Molave 0' : 'Gross 0',
-                  handicap: 12.4,
-                  onFormat: (format) => setLocal(() => selected = format),
-                  onDoubleEagle: (_) {},
-                  onRating: (_, __) {},
-                  onAttest: () {},
-                ),
-                ScorecardCartPanel(
-                  courseName: 'Local Course',
-                  holeCount: 18,
-                  selectedHole: 1,
-                  totals: null,
-                  holeRow: (_) => null,
-                  highContrast: false,
-                  onHoleSelected: (_) {},
-                  onPlusStroke: () {},
-                  onPenalty: () {},
-                  onMulligan: () {},
-                  onGimme: () {},
-                  onHighContrastChanged: (_) {},
-                  formatSummary: selected == ScoringFormat.molave
-                      ? 'Molave 0'
-                      : 'Gross 0',
-                ),
-              ],
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showCourseRoundDialog(
+                context: context,
+                initial: const CourseRoundValues(courseName: 'Local Course'),
+                recentNames: const [],
+              ),
+              child: const Text('Open'),
             ),
           ),
         ),
       ),
     );
-    await tester.pump();
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
 
+    expect(find.text('Course'), findsOneWidget);
     expect(find.byKey(const ValueKey('scorecard-format-toggle')), findsOneWidget);
-    expect(find.text('Gross 0'), findsWidgets);
-    expect(find.text('Unofficial estimate 12.4'), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-course-rating')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-slope')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-double-eagle-7')), findsNothing);
+    expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsNothing);
+
     await tester.tap(find.text('Molave'));
     await tester.pump();
-    expect(find.text('Molave 0'), findsWidgets);
-    expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-double-eagle-7')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-double-eagle-6')), findsOneWidget);
+  });
+
+  testWidgets('cart panel keeps the format total', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildGolfTheme(),
+        home: Scaffold(
+          body: ScorecardCartPanel(
+            courseName: 'Local Course',
+            holeCount: 18,
+            selectedHole: 1,
+            totals: null,
+            holeRow: (_) => null,
+            highContrast: false,
+            onHoleSelected: (_) {},
+            onPlusStroke: () {},
+            onPenalty: () {},
+            onMulligan: () {},
+            onGimme: () {},
+            onHighContrastChanged: (_) {},
+            formatSummary: 'Gross 0',
+          ),
+        ),
+      ),
+    );
     expect(find.byKey(const ValueKey('scorecard-cart-format-total')), findsOneWidget);
+    expect(find.text('Gross 0'), findsOneWidget);
   });
 }

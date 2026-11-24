@@ -15,6 +15,7 @@ class VenueNameField extends StatefulWidget {
     this.onSelected,
     this.onSubmitted,
     this.autofocus = false,
+    this.fieldKey,
   });
 
   final TextEditingController controller;
@@ -27,6 +28,7 @@ class VenueNameField extends StatefulWidget {
   final ValueChanged<String>? onSelected;
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+  final Key? fieldKey;
 
   @override
   State<VenueNameField> createState() => _VenueNameFieldState();
@@ -105,6 +107,7 @@ class _VenueNameFieldState extends State<VenueNameField> {
           },
           fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
             return TextField(
+              key: widget.fieldKey,
               controller: controller,
               focusNode: focusNode,
               decoration: InputDecoration(

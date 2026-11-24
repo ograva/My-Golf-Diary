@@ -5,7 +5,7 @@
 | **Widget** | `ScorecardScreen` / `ScorecardScreenState` |
 | **Stories** | [SCOR-001](../../stories/SCOR/SCOR-001-view-rounds-grid.md), [SCOR-003](../../stories/SCOR/SCOR-003-concede-visibility.md), [SCOR-004](../../stories/SCOR/SCOR-004-cart-scoring.md), [MGDV-601](../../stories/MGDV/MGDV-601-scoring-formats-epic.md) |
 | **Persona** | Rory verifying the card after the hole |
-| **Status** | As-built + format extensions ([Wireframe_ScorecardFormats.md](./Wireframe_ScorecardFormats.md)) |
+| **Status** | Layout matches On Course. Format and course name share one dialog ([Wireframe_ScorecardFormats.md](./Wireframe_ScorecardFormats.md), [Wireframe_NewRound.md](./Wireframe_NewRound.md)) |
 
 ## 1. Screen purpose
 
@@ -15,9 +15,10 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 
 ```
 ┌─────────────────────────────┐
-│ Scorecard                   │  no refresh icon; pull to refresh
-├─────────────────────────────┤
-│ Local Course                │  headlineSmall
+│ [⋮] Scorecard   [book][acct]│  ⋮ = caddy, flight. book = diary
+│ Wack Wack — East ✎ [Cl|Cart]│  scorecard-course-summary
+│ 18 holes · par 72           │
+│ Molave · double eagle 7     │  indicators, not controls
 │ [Today · Local] [Yesterday] │  only if more than one round
 │ ┌─────┬─────┬─────┐         │
 │ │ OUT │ IN  │ TOT │         │  tabular
@@ -25,8 +26,6 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 │ │ +2  │ +4  │ +6  │         │  positive / negative / E
 │ └─────┴─────┴─────┘         │
 │ Penalties 2 · Mulligans 1   │  mulligans labeled "practice"
-│ [ Gross | Molave | System 36 ]              │  see ScorecardFormats wireframe
-│ [ Attest card ]  [ Flight ]                 │  scorecard-attest-btn, scorecard-flight-btn
 │ FRONT 9                     │
 │ ┌───┬───┬───┐               │
 │ │ 1 │ 2 │ 3 │               │  tile ≥ 72×64, tap target ≥48
@@ -34,9 +33,13 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 │ │ E │+1 │ — │               │
 │ └───┴───┴───┘               │
 │ BACK 9                      │  same 3×3
+│ Attested by Pat · marker    │  only when every hole is played
+│ [ Attest card ]             │  scorecard-attest-btn, same gate
 │ [ Start new round ]         │  outlined
 └─────────────────────────────┘
 ```
+
+The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wireframe_NewRound.md)). Classic | Cart sits on that row. Format, double eagle, rating, and slope are not controls on the card. Attest sits under the grids or the cart panel, and only after every hole on the card is played (`isHolePlayed`, including a gimme). Flight is in the leading ⋮ with Invite caddy. Diary and the account avatar stay pinned.
 
 Each tile:
 
@@ -113,6 +116,7 @@ flowchart TD
 
 | Element | ValueKey | Widget |
 | :--- | :--- | :--- |
+| Course name | `scorecard-course-summary` | `InkWell` |
 | Round chip | `scorecard-round-chip-{roundId}` | `ChoiceChip` |
 | Summary banner | `scorecard-summary-banner` | `Card` |
 | Hole tile | `scorecard-hole-tile-{n}` | `InkWell` |

@@ -21,11 +21,11 @@ import '../services/on_course_settings.dart';
 import '../services/pin_distance.dart';
 import '../services/swing_diary_service.dart';
 import '../widgets/account_avatar_app_bar_menu.dart';
+import '../widgets/course_round_dialog.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/fwy_hole_map.dart';
 import '../widgets/fwy_overlays.dart';
 import '../widgets/shared_header_actions.dart';
-import '../widgets/venue_name_field.dart';
 import '../theme/app_theme.dart';
 
 class FairwayTrackerScreen extends StatefulWidget {
@@ -77,7 +77,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   int _holeCount = 18;
   int _par = 4;
   String _appliedCourseName = 'Local Course';
-  List<String> _recentCourses = [];
   Club? _selectedClub;
   String _lieType = 'tee';
   RoundScore? _holeScore;
@@ -280,7 +279,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     _railSide = await OnCourseSettings.instance.railSide();
     _gpsMode = await OnCourseSettings.instance.gpsMode();
     _clubs = await LocalDatabaseService.instance.getAllClubs();
-    _recentCourses = await LocalDatabaseService.instance.distinctCourseNames();
     _roundId = await LocalDatabaseService.instance.ensureActiveRound(
       courseName: _courseController.text.trim().isEmpty
           ? 'Local Course'
@@ -323,7 +321,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (!mounted || active == null) return;
     _roundId = active;
     _clubs = await LocalDatabaseService.instance.getAllClubs();
-    _recentCourses = await LocalDatabaseService.instance.distinctCourseNames();
     await _loadCourseName();
     _courseReady = true;
     await _restoreHole();
@@ -678,53 +675,50 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     );
   }
 
-  Future<void> _openCourseSheet() async {
-    await showModalBottomSheet<void>(
+  Future<void> _openCourseDialog() async {
+    final db = LocalDatabaseService.instance;
+    final roundId = _roundId;
+    final settings = roundId == null
+        ? const RoundFormatSettings(roundId: '')
+        : await db.getRoundFormat(roundId);
+    final recent = await db.distinctCourseNames();
+    if (!mounted) return;
+    final result = await showCourseRoundDialog(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        void apply() {
-          _persistCourseName();
-          if (ModalRoute.of(sheetContext)?.isCurrent ?? false) {
-            Navigator.of(sheetContext).pop();
-          }
-        }
-
-        return Padding(
-          key: const ValueKey('oncourse-course-sheet'),
-          padding: EdgeInsets.fromLTRB(
-            16,
-            0,
-            16,
-            16 + MediaQuery.viewInsetsOf(sheetContext).bottom,
-          ),
-          child: SizedBox(
-            height: 320,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Course',
-                    style: Theme.of(sheetContext).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                VenueNameField(
-                  key: const ValueKey('oncourse-course-name-field'),
-                  controller: _courseController,
-                  focusNode: _courseFocus,
-                  labelText: 'Course name',
-                  recentNames: _recentCourses,
-                  catalogNames: PhGolfCatalog.courseNames,
-                  captionFor: PhGolfCatalog.courseCaption,
-                  onSelected: (_) => apply(),
-                  onSubmitted: (_) => apply(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      initial: CourseRoundValues(
+        courseName: _appliedCourseName,
+        format: settings.format,
+        molaveDoubleEaglePoints: settings.molaveDoubleEaglePoints,
+        courseRating: settings.courseRating,
+        slopeRating: settings.slopeRating,
+      ),
+      recentNames: recent,
     );
+    if (result == null || !mounted) return;
+    var id = _roundId;
+    if (id == null) {
+      id = await db.ensureActiveRound(courseName: result.courseName);
+      if (!mounted) return;
+      setState(() => _roundId = id);
+    }
+    final current = await db.getRoundFormat(id);
+    if (!courseRoundChanged(
+      courseName: _appliedCourseName,
+      settings: current,
+      next: result,
+    )) {
+      return;
+    }
+    if (current.isAttested) {
+      if (!mounted) return;
+      final ok = await showAttestedEditConfirm(context);
+      if (!ok || !mounted) return;
+      await db.invalidateAttestation(id);
+    }
+    _courseController.text = result.courseName;
     await _persistCourseName();
+    if (!mounted) return;
+    await db.saveRoundFormat(applyCourseRoundValues(current, result));
   }
 
   Future<void> _openHoleSheet(int strokes, int penalties, int score) async {
@@ -1121,7 +1115,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         : '${course!.holes} holes · Par ${course.totalPar}';
     final summary = InkWell(
       key: const ValueKey('oncourse-course-summary'),
-      onTap: _openCourseSheet,
+      onTap: _openCourseDialog,
       borderRadius: BorderRadius.circular(8),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 40),
@@ -1682,7 +1676,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 Expanded(
                   child: InkWell(
                     key: const ValueKey('oncourse-course-summary'),
-                    onTap: _openCourseSheet,
+                    onTap: _openCourseDialog,
                     borderRadius: BorderRadius.circular(8),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 40),

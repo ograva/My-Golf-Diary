@@ -34,14 +34,14 @@ Tokens in `app_theme.dart` match `tools/map_pack/render.py`. Use for `FwyHoleMap
 | Send | `diary-send-btn`; busy → `diary-send-busy` (20dp spinner) |
 | Do not | Feedback / Summarize buttons in main thread |
 
-### Scorecard format bar (`ScorecardFormatBar`)
+### Shared course dialog (`showCourseRoundDialog`)
 
 | Property | Value |
 | :--- | :--- |
-| Control | `SegmentedButton` Gross / Molave / System 36 (`scorecard-format-toggle`) |
-| Summary | `scorecard-format-total` — tabular-friendly line under toggle |
-| Attest | `scorecard-attest-badge` + text button; unofficial handicap uses `scorecard-handicap-estimate` label prefix |
-| Flight entry | `scorecard-flight-btn` opens modal sheet |
+| Control | `SegmentedButton` Gross / Molave / System 36 (`scorecard-format-toggle`), used by Scorecard and On Course |
+| Indicators | Format name under the course name. `scorecard-format-total` stays on the summary banner |
+| Attest | Below the card, only when every hole is played (`scorecard-attest-badge`). Handicap prefix `scorecard-handicap-estimate` |
+| Flight entry | Leading overflow `scorecard-flight-btn` |
 
 ### Range shot total (`range-shot-total`)
 

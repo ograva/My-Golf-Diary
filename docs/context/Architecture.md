@@ -123,7 +123,7 @@ golf_diary_app/ios/Runner/Info.plist
 | :--- | :--- | :--- |
 | `BAG` | `clubs_screen.dart` stat-tile cards (`MGDV-203`) | `clubs`; reads `golfer_profile` for yardage labels |
 | `CRSE` | `fairway_tracker_screen.dart`, `fwy_hole_map.dart`, `fwy_overlays.dart`, `venue_name_field.dart` | `shots` (+ `aim_direction`, sim optional cols v15), `round_scores`, `golf_rounds`; `CourseMapCacheService` + `course_map_manifest.dart`; coords catalog `CRSE-005`; FWY `CRSE-036` / SIM `CRSE-035` |
-| `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart`, `scorecard_hole_editor.dart`, `scorecard_format_bar.dart`, `flight_sheet.dart` | `round_scores` (+ `paid_mulligans` v17), `golf_rounds` (+ format, attestation, rating/slope v17); `scoring_format.dart` (derived totals); `golfer_profile` view prefs |
+| `SCOR` | `scorecard_screen.dart`, `scorecard_cart_panel.dart`, `scorecard_hole_editor.dart`, `course_round_dialog.dart`, `flight_sheet.dart` | `round_scores` (+ `paid_mulligans` v17), `golf_rounds` (+ format, attestation, rating/slope v17); `scoring_format.dart` (derived totals); `golfer_profile` view prefs |
 | `RNGE` | `range_drill_screen.dart` (`range-shot-total` cycle), `SwingDiarySheet` (bottom composer) | `range_drills`, `practice_drills`, `range_sessions`; diary tables (`swing_diary_messages`, `range_evaluations`, `diary_settings`) |
 | `SYNC` | `account_avatar_app_bar_menu.dart`, `account_auth_controller.dart`, `diary_sync_runner.dart` | `CloudSyncService` → Firestore; `SyncIdentity`; Storage pack reads; `google_sign_in` |
 | `PWA` | `pwa_service_worker.js`, `PwaUpdateHost`, `tool/build_web.sh` | Precache manifest; `main.dart` optional Firebase (`unawaited(_startOptionalCloud())`) |

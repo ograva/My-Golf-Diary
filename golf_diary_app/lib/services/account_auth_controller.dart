@@ -160,13 +160,20 @@ class AccountAuthController extends ChangeNotifier {
     _sub = null;
   }
 
+  UserInfo? _googleProfile(User user) {
+    for (final info in user.providerData) {
+      if (info.providerId == 'google.com') return info;
+    }
+    return null;
+  }
+
   AuthUserSnapshot? _snapshot(User? user) {
     if (user == null) return null;
     return AuthUserSnapshot(
       uid: user.uid,
       email: user.email,
-      displayName: user.displayName,
-      photoUrl: user.photoURL,
+      displayName: user.displayName ?? _googleProfile(user)?.displayName,
+      photoUrl: _googleProfile(user)?.photoURL ?? user.photoURL,
       isAnonymous: user.isAnonymous,
       isEmailVerified: user.emailVerified,
       providerIds: [

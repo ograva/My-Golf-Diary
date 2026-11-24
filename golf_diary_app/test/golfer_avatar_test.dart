@@ -134,10 +134,24 @@ void main() {
       skillTier: GolferSkillTier.amateur,
     );
 
-    test('Google photo beats illustrated avatar', () {
+    test('Google photo beats the automatic illustrated avatar', () {
       expect(
         resolveGolferAvatarSource(session: _googleSession, profile: amateur),
         GolferAvatarSource.accountPhoto,
+      );
+    });
+
+    test('an explicit preset beats the Google photo', () {
+      expect(
+        resolveGolferAvatarSource(
+          session: _googleSession,
+          profile: const GolferProfile(
+            gender: GolferGender.female,
+            skillTier: GolferSkillTier.amateur,
+            avatarChoice: 'female_amateur_alt',
+          ),
+        ),
+        GolferAvatarSource.illustrated,
       );
     });
 
@@ -217,6 +231,24 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('chosen preset replaces a signed-in Google photo',
+        (tester) async {
+      await pumpHeader(
+        tester,
+        session: _googleSession,
+        profile: const GolferProfile(
+          gender: GolferGender.female,
+          skillTier: GolferSkillTier.amateur,
+          avatarChoice: 'female_amateur_alt',
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('golfer-avatar-female_amateur_alt')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('golfer-avatar-photo')), findsNothing);
     });
 
     testWidgets('shows chosen alternate avatar', (tester) async {

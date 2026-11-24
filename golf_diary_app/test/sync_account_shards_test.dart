@@ -121,13 +121,24 @@ void main() {
       );
     });
 
-    test('profile and later diary tables are not in kSyncTables yet', () {
+    test('swing diary tables are in the sync set', () {
+      expect(
+        kSyncTables,
+        containsAll([
+          'range_sessions',
+          'diary_context_notes',
+          'swing_diary_messages',
+          'range_evaluations',
+        ]),
+      );
+    });
+
+    test('profile, rounds, drills, and diary opt-in are not in kSyncTables yet',
+        () {
       expect(kSyncTables, isNot(contains('golfer_profile')));
       expect(kSyncTables, isNot(contains('golf_rounds')));
       expect(kSyncTables, isNot(contains('practice_drills')));
-      expect(kSyncTables, isNot(contains('range_sessions')));
-      expect(kSyncTables, isNot(contains('swing_diary_messages')));
-      expect(kSyncTables, isNot(contains('range_evaluations')));
+      expect(kSyncTables, isNot(contains('diary_settings')));
     });
   });
 

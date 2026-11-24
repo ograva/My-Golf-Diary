@@ -1903,6 +1903,14 @@ class LocalDatabaseService {
       }
     }
     await db.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    if (table == 'swing_diary_messages') {
+      // The golfer opted in when this thread was written on another device.
+      await db.insert(
+        'diary_settings',
+        {'id': 'local', 'opted_in': 1},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     if (table == 'round_scores') {
       final roundId = row['round_id'] as String?;
       if (roundId != null) {
@@ -2317,6 +2325,51 @@ class LocalDatabaseService {
       'venue_name',
       'drill_id',
       'session_id',
+      'timestamp',
+      'is_synced',
+      'updated_at_ms',
+      'deleted',
+    ],
+    'range_sessions': [
+      'id',
+      'venue_name',
+      'session_note',
+      'compiled_summary_json',
+      'timestamp',
+      'is_synced',
+      'updated_at_ms',
+      'deleted',
+    ],
+    'diary_context_notes': [
+      'id',
+      'source',
+      'content',
+      'context_date',
+      'round_id',
+      'timestamp',
+      'is_synced',
+      'updated_at_ms',
+      'deleted',
+    ],
+    'swing_diary_messages': [
+      'id',
+      'role',
+      'content',
+      'timestamp',
+      'is_synced',
+      'updated_at_ms',
+      'deleted',
+    ],
+    'range_evaluations': [
+      'id',
+      'kind',
+      'session_id',
+      'session_date',
+      'content',
+      'prompt_tokens',
+      'covered_through_ms',
+      'referenced_drill_ids_json',
+      'referenced_club_ids_json',
       'timestamp',
       'is_synced',
       'updated_at_ms',

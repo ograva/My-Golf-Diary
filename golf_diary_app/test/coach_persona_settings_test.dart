@@ -25,7 +25,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('profile-coach-persona-golf-lady')),
+      find.byKey(const ValueKey('profile-coach-persona-og-golf-pro')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
@@ -40,7 +40,7 @@ void main() {
     expect(await store.load(), CoachPersona.golfLady);
   });
 
-  testWidgets('Settings lists three coaches with golf-pro selected by default',
+  testWidgets('Settings lists four coaches with golf-pro selected by default',
       (tester) async {
     await pumpSettings(tester);
     for (final persona in CoachPersona.values) {
@@ -52,6 +52,8 @@ void main() {
     expect(find.text('Golf Pro'), findsOneWidget);
     expect(find.text('Golf Buddy'), findsOneWidget);
     expect(find.text('Golf Lady'), findsOneWidget);
+    expect(find.text('OG Golf Pro'), findsOneWidget);
+    expect(CoachPersona.values, hasLength(4));
     expect(
       find.text('Tour-level advice from a playing partner, in plain '
           'range-and-fairway talk.'),
@@ -62,13 +64,13 @@ void main() {
   testWidgets('picking a coach saves it on this device', (tester) async {
     await pumpSettings(tester);
     await tester
-        .tap(find.byKey(const ValueKey('profile-coach-persona-golf-buddy')));
+        .tap(find.byKey(const ValueKey('profile-coach-persona-og-golf-pro')));
     await tester.pumpAndSettle();
-    expect(isChecked(tester, CoachPersona.golfBuddy), isTrue);
-    expect(await const CoachPersonaStore().load(), CoachPersona.golfBuddy);
+    expect(isChecked(tester, CoachPersona.ogGolfPro), isTrue);
+    expect(await const CoachPersonaStore().load(), CoachPersona.ogGolfPro);
 
     await tester.pumpWidget(const SizedBox());
     await pumpSettings(tester);
-    expect(isChecked(tester, CoachPersona.golfBuddy), isTrue);
+    expect(isChecked(tester, CoachPersona.ogGolfPro), isTrue);
   });
 }

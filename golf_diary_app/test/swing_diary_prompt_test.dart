@@ -58,9 +58,12 @@ Your tone is grounded, analytical, encouraging, and practical—like a trusted T
       voices.add(persona.voice);
       expect(CoachPersona.fromId(persona.id), persona);
     }
-    expect(voices.length, 3);
+    expect(voices.length, 4);
     expect(CoachPersona.golfBuddy.voice, contains('fellow-amateur'));
     expect(CoachPersona.golfLady.voice, contains('women golfers'));
+    expect(CoachPersona.ogGolfPro.voice, contains('senior golfers'));
+    expect(CoachPersona.ogGolfPro.voice, contains('Never patronize'));
+    expect(CoachPersona.fromId('og-golf-pro'), CoachPersona.ogGolfPro);
     expect(CoachPersona.fromId('unknown'), CoachPersona.golfPro);
     expect(CoachPersona.fromId(null), CoachPersona.golfPro);
 

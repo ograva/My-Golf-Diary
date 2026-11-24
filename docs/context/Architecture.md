@@ -4,7 +4,8 @@
 
 | Version | Status | Date | Owner |
 | :--- | :--- | :--- | :--- |
-| 1.23 | Active | 2026-11-24 | Athena |
+| 1.24 | Active | 2026-11-24 | Athena |
+| 1.23 | Superseded | 2026-11-24 | Athena |
 | 1.22 | Superseded | 2026-11-24 | Athena |
 | 1.21 | Superseded | 2026-11-23 | Watson |
 | 1.20 | Superseded | 2026-11-23 | Watson |
@@ -375,7 +376,7 @@ sequenceDiagram
   App->>App: Save model entry in same thread
 ```
 
-**Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`; pulling a live `swing_diary_messages` row sets it, because the golfer opted in where that thread was written. One coach and one billing path, with three selectable **voices** (golf-pro default, golf-buddy, golf-lady) chosen in Settings and kept in device-only `shared_preferences` (not SQLite, not `syncFull`). Voices change only wording and references, never the method or depth.
+**Who pays.** Unchanged. `FirebaseAI.agentPlatform()` (the `firebase_ai` 5.1 rename of `vertexAI()`) with App Check when the Firebase app is already configured, and the existing anonymous user. The model is `gemini-3.8-flash`. `gemini-2.5-flash` was shut down on Agent Platform on 2026-10-20. No `google_generative_ai` client and no API key in the binary. The project owner pays Vertex AI on `novusinc-8df79` while the diary stays under about **1,000 people**. At about 1,000 people, stop and plan again. Players do not paste their own Gemini keys. Vertex is billed only for tokens sent. The 250,000 figure is a ceiling, not the size of a new player's prompt. Opt-in is a local `diary_settings` row and is not part of `syncFull`; pulling a live `swing_diary_messages` row sets it, because the golfer opted in where that thread was written. One coach and one billing path, with four selectable **voices** (golf-pro default, golf-buddy, golf-lady, og-golf-pro) chosen in Settings and kept in device-only `shared_preferences` (not SQLite, not `syncFull`). Voices change only wording and references, never the method or depth.
 
 **What each call contains**, in order. The existing coach prompt stays. Diary entries are its context. A compiled `range_sessions` row is not attached and does not start the call.
 
@@ -580,3 +581,4 @@ Background location **not** required for current flows.
 | 1.21 | 2026-11-23 | Watson | **MGDV-6 pilot data design:** §5.0.2 planned v18 tables, Firestore `tournament_events/*` paths, pilot rules sketch, caddy hardening notes; links Eunice [`Wireframe_Tournament.md`](./designs/Wireframe_Tournament.md). Spec only — no app migration in this revision. |
 | 1.22 | 2026-11-24 | Athena | Swing diary joins `syncFull`: `range_sessions`, `diary_context_notes`, `swing_diary_messages`, `range_evaluations` upload, download, and LWW-merge under `users/{uid}`. Empty-account and tombstone guards cover them. Pulling a live diary message marks the local opt-in. `diary_settings` stays local. No DB migration |
 | 1.23 | 2026-11-24 | Athena | Swing diary coach personas: `systemInstruction` is the shared role, one persona voice section (golf-pro, golf-buddy, golf-lady), then the shared technical core. golf-pro is byte-identical to the 1.11 prompt and stays the default. **`shared_preferences`** holds the device-only choice so it adds no schema change and stays out of SQLite and `syncFull`. Busy state uses `GolfPuttLoader` (`diary-send-busy`, `diary-golf-loader`) |
+| 1.24 | 2026-11-24 | Athena | Fourth swing diary voice **og-golf-pro** (veteran pro for senior golfers: protect the back, tempo over force, short game and accuracy over distance, lighter shafts and hybrids where the numbers fit). Same shared role and technical core; four voices total. Settings coach labels and descriptions refreshed |

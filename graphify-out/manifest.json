@@ -501,9 +501,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/services/swing_diary_prompt.dart": {
-    "mtime": 1795523300.538367,
-    "seen": 1795523399.3604,
-    "ast_hash": "a31a1e9173eff0e6a63f3a19b8603b6d",
+    "mtime": 1795523438.217176,
+    "seen": 1795523523.5152295,
+    "ast_hash": "33c387da59a2a37dc6306c95491d3881",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/services/swing_diary_service.dart": {
@@ -705,9 +705,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/test/swing_diary_prompt_test.dart": {
-    "mtime": 1795523295.3133578,
-    "seen": 1795523399.3605688,
-    "ast_hash": "948e39960ba6dc8e5a7e48a28d14d532",
+    "mtime": 1795523438.217176,
+    "seen": 1795523523.5153306,
+    "ast_hash": "b64962bc75589b621d58bec838a2a50c",
     "semantic_hash": ""
   },
   "golf_diary_app/test/swing_diary_test.dart": {
@@ -807,9 +807,9 @@
     "semantic_hash": ""
   },
   "docs/context/Architecture.md": {
-    "mtime": 1795523295.309357,
-    "seen": 1795523399.3606386,
-    "ast_hash": "6b7ea9f85358d64f68e6d0f52e5671d2",
+    "mtime": 1795523438.217176,
+    "seen": 1795523523.5153682,
+    "ast_hash": "e0a97c2905b02628815298d3a333e118",
     "semantic_hash": ""
   },
   "docs/context/BACKLOG.md": {
@@ -1995,9 +1995,9 @@
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Settings.md": {
-    "mtime": 1795523308.751316,
-    "seen": 1795523399.3606913,
-    "ast_hash": "c49338856bad37c77e0053fb861c51f4",
+    "mtime": 1795523438.217176,
+    "seen": 1795523523.5153959,
+    "ast_hash": "8983dcebaec49e9559d74bd184847894",
     "semantic_hash": ""
   },
   "docs/stories/BAG/BAG-001-filter-by-category.md": {
@@ -2661,9 +2661,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/test/coach_persona_settings_test.dart": {
-    "mtime": 1795523311.283532,
-    "seen": 1795523399.360512,
-    "ast_hash": "c538decfaeb068c866672135414dbdf9",
+    "mtime": 1795523551.0614564,
+    "seen": 1795523636.9244123,
+    "ast_hash": "d1e6e37d74c612af35ad5e8d508a0ead",
     "semantic_hash": ""
   }
 }

@@ -52,7 +52,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 17,
+      version: 18,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -178,6 +178,30 @@ class LocalDatabaseService {
       );
       await _createCaddyPlayerTables(db);
     }
+    if (oldVersion < 18) {
+      await _addColumnIfMissing(
+        db,
+        'round_scores',
+        'round_finished_at_ms',
+        'INTEGER',
+      );
+      await _addColumnIfMissing(db, 'golf_rounds', 'flight_id', 'TEXT');
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('round_scores', 'golf_rounds')",
+      );
+      if (tables.length == 2) {
+        await db.execute('''
+        UPDATE round_scores
+        SET round_finished_at_ms = (
+              SELECT g.completed_at_ms FROM golf_rounds g
+              WHERE g.round_id = round_scores.round_id
+            )
+        WHERE deleted = 0 AND round_id IN (
+          SELECT round_id FROM golf_rounds WHERE completed_at_ms IS NOT NULL
+        )
+      ''');
+      }
+    }
   }
 
   Future<void> _addColumnIfMissing(
@@ -281,6 +305,7 @@ class LocalDatabaseService {
         paid_mulligans INTEGER NOT NULL DEFAULT 0,
         conceded INTEGER NOT NULL DEFAULT 0,
         final_score INTEGER NOT NULL DEFAULT 0,
+        round_finished_at_ms INTEGER,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
         deleted INTEGER NOT NULL DEFAULT 0
@@ -716,12 +741,53 @@ class LocalDatabaseService {
       where: 'round_id = ?',
       whereArgs: [roundId],
     );
+    // `golf_rounds` is local-only, so the hole rows carry the finish to other devices.
+    await db.update(
+      'round_scores',
+      _dirty({'round_finished_at_ms': now}),
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+    );
+  }
+
+  /// Soft-deletes a round. Hole and shot tombstones sync, so every device drops it.
+  Future<void> deleteRound(String roundId) => discardRound(roundId);
+
+  /// Remembers the flight this round was shared or joined through.
+  Future<void> linkRoundToFlight(String roundId, String flightId) async {
+    final db = await database;
+    await db.update(
+      'golf_rounds',
+      _dirty({'flight_id': flightId}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  /// True when the round was shared through a flight or a caddy session.
+  Future<bool> roundHasFlight(String roundId) async {
+    final db = await database;
+    final linked = await db.query(
+      'golf_rounds',
+      columns: ['flight_id'],
+      where: "round_id = ? AND flight_id IS NOT NULL AND flight_id != ''",
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    if (linked.isNotEmpty) return true;
+    final caddy = await db.query(
+      'caddy_sessions',
+      columns: ['channel_id'],
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+      limit: 1,
+    );
+    return caddy.isNotEmpty;
   }
 
   /// Removes an in-progress round the golfer chose not to keep.
   Future<void> discardRound(String roundId) async {
     final db = await database;
-    final now = _nowMs();
     await db.update(
       'golf_rounds',
       _dirty({'deleted': 1}),
@@ -932,9 +998,20 @@ class LocalDatabaseService {
 
   Future<void> upsertHoleScore(RoundScore score) async {
     final db = await database;
+    final round = await db.query(
+      'golf_rounds',
+      columns: ['completed_at_ms'],
+      where: 'round_id = ?',
+      whereArgs: [score.roundId],
+      limit: 1,
+    );
     await db.insert(
       'round_scores',
-      _newRow(score.toMap()),
+      _newRow({
+        ...score.toMap(),
+        'round_finished_at_ms':
+            round.isEmpty ? null : round.first['completed_at_ms'],
+      }),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -1890,6 +1967,10 @@ class LocalDatabaseService {
     if (readDeleted(remote)) {
       if (localRows.isEmpty) return false;
       await db.delete(table, where: 'id = ?', whereArgs: [id]);
+      if (table == 'round_scores') {
+        final roundId = localRows.first['round_id'] as String?;
+        if (roundId != null) await _retireRoundWithoutHoles(db, roundId);
+      }
       return true;
     }
 
@@ -1915,9 +1996,33 @@ class LocalDatabaseService {
       final roundId = row['round_id'] as String?;
       if (roundId != null) {
         await _ensureGolfRoundFromScores(db, roundId);
+        final finishedAt = row['round_finished_at_ms'] as int?;
+        if (finishedAt != null) {
+          await db.update(
+            'golf_rounds',
+            {'completed_at_ms': finishedAt},
+            where: 'round_id = ? AND completed_at_ms IS NULL',
+            whereArgs: [roundId],
+          );
+        }
       }
     }
     return true;
+  }
+
+  /// A round deleted on another device arrives as hole tombstones only.
+  Future<void> _retireRoundWithoutHoles(Database db, String roundId) async {
+    final live = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM round_scores WHERE round_id = ? AND deleted = 0',
+      [roundId],
+    ));
+    if ((live ?? 0) > 0) return;
+    await db.update(
+      'golf_rounds',
+      {'deleted': 1},
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
   }
 
   Map<String, Object?> _sqliteRow(
@@ -2176,6 +2281,7 @@ class LocalDatabaseService {
         attested_by_name TEXT NOT NULL DEFAULT '',
         attested_role TEXT NOT NULL DEFAULT '',
         edited_after_attest_count INTEGER NOT NULL DEFAULT 0,
+        flight_id TEXT,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,
         deleted INTEGER NOT NULL DEFAULT 0
@@ -2310,6 +2416,7 @@ class LocalDatabaseService {
       'paid_mulligans',
       'conceded',
       'final_score',
+      'round_finished_at_ms',
       'is_synced',
       'updated_at_ms',
       'deleted',

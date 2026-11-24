@@ -15,6 +15,7 @@ import '../widgets/account_avatar_app_bar_menu.dart';
 import '../widgets/course_round_dialog.dart';
 import '../widgets/diary_launcher.dart';
 import '../widgets/flight_sheet.dart';
+import '../widgets/round_finish_dialogs.dart';
 import '../widgets/save_round_before_new_dialog.dart';
 import '../widgets/scorecard_cart_panel.dart';
 import '../widgets/shared_header_actions.dart';
@@ -48,6 +49,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   bool _wakelockActive = false;
   RoundFormatSettings? _format;
   double? _handicap;
+  String? _unlockedRoundId;
 
   @override
   void initState() {
@@ -217,6 +219,10 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     final roundId = _selectedRoundId;
     final settings = _format;
     if (roundId == null || settings == null) return;
+    if (_locked) {
+      _showReadOnly();
+      return;
+    }
     final recent =
         await LocalDatabaseService.instance.distinctCourseNames();
     if (!mounted) return;
@@ -239,7 +245,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     )) {
       return;
     }
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     final db = LocalDatabaseService.instance;
     if (result.courseName != _courseName) {
       await db.applyCoursePar(roundId, result.courseName);
@@ -260,17 +266,6 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       (_holes.isNotEmpty ? _holes.first.courseName : 'Local Course');
 
   int get _holesOnCard => PhGolfCatalog.holeCount(_courseName);
-
-  bool get _fullyScored {
-    if (_selectedRoundId == null) return false;
-    final holes = _holesOnCard;
-    if (holes <= 0) return false;
-    for (var hole = 1; hole <= holes; hole++) {
-      final row = _holeRow(hole);
-      if (row == null || !isHolePlayed(row)) return false;
-    }
-    return true;
-  }
 
   String _formatIndicator(RoundFormatSettings settings) {
     if (settings.format == ScoringFormat.molave) {
@@ -351,6 +346,17 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     );
   }
 
+  RoundSummary? get _selectedSummary {
+    for (final r in _recentRounds) {
+      if (r.roundId == _selectedRoundId) return r;
+    }
+    return null;
+  }
+
+  bool get _finished => _selectedSummary?.isCompleted ?? false;
+
+  bool get _locked => _finished && _unlockedRoundId != _selectedRoundId;
+
   Future<bool> _allowAttestedEdit() async {
     final settings = _format;
     final roundId = _selectedRoundId;
@@ -363,63 +369,79 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     return true;
   }
 
+  /// Finished rounds are read-only until unlocked from the ⋮ menu.
+  Future<bool> _allowEdit() async {
+    if (_locked) {
+      _showReadOnly();
+      return false;
+    }
+    return _allowAttestedEdit();
+  }
+
+  void _showReadOnly() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: ValueKey('scorecard-read-only-snack'),
+        content:
+            Text('Round finished. Use ⋮ › Edit finished round to change it.'),
+      ),
+    );
+  }
+
+  void _unlockFinishedRound() {
+    setState(() => _unlockedRoundId = _selectedRoundId);
+  }
+
   Future<void> _attest() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    final nameController = TextEditingController(text: 'Me');
-    var role = 'self';
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
-          title: const Text('Attest card'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                key: const ValueKey('scorecard-attest-name'),
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButton<String>(
-                key: const ValueKey('scorecard-attest-role'),
-                value: role,
-                isExpanded: true,
-                items: [
-                  for (final item in attestRoles)
-                    DropdownMenuItem(value: item, child: Text(item)),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setLocal(() => role = value);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const ValueKey('scorecard-attest-save'),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Attest'),
-            ),
-          ],
-        ),
-      ),
-    );
-    final name = nameController.text;
-    nameController.dispose();
-    if (saved != true || !mounted) return;
-    await LocalDatabaseService.instance.attestRound(
-      roundId: roundId,
-      name: name,
-      role: role,
-    );
+    final saved = await showAttestCardDialog(context, roundId: roundId);
+    if (!saved || !mounted) return;
     await loadScorecard();
+  }
+
+  Future<void> _finishRound() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    final blank = blankHoleCount(_holes, _holesOnCard);
+    if (!await confirmFinishRound(context, blank) || !mounted) return;
+    final db = LocalDatabaseService.instance;
+    await db.completeRound(roundId);
+    await _writeRoundDiary(roundId);
+    if (!mounted) return;
+    setState(() => _unlockedRoundId = null);
+    await loadScorecard();
+    if (!mounted) return;
+    await showAttestCardDialog(context, roundId: roundId, afterFinish: true);
+    if (!mounted) return;
+    await loadScorecard();
+  }
+
+  Future<void> _deleteRound() async {
+    final roundId = _selectedRoundId;
+    if (roundId == null) return;
+    final db = LocalDatabaseService.instance;
+    final inFlight = await db.roundHasFlight(roundId);
+    if (!mounted) return;
+    final ok = await confirmDeleteRound(
+      context,
+      courseName: _courseName,
+      attested: _format?.isAttested ?? false,
+      inFlight: inFlight,
+    );
+    if (!ok || !mounted) return;
+    await db.deleteRound(roundId);
+    final remaining = await db.listRecentRounds(limit: 1);
+    if (!mounted) return;
+    setState(() {
+      _selectedRoundId = remaining.isEmpty ? null : remaining.first.roundId;
+      _unlockedRoundId = null;
+    });
+    await loadScorecard();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Round deleted')),
+    );
   }
 
   Future<void> _openFlight() async {
@@ -449,7 +471,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartPlusStroke() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     await _cartMutation(() => LocalDatabaseService.instance.incrementStrokes(
           roundId: roundId,
           courseName: _courseName,
@@ -460,7 +482,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartPenalty() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -475,7 +497,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartMulligan() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -490,7 +512,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _cartGimme() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     await _cartMutation(() async {
       await LocalDatabaseService.instance.ensureHoleRow(
         roundId: roundId,
@@ -505,7 +527,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _editHole(int holeNumber) async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    if (!await _allowAttestedEdit()) return;
+    if (!await _allowEdit() || !mounted) return;
     await showScorecardHoleEditor(
       context: context,
       roundId: roundId,
@@ -541,6 +563,14 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                 onSelected: () {
                   _openFlight();
                 },
+              ),
+            if (_locked)
+              PlayHeaderMenuAction(
+                id: 'edit-finished-round',
+                key: 'scorecard-edit-finished-round',
+                icon: Icons.lock_open_outlined,
+                label: 'Edit finished round',
+                onSelected: _unlockFinishedRound,
               ),
           ],
         ),
@@ -681,13 +711,16 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
-                    if (_selectedRoundId != null &&
-                        _recentRounds.any((r) =>
-                            r.roundId == _selectedRoundId && !r.isCompleted))
+                    if (_selectedSummary != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4, left: 4),
                         child: Text(
-                          'In progress — finish holes on On Course or save via Start new round',
+                          !_finished
+                              ? 'In progress'
+                              : _locked
+                                  ? 'Finished · read-only'
+                                  : 'Finished · editing',
+                          key: const ValueKey('scorecard-round-status'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -762,28 +795,60 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         onHoleTap: _editHole,
                       ),
                     ],
-                    if (_fullyScored && format != null) ...[
+                    if (_finished && format != null) ...[
                       const SizedBox(height: 16),
                       Text(
                         format.attestationLabel,
                         key: const ValueKey('scorecard-attest-badge'),
                       ),
-                      if (!format.isAttested)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            key: const ValueKey('scorecard-attest-btn'),
-                            onPressed: _attest,
-                            child: const Text('Attest card'),
-                          ),
-                        ),
                     ],
                     const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      key: const ValueKey('scorecard-new-round-btn'),
-                      onPressed: _startNewRound,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Start new round'),
+                    if (_selectedRoundId != null && !_finished)
+                      FilledButton.icon(
+                        key: const ValueKey('scorecard-finish-round'),
+                        onPressed: _finishRound,
+                        icon: const Icon(Icons.flag_outlined),
+                        label: const Text('Finish round'),
+                      )
+                    else if (_finished &&
+                        format != null &&
+                        !format.isAttested)
+                      FilledButton.icon(
+                        key: const ValueKey('scorecard-attest-btn'),
+                        onPressed: _attest,
+                        icon: const Icon(Icons.verified_outlined),
+                        label: const Text('Attest card'),
+                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('scorecard-new-round-btn'),
+                            onPressed: _startNewRound,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Start new round'),
+                          ),
+                        ),
+                        if (_selectedRoundId != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              key: const ValueKey('scorecard-delete-round'),
+                              onPressed: _deleteRound,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.error,
+                                side: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete round'),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ],

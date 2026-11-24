@@ -33,13 +33,26 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 │ │ E │+1 │ — │               │
 │ └───┴───┴───┘               │
 │ BACK 9                      │  same 3×3
-│ Attested by Pat · marker    │  only when every hole is played
-│ [ Attest card ]             │  scorecard-attest-btn, same gate
-│ [ Start new round ]         │  outlined
+│ Attested by Pat · marker    │  finished rounds only
+│ [ ⚑ Finish round          ] │  scorecard-finish-round, full width
+│ [+ Start new round][🗑 Delete]│  one row; Delete is red
 └─────────────────────────────┘
 ```
 
-The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wireframe_NewRound.md)). Classic | Cart sits on that row. Format, double eagle, rating, and slope are not controls on the card. Attest sits under the grids or the cart panel, and only after every hole on the card is played (`isHolePlayed`, including a gimme). Flight is in the leading ⋮ with Invite caddy. Diary and the account avatar stay pinned.
+The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wireframe_NewRound.md)). Classic | Cart sits on that row. Format, double eagle, rating, and slope are not controls on the card. Flight is in the leading ⋮ with Invite caddy. Diary and the account avatar stay pinned.
+
+### Round controls (below the card or the cart panel)
+
+- **Finish round** (`scorecard-finish-round`) is the full-width primary while the round is open. It replaces the standalone Attest button. If any hole on the card is blank (`isHolePlayed` false), a confirm asks first: “N holes blank, finish anyway?” (`scorecard-finish-confirm`). Finishing calls `completeRound`, writes the diary note, and opens the attest dialog right away. Its dismiss reads **Skip** (`scorecard-attest-skip`); the round stays finished.
+- Once finished, the primary slot shows **Attest card** (`scorecard-attest-btn`) only while the card is not attested, including after an edit cleared it. Attested cards show the badge alone (`scorecard-attest-badge`).
+- **Start new round** (`scorecard-new-round-btn`) and **Delete round** (`scorecard-delete-round`, error color) share one row. Delete always confirms (`scorecard-delete-confirm`). An attested round, or one shared through a flight or caddy session, adds a red warning line (`scorecard-delete-warning`). Delete soft-deletes with sync tombstones, so the round leaves every synced device. Afterwards the next most recent round is selected, or the empty state shows.
+- The status caption under the name (`scorecard-round-status`) reads **In progress**, **Finished · read-only**, or **Finished · editing**.
+
+### Finished rounds are read-only
+
+Hole taps, cart buttons, and the course dialog show a snackbar (`scorecard-read-only-snack`) instead of editing. The leading ⋮ adds **Edit finished round** (`scorecard-edit-finished-round`) to unlock the selected round until another round is selected. An unlocked attested card still uses the “Edit attested card?” confirm, and each edit after attesting increments `edited_after_attest_count`.
+
+On Course has no new buttons. Its existing **Finish Round** on the last hole runs the same blank-hole confirm and then the same skippable attest dialog.
 
 Each tile:
 
@@ -77,7 +90,8 @@ Tile fill (not the only signal):
 | `ChoiceChip` | Recent rounds (max 12, existing query) |
 | Summary `Card` | Out, In, Total |
 | Custom hole `InkWell` tile | Opens editor |
-| `OutlinedButton` | Start new round when a round exists |
+| `FilledButton` | Finish round, or Attest card on a finished unattested round |
+| `OutlinedButton` | Start new round and Delete round when a round exists |
 | `FilledButton` | Start new round on empty state only |
 | `CircularProgressIndicator` | `_loading` |
 
@@ -93,6 +107,9 @@ Tile fill (not the only signal):
 | Played | Gross + vs par |
 | Conceded | Gross (2× par) + label Gimme |
 | Penalties or mulligans &gt; 0 | Summary footnote |
+| Open round | Finish round primary |
+| Finished, locked | Read-only; ⋮ offers Edit finished round |
+| Finished, unlocked | Edits allowed; attested edits confirm first |
 | Tab selected | `loadScorecard()` from `HomeShell` |
 
 Vs par is `effectiveHoleScore - par` for played holes. Even par displays `E`.
@@ -110,6 +127,15 @@ flowchart TD
   grid --> edit[Hole editor sheet]
   edit --> load
   start --> load
+  grid --> finish[Finish round]
+  finish -->|blank holes| confirm[N holes blank, finish anyway?]
+  confirm --> done[completeRound]
+  finish -->|all scored| done
+  done --> attest[Attest dialog, Skip allowed]
+  attest --> load
+  grid --> del[Delete round confirm]
+  del --> tomb[Soft delete + sync tombstones]
+  tomb --> load
 ```
 
 ## 7. Key map
@@ -121,6 +147,16 @@ flowchart TD
 | Summary banner | `scorecard-summary-banner` | `Card` |
 | Hole tile | `scorecard-hole-tile-{n}` | `InkWell` |
 | New round | `scorecard-new-round-btn` | `OutlinedButton` or `FilledButton` |
+| Finish round | `scorecard-finish-round` | `FilledButton` |
+| Finish anyway | `scorecard-finish-confirm` | `FilledButton` in the blank-holes confirm |
+| Attest card | `scorecard-attest-btn` | `FilledButton`, finished and unattested only |
+| Skip attest | `scorecard-attest-skip` | `TextButton` in the attest dialog |
+| Delete round | `scorecard-delete-round` | `OutlinedButton`, error color |
+| Confirm delete | `scorecard-delete-confirm` | `FilledButton`, error color |
+| Delete warning | `scorecard-delete-warning` | `Text`, attested or flight rounds |
+| Edit finished round | `scorecard-edit-finished-round` | Leading ⋮ item |
+| Round status | `scorecard-round-status` | `Text` |
+| Read-only notice | `scorecard-read-only-snack` | `SnackBar` |
 | Empty state | `scorecard-empty-state` | `Card` |
 | Loading | `scorecard-loading` | `CircularProgressIndicator` |
 | Course field | `scorecard-new-round-course` | `TextField` in the dialog |

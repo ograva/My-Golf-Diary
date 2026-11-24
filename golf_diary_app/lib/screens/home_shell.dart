@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../pwa/pwa_update_host.dart';
 import '../widgets/caddy_golfer_merge_host.dart';
-import '../services/golfer_profile_store.dart';
 import 'clubs_screen.dart';
 import 'fairway_tracker_screen.dart';
 import 'range_drill_screen.dart';

@@ -5,6 +5,7 @@ import '../models/flight_session.dart';
 import '../models/scoring_format.dart';
 import '../services/flight_launch_config.dart';
 import '../services/flight_service.dart';
+import '../services/local_database_service.dart';
 import '../services/sync_identity.dart';
 
 /// Share or join a flight and attest a partner's card.
@@ -52,8 +53,15 @@ class _FlightSheetState extends State<FlightSheet> {
       format: widget.format,
       displayName: widget.displayName,
     );
+    await _linkRound(flight);
     if (!mounted) return;
     setState(() => _flight = flight);
+  }
+
+  Future<void> _linkRound(FlightSnapshot? flight) async {
+    if (flight == null) return;
+    await LocalDatabaseService.instance
+        .linkRoundToFlight(widget.roundId, flight.flightId);
   }
 
   Future<void> _join() async {
@@ -64,6 +72,7 @@ class _FlightSheetState extends State<FlightSheet> {
       roundId: widget.roundId,
       displayName: widget.displayName,
     );
+    await _linkRound(flight);
     if (!mounted) return;
     setState(() {
       _flight = flight;

@@ -26,6 +26,7 @@ import '../widgets/diary_launcher.dart';
 import '../widgets/fwy_hole_map.dart';
 import '../widgets/fwy_overlays.dart';
 import '../widgets/hole_map_image.dart';
+import '../widgets/round_finish_dialogs.dart';
 import '../widgets/shared_header_actions.dart';
 import '../theme/app_theme.dart';
 
@@ -578,6 +579,15 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     final finishingRound = _holeNumber >= holeCount;
     final nextPar =
         PhGolfCatalog.parForHole(_courseController.text, _holeNumber + 1) ?? 4;
+    if (finishingRound) {
+      final holes =
+          await LocalDatabaseService.instance.getScoresForRound(_roundId!);
+      if (!mounted) return;
+      final blank =
+          blankHoleCount(holes, holeCount, finishingHole: _holeNumber);
+      if (!await confirmFinishRound(context, blank) || !mounted) return;
+    }
+    final roundId = _roundId!;
     await LocalDatabaseService.instance.finishHole(
       roundId: _roundId!,
       holeNumber: _holeNumber,
@@ -594,6 +604,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     await _refreshHoleState();
     if (finishingRound) {
       await _writeFinishedRoundDiary();
+      if (mounted) {
+        await showAttestCardDialog(context, roundId: roundId, afterFinish: true);
+      }
     }
     if (finishingRound && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

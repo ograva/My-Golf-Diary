@@ -1,17 +1,17 @@
 # Graph Report - My-Golf-Diary  (2026-11-24)
 
 ## Corpus Check
-- 224 files · ~227,485 words
+- 227 files · ~230,121 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 62 file(s) not represented in the graph (top: .xml 12, (none) 9, .xcconfig 8)
 
 ## Summary
-- 4196 nodes · 5761 edges · 224 communities (156 shown, 68 thin omitted)
+- 4247 nodes · 5833 edges · 222 communities (156 shown, 66 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 265 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e0a8ff42`
+- Built from commit: `fcf6c6a4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -54,7 +54,7 @@
 - eg
 - installInstanceTearOff
 - getTag
-- practice_drill.dart
+- StatelessWidget
 - swing_diary_sheet.dart
 - FlutterActivity
 - swing_diary_service.dart
@@ -129,7 +129,7 @@
 - hole_projection.dart
 - caddy_round_channel_store.dart
 - windows
-- flight_launch_config.dart
+- range_session_wrapup_test.dart
 - golfer_avatar.dart
 - _ClubSortKey
 - State
@@ -144,7 +144,7 @@
 - HoleFrame
 - coverage.py
 - hole_map_marker_painter.dart
-- package:flutter/material.dart
+- course_map_cache_service_test.dart
 - scoring_format.dart
 - diary_launcher.dart
 - course_map_cache_service.dart
@@ -159,7 +159,7 @@
 - build_pack.py
 - diary_model.dart
 - flight_sheet.dart
-- course_map_cache_service_test.dart
+- round_finish_dialogs.dart
 - Feature
 - on_course_shot_segment.dart
 - ../data/ph_golf_hole_coords.dart
@@ -173,29 +173,28 @@
 - golfer_avatar_circle.dart
 - flutter
 - account_link_conflict.dart
-- caddy_invite_sheet.dart
+- on_course_crse_036_test.dart
 - pwa_update_client.dart
-- .MessageHandler
+- scorecard_round_controls_test.dart
 - flight_service.dart
 - diary_remote.dart
 - pwa_update_client_stub.dart
 - return
-- hole_map_image.dart
+- ../data/ph_golf_catalog.dart
 - pwa_published_build.dart
 - CustomPainter
-- Point
+- sync_merge.dart
 - AccountAuthController
 - course_map_pack_store_io.dart
-- CourseMapPackSource
-- account_profile_screen.dart
+- Size
+- bool get
+- ScorecardScreenState
 - course_map_pack_local.dart
 - golf_putt_loader.dart
 - caddy_invite_sheet.dart
 - range_shot_total_test.dart
 - @visibleForTesting
 - _CounterEntry
-- _AddClubDialog
-- FlutterWindow
 - auth_session_binder.dart
 - static const
 
@@ -226,7 +225,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (224 total, 68 thin omitted)
+## Communities (222 total, 66 thin omitted)
 
 ### Community 1 - "app_theme.dart"
 Cohesion: 0.03
@@ -242,7 +241,7 @@ Nodes (64): aimDirection, avgDistance, avgYards, brand, category, clubId, clubNa
 
 ### Community 4 - "local_database_service.dart"
 Cohesion: 0.02
-Nodes (112): addCaddyFlightPlayer, _addColumnIfMissing, applyCoursePar, applyRemoteRow, attestRound, _backfillGolfRounds, caddyPlayerGrossByHole, _columns (+104 more)
+Nodes (116): addCaddyFlightPlayer, _addColumnIfMissing, applyCoursePar, applyRemoteRow, attestRound, _backfillGolfRounds, caddyPlayerGrossByHole, _columns (+108 more)
 
 ### Community 5 - "GeneratedPluginRegistrant.swift"
 Cohesion: 0.05
@@ -250,7 +249,7 @@ Nodes (24): cloud_firestore, Cocoa, firebase_ai, firebase_app_check, firebase_au
 
 ### Community 6 - "scorecard_screen.dart"
 Cohesion: 0.03
-Nodes (55): _allowAttestedEdit, _attest, build, _cartGimme, _cartHighContrast, _cartMulligan, _cartMutation, _cartPenalty (+47 more)
+Nodes (63): _allowAttestedEdit, _allowEdit, _attest, build, _cartGimme, _cartHighContrast, _cartMulligan, _cartMutation (+55 more)
 
 ### Community 7 - "fairway_tracker_screen.dart"
 Cohesion: 0.01
@@ -285,12 +284,12 @@ Cohesion: 0.05
 Nodes (65): $0(), $1(), a1(), a3(), a4(), a5(), aH(), aU() (+57 more)
 
 ### Community 15 - "utils.cpp"
-Cohesion: 0.16
+Cohesion: 0.12
 Nodes (4): wWinMain(), CreateAndAttachConsole(), GetCommandLineArguments(), Utf8FromUtf16()
 
 ### Community 16 - "clubs_screen.dart"
 Cohesion: 0.04
-Nodes (50): YardageUiDensity, _addClub, _brand, build, categories, _category, club, clubId (+42 more)
+Nodes (52): YardageUiDensity, _addClub, _brand, build, categories, _category, club, clubId (+44 more)
 
 ### Community 17 - "swing_diary_prompt.dart"
 Cohesion: 0.02
@@ -298,7 +297,7 @@ Nodes (91): blurb, brief, buffer, buildDiarySystemInstruction, clubName, clubs, 
 
 ### Community 18 - "win32_window.cpp"
 Cohesion: 0.12
-Nodes (8): EnableNonClientDpiScaling, Scale(), Win32Window::Win32Window(), WindowClassRegistrar, class_registered_, WindowClassRegistrar::GetWindowClass(), instance_, WindowClassRegistrar::UnregisterWindowClass()
+Nodes (9): EnableFullDpiSupportIfAvailable(), EnableNonClientDpiScaling, Scale(), Win32Window::Win32Window(), WindowClassRegistrar, class_registered_, WindowClassRegistrar::GetWindowClass(), instance_ (+1 more)
 
 ### Community 19 - "main.dart"
 Cohesion: 0.17
@@ -308,29 +307,33 @@ Nodes (7): build, GolfDiaryApp, initDesktopDatabase, initializeFirebase, main, p
 Cohesion: 0.10
 Nodes (19): backNinePar, backNineScore, backNineToPar, completedAtMs, courseName, frontNinePar, frontNineScore, frontNineToPar (+11 more)
 
+### Community 21 - ".MessageHandler"
+Cohesion: 0.11
+Nodes (4): FlutterWindow, flutter_controller_, FlutterWindow::FlutterWindow(), project_
+
 ### Community 22 - "b9"
 Cohesion: 0.22
 Nodes (9): aP(), b9(), bL(), cF(), cV(), cX(), dh(), gbZ() (+1 more)
 
 ### Community 23 - "package:flutter/material.dart"
 Cohesion: 0.06
-Nodes (23): SaveRoundBeforeNewChoice, showSaveRoundBeforeNewDialog, club, main, openDialog, main, restoreDatabase, useFreshDatabase (+15 more)
+Nodes (28): ClubEditResult, PinFix, SaveRoundBeforeNewChoice, showSaveRoundBeforeNewDialog, club, main, openDialog, current (+20 more)
 
 ### Community 24 - "caddy_golfer_merge_host.dart"
 Cohesion: 0.11
 Nodes (16): applier, _attach, _bootstrap, build, CaddyGolferMergeHost, _CaddyGolferMergeHostState, child, createState (+8 more)
 
 ### Community 25 - "package:flutter/material.dart"
-Cohesion: 0.05
-Nodes (29): initDesktopDatabase, db, main, strokes, main, main, restoreDatabase, useFreshDatabase (+21 more)
+Cohesion: 0.07
+Nodes (22): initDesktopDatabase, db, main, strokes, main, available, generate, generateJson (+14 more)
 
 ### Community 26 - "manifest.json"
 Cohesion: 0.18
 Nodes (10): background_color, description, display, icons, name, orientation, prefer_related_applications, short_name (+2 more)
 
 ### Community 27 - "Win32Window"
-Cohesion: 0.18
-Nodes (7): Size, height, width, Win32Window, child_content_, quit_on_close_, window_handle_
+Cohesion: 0.16
+Nodes (7): Point, x, y, Win32Window, child_content_, quit_on_close_, window_handle_
 
 ### Community 28 - "diary_context_note.dart"
 Cohesion: 0.17
@@ -345,8 +348,8 @@ Cohesion: 0.33
 Nodes (5): analyzer, exclude, include, linter, rules
 
 ### Community 32 - "caddy_on_course_screen.dart"
-Cohesion: 0.09
-Nodes (18): build, _busy, CaddyOnCourseScreen, _CaddyOnCourseScreenState, createState, _hole, initState, _loadHole (+10 more)
+Cohesion: 0.13
+Nodes (14): build, _busy, CaddyOnCourseScreen, _CaddyOnCourseScreenState, createState, _hole, initState, _loadHole (+6 more)
 
 ### Community 33 - "copyProperties"
 Cohesion: 0.33
@@ -368,9 +371,9 @@ Nodes (5): installInstanceTearOff(), installStaticTearOff(), instanceTearOffGett
 Cohesion: 0.50
 Nodes (4): getTag(), getTagFirefox(), getTagFixed(), getTagIE()
 
-### Community 39 - "practice_drill.dart"
-Cohesion: 0.18
-Nodes (10): category, fromMap, id, isCustom, PracticeDrill, recommendedClubs, shortDescription, steps (+2 more)
+### Community 39 - "StatelessWidget"
+Cohesion: 0.09
+Nodes (20): _ClubBagCard, _StatTile, _TrendTile, _AvatarOption, _AvatarPicker, _AgeStep, _GenderStep, _SkillTierStep (+12 more)
 
 ### Community 40 - "swing_diary_sheet.dart"
 Cohesion: 0.06
@@ -397,8 +400,8 @@ Cohesion: 0.67
 Nodes (3): gcn(), X(), z()
 
 ### Community 81 - "onboarding_starter_wizard.dart"
-Cohesion: 0.06
-Nodes (34): _ageController, _ageError, _AgeStep, build, controller, createState, dispose, _draftProfile (+26 more)
+Cohesion: 0.07
+Nodes (28): _ageController, _ageError, build, controller, createState, dispose, _draftProfile, errorText (+20 more)
 
 ### Community 82 - "golfer_profile_settings_screen.dart"
 Cohesion: 0.05
@@ -413,12 +416,12 @@ Cohesion: 0.07
 Nodes (22): _applying, build, _check, _checking, child, client, createState, dialogKey (+14 more)
 
 ### Community 85 - "practice_drill_sheet.dart"
-Cohesion: 0.08
-Nodes (25): _add, build, _category, copyTitleToNote, createState, _delete, _description, dispose (+17 more)
+Cohesion: 0.06
+Nodes (35): category, fromMap, id, isCustom, PracticeDrill, recommendedClubs, shortDescription, steps (+27 more)
 
 ### Community 86 - "swing_diary_test.dart"
-Cohesion: 0.04
-Nodes (32): isChecked, main, pumpSettings, amateur, beginner, main, pro, main (+24 more)
+Cohesion: 0.05
+Nodes (26): isChecked, main, pumpSettings, drill, main, askDiary, available, calls (+18 more)
 
 ### Community 87 - "golfer_profile_service.dart"
 Cohesion: 0.08
@@ -437,8 +440,8 @@ Cohesion: 0.10
 Nodes (20): avgYards, blocks, clubId, clubName, drillId, drillSteps, drillTitle, fromJson (+12 more)
 
 ### Community 91 - "diary_markdown_body.dart"
-Cohesion: 0.06
-Nodes (29): _ClubBagCard, _StatTile, _TrendTile, _AvatarOption, _AvatarPicker, _CounterRow, _HoleTile, _NineGrid (+21 more)
+Cohesion: 0.10
+Nodes (17): baseStyle, build, _CodeDiagramBox, data, DiaryMarkdownBody, header, _InlineMarkdownText, _isDiagramLine (+9 more)
 
 ### Community 92 - "golfer_baseline_sheet.dart"
 Cohesion: 0.08
@@ -469,8 +472,8 @@ Cohesion: 0.13
 Nodes (12): build, buildCaddyLaunchRoot, CaddyPairingGate, _CaddyPairingGateState, config, createState, _error, initState (+4 more)
 
 ### Community 99 - "golfer_profile_store.dart"
-Cohesion: 0.17
-Nodes (10): GolferProfile, GolferProfileScope, GolferProfileStore, load, maybeOf, of, persist, profile (+2 more)
+Cohesion: 0.11
+Nodes (13): GolferProfile, GolferProfileScope, GolferProfileStore, load, maybeOf, of, persist, profile (+5 more)
 
 ### Community 100 - "pin_distance.dart"
 Cohesion: 0.12
@@ -493,12 +496,12 @@ Cohesion: 0.33
 Nodes (3): DefaultFirebaseOptions, kDefaultGoogleWebClientId, web
 
 ### Community 105 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.14
-Nodes (7): main, main, pumpMenu, main, _emailSession, _googleSession, main
+Cohesion: 0.13
+Nodes (8): main, main, pumpMenu, main, _emailSession, _googleSession, main, main
 
 ### Community 106 - "fwy_hole_map.dart"
 Cohesion: 0.05
-Nodes (38): aimRingFaint, aimRingMeters, aimTarget, _AimTargetMarker, ball, build, clearInsets, _dashed (+30 more)
+Nodes (34): aimRingFaint, aimRingMeters, aimTarget, ball, build, clearInsets, _dashed, drawHole (+26 more)
 
 ### Community 107 - "json"
 Cohesion: 0.21
@@ -509,16 +512,16 @@ Cohesion: 0.12
 Nodes (12): applyCount, applyUpdate, dismissedBuildId, fetchPublishedBuild, main, published, pump, pumpAndSettle (+4 more)
 
 ### Community 109 - "account_link_conflict_test.dart"
-Cohesion: 0.05
-Nodes (30): ConflictPrompt, cancelLinkConflict, cancels, conflict, downloads, _emailSession, _emailUser, false (+22 more)
+Cohesion: 0.04
+Nodes (36): ConflictPrompt, cancelLinkConflict, cancels, conflict, downloads, _emailSession, _emailUser, false (+28 more)
 
 ### Community 110 - "on_course_header_test.dart"
-Cohesion: 0.09
-Nodes (18): available, generate, generateJson, location, main, modelName, available, closeDiary (+10 more)
+Cohesion: 0.08
+Nodes (18): amateur, beginner, main, pro, available, closeDiary, dbName, generate (+10 more)
 
 ### Community 111 - "package:flutter/foundation.dart"
 Cohesion: 0.15
-Nodes (9): activateWebAppCheck, appCheckDebugState, kRecaptchaSiteKey, shouldActivateAppCheck, buildInviteUrl, CaddyLaunchConfig, currentPlatformLaunch, fromUri (+1 more)
+Nodes (10): buildInviteUrl, CaddyLaunchConfig, currentPlatformLaunch, fromUri, requestToken, buildInviteUrl, currentPlatformLaunch, FlightLaunchConfig (+2 more)
 
 ### Community 112 - "hole_map_geo.dart"
 Cohesion: 0.07
@@ -537,8 +540,8 @@ Cohesion: 0.19
 Nodes (10): applyPwaUpdate, _applyPwaUpdate, _disableServiceWorker, fetchPublishedBuild, _fetchPublishedBuild, preparePwaSession, readDismissedBuildId, _readDismissedBuildId (+2 more)
 
 ### Community 116 - "bool get"
-Cohesion: 0.14
-Nodes (8): available, defaultLocation, generate, generateJson, location, modelId, modelName, useGoogleFonts
+Cohesion: 0.18
+Nodes (7): available, defaultLocation, generate, generateJson, location, modelId, modelName
 
 ### Community 117 - "practice_drill_seed.dart"
 Cohesion: 0.13
@@ -565,12 +568,12 @@ Cohesion: 0.12
 Nodes (13): _cache, cacheName, createPackStore, _fallback, _keys, latestVersion, _open, _persistRequested (+5 more)
 
 ### Community 123 - "static const"
-Cohesion: 0.22
+Cohesion: 0.25
 Nodes (6): cart, classic, defaultMode, label, ScorecardViewMode, values
 
 ### Community 124 - "sync_identity.dart"
-Cohesion: 0.25
-Nodes (4): canSync, currentUserId, ensureSignedIn, SyncIdentity
+Cohesion: 0.13
+Nodes (8): activateWebAppCheck, appCheckDebugState, kRecaptchaSiteKey, shouldActivateAppCheck, canSync, currentUserId, ensureSignedIn, SyncIdentity
 
 ### Community 125 - "practice_drill_metadata.dart"
 Cohesion: 0.33
@@ -616,17 +619,17 @@ Nodes (14): appendEvent, CaddyRoundChannelStore, channels, createChannel, events
 Cohesion: 0.50
 Nodes (4): windows, generate, icon_size, image_path
 
-### Community 136 - "flight_launch_config.dart"
-Cohesion: 0.33
-Nodes (5): buildInviteUrl, currentPlatformLaunch, FlightLaunchConfig, fromUri, token
+### Community 136 - "range_session_wrapup_test.dart"
+Cohesion: 0.10
+Nodes (13): db, main, restoreDatabase, useFreshDatabase, db, main, restoreDatabase, useFreshDatabase (+5 more)
 
 ### Community 137 - "golfer_avatar.dart"
 Cohesion: 0.14
 Nodes (12): assetPath, defaultGolferAvatar, fromId, GolferAvatar, golferAvatarPickerOrder, GolferAvatarTier, id, label (+4 more)
 
 ### Community 139 - "State"
-Cohesion: 0.11
-Nodes (24): PwaUpdateHost, _PwaUpdateHostState, ClubsScreen, ClubsScreenState, FairwayTrackerScreen, FairwayTrackerScreenState, ShotEditDialog, _ShotEditDialogState (+16 more)
+Cohesion: 0.10
+Nodes (26): PwaUpdateHost, _PwaUpdateHostState, _AddClubDialog, _AddClubDialogState, ClubsScreen, ClubsScreenState, SwingNotesDialog, _SwingNotesDialogState (+18 more)
 
 ### Community 141 - "steps"
 Cohesion: 0.07
@@ -645,8 +648,8 @@ Cohesion: 0.14
 Nodes (11): HoleMapManifestEntry, attribution, CachedHoleMapPackSource, entry, HoleMapPack, HoleMapPackSource, imageBytes, instance (+3 more)
 
 ### Community 153 - "mgdv_601_scoring_formats_test.dart"
-Cohesion: 0.12
-Nodes (6): main, restoreDatabase, useFreshDatabase, hole, main, main
+Cohesion: 0.13
+Nodes (5): main, restoreDatabase, useFreshDatabase, hole, main
 
 ### Community 154 - "HoleFrame"
 Cohesion: 0.17
@@ -658,11 +661,11 @@ Nodes (7): coverage_rows(), grade(), classify(), parse_elements(), golf_features
 
 ### Community 156 - "hole_map_marker_painter.dart"
 Cohesion: 0.18
-Nodes (8): HoleMapBounds, bounds, colorScheme, coords, paint, player, shots, shouldRepaint
+Nodes (9): HoleCoordinates, HoleMapBounds, bounds, colorScheme, coords, paint, player, shots (+1 more)
 
-### Community 157 - "package:flutter/material.dart"
+### Community 157 - "course_map_cache_service_test.dart"
 Cohesion: 0.05
-Nodes (26): PinFix, current, fix, live, main, waitForBag, watch, build (+18 more)
+Nodes (22): base, course, gates, holes, _json, main, objects, packReads (+14 more)
 
 ### Community 158 - "scoring_format.dart"
 Cohesion: 0.03
@@ -674,7 +677,7 @@ Nodes (12): DiaryContextSource, DiaryContextSourceLabels, SwingDiaryService, bui
 
 ### Community 160 - "course_map_cache_service.dart"
 Cohesion: 0.04
-Nodes (44): _active, _activeVersion, cachedImageBytes, canonicalCourseName, _courseId, CourseMapCacheService, courseMapPackId, courseMapPackIdFromName (+36 more)
+Nodes (47): _active, _activeVersion, cachedImageBytes, canonicalCourseName, _courseId, CourseMapCacheService, courseMapPackId, courseMapPackIdFromName (+39 more)
 
 ### Community 161 - "hole_frame.py"
 Cohesion: 0.17
@@ -694,10 +697,10 @@ Nodes (13): _openGolferProfile, AccountAvatarAppBarMenu, _AccountAvatarAppBarMen
 
 ### Community 165 - "oncourse_satellite_hole_map.dart"
 Cohesion: 0.12
-Nodes (13): HoleCoordinates, HoleMapFrame, build, coords, frame, OncourseSatelliteHoleMap, player, shots (+5 more)
+Nodes (12): HoleMapFrame, build, coords, frame, OncourseSatelliteHoleMap, player, shots, build (+4 more)
 
 ### Community 166 - "on_course_settings.dart"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (10): _db, _get, GpsMode, instance, OnCourseSettings, RailSide, _set, setGpsMode (+2 more)
 
 ### Community 167 - "account_login_sheet.dart"
@@ -705,8 +708,8 @@ Cohesion: 0.08
 Nodes (25): AccountLoginSheet, _AccountLoginSheetState, acknowledgeAccountSignIn, build, _busy, canSyncNow, context, _createAccount (+17 more)
 
 ### Community 168 - "account_sync_settings_screen.dart"
-Cohesion: 0.12
-Nodes (12): AccountSyncSettingsScreen, _AccountSyncSettingsScreenState, build, createState, _dirtyCount, dispose, _formatLastSync, initState (+4 more)
+Cohesion: 0.08
+Nodes (20): AccountProfileScreen, _AccountProfileScreenState, build, createState, dispose, initState, _rebuild, _signOut (+12 more)
 
 ### Community 169 - "build_pack.py"
 Cohesion: 0.20
@@ -718,11 +721,11 @@ Nodes (12): available, bindAbort, cancel, _cancelled, DiaryCancel, DiaryCancelle
 
 ### Community 171 - "flight_sheet.dart"
 Cohesion: 0.09
-Nodes (20): ScoringFormat, _attest, build, courseName, createState, displayName, dispose, _error (+12 more)
+Nodes (21): ScoringFormat, _attest, build, courseName, createState, displayName, dispose, _error (+13 more)
 
-### Community 172 - "course_map_cache_service_test.dart"
-Cohesion: 0.10
-Nodes (15): base, course, gates, holes, _json, main, objects, packReads (+7 more)
+### Community 172 - "round_finish_dialogs.dart"
+Cohesion: 0.11
+Nodes (18): afterFinish, _AttestDialog, _AttestDialogState, blank, blankHoleCount, build, confirmDeleteRound, confirmFinishRound (+10 more)
 
 ### Community 173 - "Feature"
 Cohesion: 0.23
@@ -741,8 +744,8 @@ Cohesion: 0.29
 Nodes (5): build, CaddyInviteIconButton, courseName, roundId, valueKey
 
 ### Community 178 - "account_session.dart"
-Cohesion: 0.14
-Nodes (13): AccountSession, displayName, email, isAnonymous, isDurableAccount, isEmailPasswordAccount, isEmailVerified, isGoogleAccount (+5 more)
+Cohesion: 0.15
+Nodes (12): displayName, email, isAnonymous, isDurableAccount, isEmailPasswordAccount, isEmailVerified, isGoogleAccount, isSignedOut (+4 more)
 
 ### Community 179 - "flight_session.dart"
 Cohesion: 0.09
@@ -757,7 +760,7 @@ Cohesion: 0.07
 Nodes (27): applyCourseRoundValues, build, copyWith, courseName, courseRating, courseRoundChanged, _CourseRoundDialog, _CourseRoundDialogState (+19 more)
 
 ### Community 182 - "flight_channel_store.dart"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (11): defaultFlightStore, _emit, _firestore, FirestoreFlightChannelStore, FlightChannelStore, flights, MemoryFlightChannelStore, readFlight (+3 more)
 
 ### Community 183 - "golfer_avatar_circle.dart"
@@ -768,20 +771,24 @@ Nodes (12): _AccountPhoto, build, fallback, GolferAvatarCircle, GolferAvatarSour
 Cohesion: 0.07
 Nodes (25): anonymous, AuthUserSnapshot, body, claimAccountHasEntries, displayName, email, hasEmail, hasGoogle (+17 more)
 
-### Community 191 - "caddy_invite_sheet.dart"
-Cohesion: 0.13
-Nodes (14): build, CaddyInviteSheet, _CaddyInviteSheetState, courseName, createState, _error, initState, _loading (+6 more)
+### Community 191 - "on_course_crse_036_test.dart"
+Cohesion: 0.12
+Nodes (12): current, fix, kCourse, key, kNavBarHeight, loadHole, main, _png (+4 more)
 
 ### Community 195 - "pwa_update_client.dart"
 Cohesion: 0.20
 Nodes (8): applyUpdate, fetchPublishedBuild, PlatformPwaUpdateClient, preparePwaSession, PwaUpdateClient, readDismissedBuildId, writeDismissedBuildId, _FakePwaUpdateClient
 
-### Community 197 - "flight_service.dart"
+### Community 196 - "scorecard_round_controls_test.dart"
 Cohesion: 0.12
-Nodes (12): RangeSessionBlock, attestPlayer, _db, FlightService, joinFlight, mintFlight, opaqueToken, _playerFromRound (+4 more)
+Nodes (12): main, restoreDatabase, useFreshDatabase, db, file, main, pumpScorecard, restoreDatabase (+4 more)
+
+### Community 197 - "flight_service.dart"
+Cohesion: 0.13
+Nodes (9): attestPlayer, _db, FlightService, joinFlight, mintFlight, opaqueToken, _playerFromRound, publishRound (+1 more)
 
 ### Community 198 - "diary_remote.dart"
-Cohesion: 0.15
+Cohesion: 0.18
 Nodes (10): _collection, DiaryRemote, docs, failOnSet, _firestore, FirestoreDiaryRemote, _key, listDocuments (+2 more)
 
 ### Community 199 - "pwa_update_client_stub.dart"
@@ -789,12 +796,12 @@ Cohesion: 0.29
 Nodes (5): applyPwaUpdate, fetchPublishedBuild, preparePwaSession, readDismissedBuildId, writeDismissedBuildId
 
 ### Community 200 - "return"
-Cohesion: 0.11
-Nodes (14): kOnCourseAimCenter, kOnCourseAimChoices, kOnCourseAimLeft, kOnCourseAimRight, normalizeOnCourseAim, published, shouldOfferPwaUpdate, true (+6 more)
+Cohesion: 0.18
+Nodes (8): kOnCourseAimCenter, kOnCourseAimChoices, kOnCourseAimLeft, kOnCourseAimRight, normalizeOnCourseAim, published, shouldOfferPwaUpdate, true
 
-### Community 201 - "hole_map_image.dart"
-Cohesion: 0.33
-Nodes (3): holeMapDecodeWidth, holeMapImageProvider, px
+### Community 201 - "../data/ph_golf_catalog.dart"
+Cohesion: 0.20
+Nodes (7): RangeSessionBlock, apply, CaddyEventApplier, _db, _scoresAnotherPlayer, LocalDatabaseService, _snapshotBlocks
 
 ### Community 202 - "pwa_published_build.dart"
 Cohesion: 0.50
@@ -804,21 +811,17 @@ Nodes (3): buildId, PwaPublishedBuild, version
 Cohesion: 0.40
 Nodes (4): _SparklinePainter, _FwyScenePainter, _PuttPainter, HoleMapMarkerPainter
 
-### Community 206 - "Point"
-Cohesion: 0.50
-Nodes (3): Point, x, y
+### Community 206 - "sync_merge.dart"
+Cohesion: 0.29
+Nodes (6): decideMerge, MergeAction, readDeleted, readUpdatedAtMs, tryParse, value
 
 ### Community 208 - "course_map_pack_store_io.dart"
 Cohesion: 0.14
 Nodes (10): _courseDir, createPackStore, _file, latestVersion, _legacyVersion, prune, read, _root (+2 more)
 
-### Community 211 - "CourseMapPackSource"
-Cohesion: 0.67
-Nodes (3): CourseMapPackSource, FirebaseCourseMapPackSource, _FakeSource
-
-### Community 212 - "account_profile_screen.dart"
-Cohesion: 0.18
-Nodes (8): AccountProfileScreen, _AccountProfileScreenState, build, createState, dispose, initState, _rebuild, _signOut
+### Community 211 - "Size"
+Cohesion: 0.50
+Nodes (3): Size, height, width
 
 ### Community 214 - "course_map_pack_local.dart"
 Cohesion: 0.33
@@ -829,47 +832,43 @@ Cohesion: 0.09
 Nodes (18): ball, build, _controller, createState, cup, dispose, _dropEnd, GolfPuttLoader (+10 more)
 
 ### Community 216 - "caddy_invite_sheet.dart"
-Cohesion: 0.12
-Nodes (14): CaddySessionRecord, build, CaddyShell, _CaddyShellState, createState, _index, pairing, session (+6 more)
+Cohesion: 0.07
+Nodes (28): CaddySessionRecord, build, CaddyShell, _CaddyShellState, createState, _index, pairing, session (+20 more)
 
 ### Community 217 - "range_shot_total_test.dart"
 Cohesion: 0.18
 Nodes (9): databaseSerial, hitShotButton, main, pumpRange, releaseScreen, restoreDatabase, totalControl, useFreshDatabase (+1 more)
 
 ### Community 218 - "@visibleForTesting"
-Cohesion: 0.15
-Nodes (12): ClubEditResult, ClubRangeLogSheet, EditClubDialog, _EditClubDialogState, SwingNotesDialog, _SwingNotesDialogState, debugSetInstance, debugSetSession (+4 more)
-
-### Community 221 - "FlutterWindow"
-Cohesion: 0.25
-Nodes (3): FlutterWindow, flutter_controller_, project_
+Cohesion: 0.20
+Nodes (9): ClubRangeLogSheet, ShotEditDialog, _ShotEditDialogState, debugSetInstance, debugSetSession, debugReset, debugSettle, debugClose (+1 more)
 
 ### Community 222 - "auth_session_binder.dart"
-Cohesion: 0.18
-Nodes (7): adopt, apply, AuthSessionBinder, _epoch, session, settle, settleDelay
+Cohesion: 0.17
+Nodes (8): AccountSession, adopt, apply, AuthSessionBinder, _epoch, session, settle, settleDelay
 
 ### Community 223 - "static const"
 Cohesion: 0.29
 Nodes (4): CoachPersonaStore, _key, load, save
 
 ## Knowledge Gaps
-- **2347 isolated node(s):** `DiaryTurn`, `ClubTally`, `DiaryPromptInput`, `DiaryPromptPlan`, `_Named` (+2342 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 3184 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2391 isolated node(s):** `_FwyGeometry`, `pinDistance`, `diary`, `onProfileSettingsChanged`, `_lies` (+2386 more)
+  These have ≤1 connection - possible missing edges. (Counts symbols only; 3229 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **66 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Win32Window` connect `Win32Window` to `.MessageHandler`, `Point`, `win32_window.cpp`, `String?`, `FlutterWindow`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `RegisterPlugins()` connect `windows/flutter/generated_plugin_registrant.cc` to `Win32Window`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Are the 60 inferred relationships involving `b()` (e.g. with `a0()` and `aA()`) actually correct?**
   _`b()` has 60 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `DiaryTurn`, `ClubTally`, `DiaryPromptInput` to the rest of the system?**
-  _2347 weakly-connected nodes found - possible missing edges._
+- **What connects `_FwyGeometry`, `pinDistance`, `diary` to the rest of the system?**
+  _2391 weakly-connected nodes found - possible missing edges._
 - **Should `sqflite_sw.js` be split into smaller, more focused modules?**
   _Cohesion score 0.0048543689320388345 - nodes in this community are weakly interconnected._
-- **Why does `DiaryModel` connect `golfer_baseline_sheet.dart` to `scorecard_screen.dart`, `fairway_tracker_screen.dart`, `shared_header_actions.dart`, `range_drill_screen.dart`, `diary_model.dart`, `swing_diary_sheet.dart`, `golfer_profile_settings_screen.dart`, `golfer_profile_service.dart`, `diary_launcher.dart`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `Win32Window` connect `Win32Window` to `win32_window.cpp`, `Size`, `.MessageHandler`, `utils.cpp`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Are the 44 inferred relationships involving `c()` (e.g. with `aA()` and `aC()`) actually correct?**
   _`c()` has 44 INFERRED edges - model-reasoned connections that need verification._
 - **Should `app_theme.dart` be split into smaller, more focused modules?**

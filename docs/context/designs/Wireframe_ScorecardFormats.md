@@ -37,24 +37,25 @@ The OUT / IN / TOT banner keeps the score. Its format sentence uses `scorecard-f
 
 ### Attestation (below the card)
 
-Shown only when every hole on the card is played. Hidden while any hole is still “Par 3/4/5” or an em dash.
+Shown only after the round is finished. **Finish round** (`scorecard-finish-round`) opens the attest dialog right away; **Skip** leaves the round finished and unattested. See [Wireframe_Scorecard.md](./Wireframe_Scorecard.md) § Round controls.
 
 ```
 │ FRONT 9 / BACK 9 or cart                │
-│ Attested by Pat · marker                │  scorecard-attest-badge
-│ [ Attest card ]                         │  only if not currently attested
-│ [ Start new round ]                     │
+│ Attested by Pat · marker                │  scorecard-attest-badge, finished only
+│ [ Finish round ]  or  [ Attest card ]   │  one primary slot
+│ [ Start new round ] [ Delete round ]    │
 ```
 
-- Not attested: badge **Not attested** and **Attest card**.
+- Open round: **Finish round** only. No badge.
+- Finished, not attested: badge **Not attested** and **Attest card**.
 - Attested: badge only.
-- Edited after attest, card still complete: **Edited after attest** and **Attest card** again.
+- Edited after attest (after **Edit finished round**): **Edited after attest** and **Attest card** again.
 
 ### Tokens
 
 - Format toggle: `SegmentedButton`, one segment selected, no stroke rewrite on change. Same keys from Scorecard and On Course.
 - Handicap line: always prefixed **Unofficial estimate** — never NGAP official copy.
-- Attest dialog keys: `scorecard-attest-name`, `scorecard-attest-role`, `scorecard-attest-save`.
+- Attest dialog keys: `scorecard-attest-name`, `scorecard-attest-role`, `scorecard-attest-save`, `scorecard-attest-skip` (reads **Skip** after Finish, **Cancel** otherwise).
 - Edit while attested: `scorecard-attest-edit-confirm` before the course dialog writes, and before cart/hole mutations.
 - Flight: leading overflow, `scorecard-flight-btn`. Not under the course name.
 

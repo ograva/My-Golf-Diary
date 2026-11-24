@@ -136,7 +136,7 @@ golf_diary_app/ios/Runner/Info.plist
 
 ## 5. Data Models & SQLite
 
-**DB:** `golf_diary.db`, currently **version 17** (`LocalDatabaseService._initDB`). Migration chain through **v16** unchanged (see v1.17 history); **v17** adds `golf_rounds` scoring format + attestation + rating/slope columns, `round_scores.paid_mulligans`, and caddy flight tables `caddy_flight_players`, `caddy_player_holes`.
+**DB:** `golf_diary.db`, currently **version 18** (`LocalDatabaseService._initDB`). Migration chain through **v16** unchanged (see v1.17 history); **v17** adds `golf_rounds` scoring format + attestation + rating/slope columns, `round_scores.paid_mulligans`, and caddy flight tables `caddy_flight_players`, `caddy_player_holes`. **v18** adds `round_scores.round_finished_at_ms` (synced finish state, backfilled from `golf_rounds.completed_at_ms`) and local `golf_rounds.flight_id`.
 
 **Swing diary in `syncFull` (v1.22):** `range_sessions`, `diary_context_notes`, `swing_diary_messages`, `range_evaluations` (`kSwingDiarySyncTables`).
 
@@ -146,8 +146,8 @@ golf_diary_app/ios/Runner/Info.plist
 
 - **`clubs`** — `id`, `name`, `category`, `brand`, `model`, `min_distance`, `max_distance`, `avg_distance` (yards), `swing_notes`, `is_synced`, `updated_at_ms`, `deleted`. Starter bag seeded on create.
 - **`shots`** — above plus **`aim_direction`** (`left`/`center`/`right`, v15); optional **`sim_carry_yards`**, **`sim_distance_to_hole_yards`** (simulator, v15). **`isHoled`** is derived: `notes == 'Holed'` (`kHoledShotNote`). Holed strokes use putter + `lie_type` green (`finishHole` / `_recordHoledStroke`).
-- **`round_scores`** — above plus **`paid_mulligans`** (v17, tournament mulligan; clamp one per nine; excluded from HIO/Molave rules). **`paid_mulligans`** is in the `round_scores` sync column list so LWW pull does not drop it. Practice **`mulligans`** unchanged.
-- **`golf_rounds`** — `round_id`, `course_name`, timing fields, sync metadata, plus v17: **`scoring_format`** (`gross`|`molave`|`system36`), **`molave_double_eagle_pts`**, **`paid_mulligan_fee_php`**, **`course_rating`**, **`slope_rating`**, **`attested_at_ms`**, **`attested_by_name`**, **`attested_role`**, **`edited_after_attest_count`**. **`golf_rounds` stays out of `syncFull`** until `SYNC-007` / tournament enrollment (PRD MGDV-6-010).
+- **`round_scores`** — above plus **`paid_mulligans`** (v17, tournament mulligan; clamp one per nine; excluded from HIO/Molave rules). **`paid_mulligans`** is in the `round_scores` sync column list so LWW pull does not drop it. Practice **`mulligans`** unchanged. **`round_finished_at_ms`** (v18, nullable) is also in that list: `completeRound` stamps every live hole row, and `upsertHoleScore` copies `golf_rounds.completed_at_ms` onto new rows. Because `golf_rounds` is local-only, this is how a finished round reaches other devices: a pulled row with the stamp sets the local `completed_at_ms` when it is still null.
+- **`golf_rounds`** — `round_id`, `course_name`, timing fields, sync metadata, plus v17: **`scoring_format`** (`gross`|`molave`|`system36`), **`molave_double_eagle_pts`**, **`paid_mulligan_fee_php`**, **`course_rating`**, **`slope_rating`**, **`attested_at_ms`**, **`attested_by_name`**, **`attested_role`**, **`edited_after_attest_count`**; v18 **`flight_id`** (set when `FlightSheet` shares or joins a flight; drives the stronger delete warning together with a live `caddy_sessions.round_id`). **Finished** means `completed_at_ms IS NOT NULL`; Scorecard treats it as read-only until **Edit finished round** unlocks it in the UI (no column). **`golf_rounds` stays out of `syncFull`** until `SYNC-007` / tournament enrollment (PRD MGDV-6-010).
 - **`range_drills`** — same columns including nullable **`session_id`** → `range_sessions.id` (NULL = active visit block or legacy row).
 - **`practice_drills` *(v5 — `RNGE-003`)*** — `id TEXT PRIMARY KEY`, `title TEXT NOT NULL`, `category TEXT NOT NULL`, `short_description TEXT NOT NULL`, `steps_json TEXT NOT NULL` (JSON array of step strings), `recommended_clubs TEXT`, `is_custom INTEGER NOT NULL DEFAULT 0`, `is_synced INTEGER NOT NULL DEFAULT 0`, `updated_at_ms INTEGER NOT NULL DEFAULT 0`, `deleted INTEGER NOT NULL DEFAULT 0`.
   - *Seed & Delete Mechanics:* On DB upgrade/create, `practice_drills` seeds the 12 reference drills from [`Range_Drills.md`](./Range_Drills.md) using their stable IDs (`rng-drl-*`) with `ConflictAlgorithm.ignore`. When a user deletes any drill (seeded or custom), `deleted = 1` and `updated_at_ms = _nowMs()` are set. Queries filter `WHERE deleted = 0`, ensuring deleted seeded drills stay hidden across restarts and sync.
@@ -162,13 +162,14 @@ golf_diary_app/ios/Runner/Info.plist
 - **Attestation:** `attestRound` / `invalidateAttestation` on edit; caddy `attestPlayerCard` can attest primary card.
 - **Flight:** `FlightService` + Firestore `flights/{flightId}` (or in-memory when Firebase absent). Publishes **hole gross arrays** only; keeps `attestedHoleGross` snapshot for mismatch audit. Max 4 players.
 - **Caddy multi-player:** `setHoleScore` with `targetPlayerId` → `caddy_player_holes`; primary golfer strokes unchanged on other-player holes.
-- **Planned (`MGDV-6-010+`):** see §5.0.2 — **documented, not implemented** (DB still v17).
+- **Finish / delete (v18):** Scorecard **Finish round** and On Course's last-hole **Finish Round** share `round_finish_dialogs.dart`: blank-hole confirm → `completeRound` → skippable attest dialog. **Delete round** calls `deleteRound` (= `discardRound`): `deleted = 1` on `golf_rounds`, `round_scores`, and `shots`. The `round_scores` and `shots` tombstones sync. On pull, when the last live hole row of a round is removed by a tombstone, the local `golf_rounds` row is marked deleted too, so the round leaves every device. The empty-account guard (`applyTombstones: false`, PR #96) still skips these tombstones.
+- **Planned (`MGDV-6-010+`):** see §5.0.2 — **documented, not implemented**. Its tables move to **v19** because v18 shipped the finish/flight columns.
 
-#### 5.0.2 MGDV-6 pilot tournament (planned DB v18 + Firestore)
+#### 5.0.2 MGDV-6 pilot tournament (planned DB v19 + Firestore)
 
 **Intent:** Club Intramuros pilot only. **Local-first:** enroll and play offline; publish standings when online. **Not** Gscore/back-office. Enrollment is the **SYNC-006 durability gate** (Google or email account — anonymous users see sign-in, not a hard app lock).
 
-**Planned SQLite (migration v18)** — implement in shard order **MGDV-6-010** first:
+**Planned SQLite (migration v19)** — implement in shard order **MGDV-6-010** first:
 
 | Table | Purpose |
 | :--- | :--- |
@@ -530,7 +531,7 @@ Background location **not** required for current flows.
 | `SYNC-007` table expansion | `golfer_profile`, `golf_rounds`, `practice_drills` still local-only in `syncFull` (swing diary synced since v1.22) |
 | Pack catalog coverage | CRSE-041 pipeline shipped; not all PH courses uploaded |
 | RNGE-004 production ceiling | 250k-token compaction policy partial in live prompts |
-| MGDV-6 tournament schema | §5.0.2 spec ready; **DB v18 not migrated** — Athena implements per shards 6-010→015 |
+| MGDV-6 tournament schema | §5.0.2 spec ready; **DB v19 not migrated** — Athena implements per shards 6-010→015 |
 | `golf_rounds` cloud sync | Format/attestation local until SYNC-007 or enrolled-round exception (§5.0.2) |
 | CRSE-038/040 deferrals | Manual pin on stand-in; full aim lat/lon columns |
 
@@ -582,3 +583,4 @@ Background location **not** required for current flows.
 | 1.22 | 2026-11-24 | Athena | Swing diary joins `syncFull`: `range_sessions`, `diary_context_notes`, `swing_diary_messages`, `range_evaluations` upload, download, and LWW-merge under `users/{uid}`. Empty-account and tombstone guards cover them. Pulling a live diary message marks the local opt-in. `diary_settings` stays local. No DB migration |
 | 1.23 | 2026-11-24 | Athena | Swing diary coach personas: `systemInstruction` is the shared role, one persona voice section (golf-pro, golf-buddy, golf-lady), then the shared technical core. golf-pro is byte-identical to the 1.11 prompt and stays the default. **`shared_preferences`** holds the device-only choice so it adds no schema change and stays out of SQLite and `syncFull`. Busy state uses `GolfPuttLoader` (`diary-send-busy`, `diary-golf-loader`) |
 | 1.24 | 2026-11-24 | Athena | Fourth swing diary voice **og-golf-pro** (veteran pro for senior golfers: protect the back, tempo over force, short game and accuracy over distance, lighter shafts and hybrids where the numbers fit). Same shared role and technical core; four voices total. Settings coach labels and descriptions refreshed |
+| 1.25 | 2026-11-24 | Athena | DB **v18**: `round_scores.round_finished_at_ms` (synced finish state) and local `golf_rounds.flight_id`. Scorecard Finish round / Delete round / Edit finished round; On Course last-hole finish shares the confirm and attest flow. Round delete tombstones retire the pulled `golf_rounds` row. Planned tournament tables move to v19 |

@@ -81,7 +81,8 @@ void main() {
     expect(find.byKey(const ValueKey('scorecard-invite-caddy')), findsOneWidget);
   });
 
-  testWidgets('attest appears only after every hole is played', (tester) async {
+  testWidgets('a fully scored card offers Finish round, not Attest',
+      (tester) async {
     await tester.runAsync(useFreshDatabase);
     addTearDown(() => tester.runAsync(restoreDatabase));
     await tester.runAsync(() async {
@@ -98,9 +99,9 @@ void main() {
 
     await pumpScorecard(tester);
 
-    expect(find.byKey(const ValueKey('scorecard-attest-badge')), findsOneWidget);
-    expect(find.text('Not attested'), findsOneWidget);
-    expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-finish-round')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scorecard-attest-badge')), findsNothing);
+    expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsNothing);
     expect(find.text('Gross'), findsWidgets);
   });
 

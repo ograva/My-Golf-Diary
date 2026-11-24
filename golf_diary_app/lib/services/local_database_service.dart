@@ -14,6 +14,7 @@ import '../models/practice_drill.dart';
 import '../models/range_session.dart';
 import '../models/round_summary.dart';
 import '../models/scoring_format.dart';
+import 'sync_constants.dart';
 import 'sync_merge.dart';
 
 const kEmptyRangeSessionMessage =
@@ -492,8 +493,7 @@ class LocalDatabaseService {
   }) async {
     final db = await database;
     final note = sessionNote.trim();
-    final where = StringBuffer(
-        'deleted = 0 AND session_id IS NULL');
+    final where = StringBuffer('deleted = 0 AND session_id IS NULL');
     final args = <Object?>[];
     if (blockIds != null) {
       if (blockIds.isEmpty) {
@@ -562,7 +562,8 @@ class LocalDatabaseService {
         whereArgs: [log.clubId],
         limit: 1,
       );
-      final clubName = clubs.isEmpty ? 'Removed club' : clubs.first['name'] as String;
+      final clubName =
+          clubs.isEmpty ? 'Removed club' : clubs.first['name'] as String;
       String? drillTitle;
       var steps = const <String>[];
       if (log.drillId != null && log.drillId!.isNotEmpty) {
@@ -1031,8 +1032,7 @@ class LocalDatabaseService {
     return RoundFormatSettings(
       roundId: roundId,
       format: ScoringFormat.parse(row['scoring_format'] as String?),
-      molaveDoubleEaglePoints:
-          row['molave_double_eagle_pts'] as int? ?? 7,
+      molaveDoubleEaglePoints: row['molave_double_eagle_pts'] as int? ?? 7,
       paidMulliganFeePhp: row['paid_mulligan_fee_php'] as int? ?? 0,
       courseRating: (row['course_rating'] as num?)?.toDouble(),
       slopeRating: row['slope_rating'] as int?,
@@ -1082,7 +1082,8 @@ class LocalDatabaseService {
   /// Clears the lock and counts the edit. The attestor name stays for the badge.
   Future<void> invalidateAttestation(String roundId) async {
     final current = await getRoundFormat(roundId);
-    if (!current.isAttested && current.editedAfterAttestCount == 0 &&
+    if (!current.isAttested &&
+        current.editedAfterAttestCount == 0 &&
         current.attestedByName.isEmpty) {
       return;
     }
@@ -1091,8 +1092,8 @@ class LocalDatabaseService {
       'golf_rounds',
       _dirty({
         'attested_at_ms': null,
-        'edited_after_attest_count': current.editedAfterAttestCount +
-            (current.isAttested ? 1 : 0),
+        'edited_after_attest_count':
+            current.editedAfterAttestCount + (current.isAttested ? 1 : 0),
       }),
       where: 'round_id = ?',
       whereArgs: [roundId],
@@ -1479,7 +1480,7 @@ class LocalDatabaseService {
     String clubId = 'caddy-log',
     String lieType = 'fairway',
   }) async {
-  await ensureHoleRow(
+    await ensureHoleRow(
       roundId: roundId,
       courseName: courseName,
       holeNumber: holeNumber,
@@ -1634,8 +1635,7 @@ class LocalDatabaseService {
       whereArgs: [channelId, playerId],
     );
     return {
-      for (final row in rows)
-        row['hole_number'] as int: row['gross'] as int,
+      for (final row in rows) row['hole_number'] as int: row['gross'] as int,
     };
   }
 
@@ -1744,8 +1744,7 @@ class LocalDatabaseService {
     for (final row in rows) {
       final decoded = jsonDecode(row['payload_json'] as String);
       if (decoded is Map<String, dynamic>) {
-        events.add(CaddyRoundEvent.fromFirestore(
-            row['id'] as String, decoded));
+        events.add(CaddyRoundEvent.fromFirestore(row['id'] as String, decoded));
       }
       await db.delete(
         'caddy_pending_events',
@@ -1759,6 +1758,60 @@ class LocalDatabaseService {
   Future<List<Map<String, dynamic>>> getUnsynced(String table) async {
     final db = await database;
     return db.query(table, where: 'is_synced = ?', whereArgs: [0]);
+  }
+
+  /// True when any synced table still has a live row (including the starter bag).
+  Future<bool> hasLocalSyncRows() async {
+    final db = await database;
+    for (final table in kSyncTables) {
+      final rows = await db.query(
+        table,
+        columns: ['id'],
+        where: 'deleted = 0',
+        limit: 1,
+      );
+      if (rows.isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  Future<bool> hasLiveRow(String table, String id) async {
+    final db = await database;
+    final rows = await db.query(
+      table,
+      columns: ['id'],
+      where: 'id = ? AND deleted = 0',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  /// Deletes local sync rows whose ids are not in [remoteIds].
+  ///
+  /// Used only after the golfer confirms replacing this device with a remote
+  /// diary that has live entries.
+  Future<int> deleteLocalRowsMissingFrom(
+    Map<String, Set<String>> remoteIds,
+  ) async {
+    final db = await database;
+    var removed = 0;
+    await db.transaction((txn) async {
+      for (final table in kSyncTables) {
+        final keep = remoteIds[table] ?? const <String>{};
+        final local = await txn.query(table, columns: ['id']);
+        for (final row in local) {
+          final id = row['id'] as String?;
+          if (id == null || keep.contains(id)) continue;
+          removed += await txn.delete(
+            table,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+      }
+    });
+    return removed;
   }
 
   /// Gives legacy dirty rows a timestamp before they are uploaded.
@@ -2007,8 +2060,8 @@ class LocalDatabaseService {
 
   Future<void> _upgradeGolferProfileOnboarding(Database db) async {
     await db.execute('ALTER TABLE golfer_profile ADD COLUMN age INTEGER');
-    await db.execute(
-        'ALTER TABLE golfer_profile ADD COLUMN years_playing INTEGER');
+    await db
+        .execute('ALTER TABLE golfer_profile ADD COLUMN years_playing INTEGER');
     await db.execute(
         "ALTER TABLE golfer_profile ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
     await db.execute(

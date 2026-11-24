@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/screens/account_profile_screen.dart';
 import 'package:golf_diary_app/screens/account_sync_settings_screen.dart';
 import 'package:golf_diary_app/services/account_auth_controller.dart';
+import 'package:golf_diary_app/services/account_link_conflict.dart';
 import 'package:golf_diary_app/services/account_session.dart';
+import 'package:golf_diary_app/services/remote_diary_state.dart';
 import 'package:golf_diary_app/services/cloud_sync_service.dart';
 import 'package:golf_diary_app/services/diary_remote.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
@@ -139,13 +141,25 @@ void main() {
       );
     });
 
-    test('upload-then-download conflict flow is still a stub', () async {
+    test('upload before a durable sign-in does not run', () async {
       final message =
           await AccountAuthController.instance.resolveLinkConflictUploadFirst();
       expect(
         message,
-        'Full upload-then-download conflict flow is not available yet.',
+        'Sign in to the account before uploading this device.',
       );
+    });
+
+    test('an empty account is not described as already having entries', () {
+      const prompt = ConflictPrompt(
+        remote: RemoteDiaryState.empty,
+        localDataExists: true,
+      );
+      expect(prompt.claimAccountHasEntries, isFalse);
+      expect(prompt.offerUpload, isTrue);
+      expect(prompt.needsDialog, isTrue);
+      expect(prompt.title, isNot(contains('already has')));
+      expect(prompt.body, isNot(contains('already has')));
     });
   });
 
@@ -210,7 +224,8 @@ void main() {
       expect(find.text('Signed in: Not signed in'), findsOneWidget);
       expect(find.text('Last successful pull: Never'), findsOneWidget);
       expect(find.textContaining('Rows waiting to upload:'), findsOneWidget);
-      expect(find.byKey(const Key('account-settings-sync-now')), findsOneWidget);
+      expect(
+          find.byKey(const Key('account-settings-sync-now')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('settings-golfer-profile-entry')),
         findsOneWidget,
@@ -243,7 +258,8 @@ void main() {
       expect(find.text('Send verification email'), findsOneWidget);
     });
 
-    testWidgets('Google account does not show a password action', (tester) async {
+    testWidgets('Google account does not show a password action',
+        (tester) async {
       AccountAuthController.instance.debugSetSession(
         const AccountSession(
           uid: 'uid',
@@ -274,7 +290,10 @@ Future<void> _pumpSettings(WidgetTester tester) async {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await tester.pump();
-    if (find.byKey(const Key('account-settings-sync-now')).evaluate().isNotEmpty) {
+    if (find
+        .byKey(const Key('account-settings-sync-now'))
+        .evaluate()
+        .isNotEmpty) {
       return;
     }
   }

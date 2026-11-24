@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/account_auth_controller.dart';
+import '../services/account_link_conflict.dart';
+import 'account_link_conflict_dialog.dart';
 
 Future<bool?> showAccountLoginSheet(BuildContext context) {
   return showModalBottomSheet<bool>(
@@ -47,20 +49,7 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
   Future<void> _google() async {
     await _withBusy(() async {
       final err = await AccountAuthController.instance.signInWithGoogle();
-      if (!mounted) return;
-      if (isAccountLinkConflict(err)) {
-        Navigator.of(context).pop();
-        await _showLinkConflictDialog();
-        return;
-      }
-      if (isSignInCancelled(err)) {
-        return;
-      }
-      if (err != null) {
-        setState(() => _error = err);
-        return;
-      }
-      Navigator.of(context).pop(true);
+      await _finishSignIn(err);
     });
   }
 
@@ -71,18 +60,66 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
         password: _passwordController.text,
         createAccount: _createAccount,
       );
-      if (!mounted) return;
-      if (isAccountLinkConflict(err)) {
-        Navigator.of(context).pop();
-        await _showLinkConflictDialog();
-        return;
-      }
-      if (err != null) {
-        setState(() => _error = err);
-        return;
-      }
-      Navigator.of(context).pop(true);
+      await _finishSignIn(err);
     });
+  }
+
+  Future<void> _finishSignIn(String? err) async {
+    if (!mounted) return;
+    if (isAccountLinkConflict(err)) {
+      await _resolveLinkConflict();
+      return;
+    }
+    if (isSignInCancelled(err)) return;
+    if (err != null) {
+      setState(() => _error = err);
+      return;
+    }
+    Navigator.of(context).pop(true);
+  }
+
+  Future<void> _resolveLinkConflict() async {
+    final prompt =
+        await AccountAuthController.instance.loadLinkConflictPrompt();
+    if (!mounted) return;
+    if (prompt.signInError != null) {
+      setState(() => _error = prompt.signInError);
+      return;
+    }
+    if (!prompt.needsDialog) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    final choice = await showAccountLinkConflictDialog(context, prompt);
+    if (!mounted) return;
+    if (choice == null || choice == AccountLinkChoice.cancel) {
+      await AccountAuthController.instance.cancelLinkConflict();
+      return;
+    }
+    String? message;
+    if (choice == AccountLinkChoice.uploadFirst) {
+      message =
+          await AccountAuthController.instance.resolveLinkConflictUploadFirst();
+    } else if (choice == AccountLinkChoice.downloadAndSync) {
+      message =
+          await AccountAuthController.instance.resolveLinkConflictDownload();
+    } else if (choice == AccountLinkChoice.replaceLocal) {
+      final confirmed = await confirmReplaceLocalDiary(context);
+      if (!mounted) return;
+      if (!confirmed) {
+        Navigator.of(context).pop(true);
+        return;
+      }
+      message = await AccountAuthController.instance
+          .resolveLinkConflictReplaceLocal();
+    }
+    if (!mounted) return;
+    if (message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _forgotPassword() async {
@@ -102,41 +139,6 @@ class _AccountLoginSheetState extends State<AccountLoginSheet> {
         const SnackBar(content: Text('Password reset email sent.')),
       );
     });
-  }
-
-  Future<void> _showLinkConflictDialog() async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Account already exists'),
-        content: const Text(
-          'That Google or email account already has a diary in the cloud. '
-          'Choose how to combine it with this device.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            key: const Key('account-conflict-upload-first'),
-            onPressed: () async {
-              Navigator.of(dialogContext).pop();
-              final msg =
-                  await AccountAuthController.instance.resolveLinkConflictUploadFirst();
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(msg ?? 'Upload flow coming soon.'),
-                ),
-              );
-            },
-            child: const Text('Upload this device, then download'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

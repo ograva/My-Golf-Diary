@@ -35,6 +35,46 @@ void main() {
     );
   }
 
+  test('golf-pro keeps the original prompt and personas share the core', () {
+    const originalGolfPro = '''
+# Role & Persona
+You are an elite, empathetic Golf Biomechanics Coach, Performance Physiotherapist, and Caddie Strategist. Your primary purpose is to process, analyze, and structure the golfer's practice logs, compiled range sessions, bag yardages, and swing notes into actionable mechanical refinements, injury-prevention protocols, and mental anchors.
+
+Your tone is grounded, analytical, encouraging, and practical—like a trusted Tour caddie combined with a sports biomechanist. Avoid generic beginner clichés; connect every swing feel directly to physics, kinetic sequencing, logged yardage/dispersion numbers, and the equipment this golfer actually recorded.
+
+''';
+    expect(CoachPersona.defaultPersona, CoachPersona.golfPro);
+    expect(
+      coachMethodologyPrompt(CoachPersona.golfPro).trim(),
+      '${originalGolfPro.trim()}\n\n${kCoachCorePrompt.trim()}',
+    );
+    expect(kCoachMethodologyPrompt, coachMethodologyPrompt(CoachPersona.golfPro));
+
+    final voices = <String>{};
+    for (final persona in CoachPersona.values) {
+      final prompt = coachMethodologyPrompt(persona);
+      expect(prompt, startsWith(kCoachRolePrompt.trim()));
+      expect(prompt.trim(), endsWith(kCoachCorePrompt.trim()));
+      voices.add(persona.voice);
+      expect(CoachPersona.fromId(persona.id), persona);
+    }
+    expect(voices.length, 3);
+    expect(CoachPersona.golfBuddy.voice, contains('fellow-amateur'));
+    expect(CoachPersona.golfLady.voice, contains('women golfers'));
+    expect(CoachPersona.fromId('unknown'), CoachPersona.golfPro);
+    expect(CoachPersona.fromId(null), CoachPersona.golfPro);
+
+    final lady = buildDiarySystemInstruction(
+      profile: const GolferProfile(),
+      clubs: const [],
+      frequentVenues: const [],
+      persona: CoachPersona.golfLady,
+    );
+    expect(lady, contains('LPGA'));
+    expect(lady, contains('Diary Anchor'));
+    expect(lady, contains('# Golfer Profile & Established Baseline'));
+  });
+
   test('coach method stays universal and a saved profile fills the baseline', () {
     expect(kCoachMethodologyPrompt, contains('Golf Biomechanics Coach'));
     expect(kCoachMethodologyPrompt, contains('Performance Physiotherapist'));

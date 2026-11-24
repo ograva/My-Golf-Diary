@@ -225,6 +225,7 @@ class SwingDiaryService {
   /// writes one periodic summary before returning.
   Future<DiaryPromptPlan> preparePrompt({
     String question = '',
+    CoachPersona persona = CoachPersona.defaultPersona,
     int tokenCeiling = kDiaryTokenCeiling,
     DateTime? now,
   }) async {
@@ -256,6 +257,7 @@ class SwingDiaryService {
       tallies: tallies,
       progressBrief: existing,
       question: question,
+      persona: persona,
       tokenCeiling: tokenCeiling,
     ));
     if (plan.summary != null) {

@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../models/golfer_avatar.dart';
 import '../models/golfer_profile.dart';
+import '../services/coach_persona_store.dart';
 import '../services/diary_model.dart';
 import '../services/golfer_profile_store.dart';
 import '../services/local_database_service.dart';
+import '../services/swing_diary_prompt.dart';
 import '../services/vertex_diary_model.dart';
 import '../widgets/golfer_baseline_sheet.dart';
 
@@ -15,10 +17,12 @@ class GolferProfileSettingsScreen extends StatefulWidget {
     super.key,
     this.diary,
     this.initialProfile,
+    this.personaStore = const CoachPersonaStore(),
   });
 
   final DiaryModel? diary;
   final GolferProfile? initialProfile;
+  final CoachPersonaStore personaStore;
 
   @override
   State<GolferProfileSettingsScreen> createState() =>
@@ -36,6 +40,7 @@ class _GolferProfileSettingsScreenState
   String _skillTier = '';
   String _avatarChoice = '';
   String _yardageMode = YardageDisplayMode.defaultMode;
+  CoachPersona _persona = CoachPersona.defaultPersona;
   String? _ageError;
   String? _yearsError;
   bool _busy = false;
@@ -53,6 +58,7 @@ class _GolferProfileSettingsScreenState
     } else {
       _loadFromDb();
     }
+    _loadPersona();
   }
 
   void _hydrateFrom(GolferProfile profile) {
@@ -104,6 +110,17 @@ class _GolferProfileSettingsScreenState
     }
     if (!mounted) return;
     setState(() => _base = next);
+  }
+
+  Future<void> _loadPersona() async {
+    final persona = await widget.personaStore.load();
+    if (!mounted) return;
+    setState(() => _persona = persona);
+  }
+
+  Future<void> _selectPersona(CoachPersona persona) async {
+    setState(() => _persona = persona);
+    await widget.personaStore.save(persona);
   }
 
   bool _validateDemographics() {
@@ -293,6 +310,27 @@ class _GolferProfileSettingsScreenState
               },
               title: Text(YardageDisplayMode.label(mode)),
               subtitle: Text(YardageDisplayMode.blurb(mode)),
+            ),
+          ),
+          const Divider(height: 32),
+          Text('Swing diary coach', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            'Same advice and depth from every coach. Only the wording changes. '
+            'Saved on this device.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          ...CoachPersona.values.map(
+            (persona) => RadioListTile<CoachPersona>(
+              key: ValueKey('profile-coach-persona-${persona.id}'),
+              value: persona,
+              groupValue: _persona,
+              onChanged: (next) {
+                if (next != null) _selectPersona(next);
+              },
+              title: Text(persona.label),
+              subtitle: Text(persona.blurb),
             ),
           ),
           const Divider(height: 32),

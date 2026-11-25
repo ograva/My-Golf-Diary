@@ -15,7 +15,7 @@ A modal sheet (~85% viewport height) for **one ongoing diary thread**. Entry is 
 2. **Ask** — multiline **composer** pinned at the **bottom**; **Send** stores the note then calls Vertex when opted in and online.
 3. **History** — **Evaluation log** (`diary-evaluation-log-btn`) reads local `range_evaluations` only.
 
-Compile from Range (**Save and evaluate session**) does **not** auto-open this sheet or auto-call Vertex.
+**Save and evaluate session** on Range, after a successful compile, opens this sheet and posts once as the golfer: “How did I do in my last range session?” The coach prompt includes that saved range session (and its stored evaluation when one already exists). A later tap that does not create a new session does not post again. The sheet still opens on the latest post, shows `diary-golf-loader` / `diary-send-busy` while the selected coach replies, and keeps the opt-in gate before the first model call.
 
 ## 2. Mobile layout
 
@@ -70,6 +70,7 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 | Action | Behavior |
 | :--- | :--- |
 | Open from header | Same sheet state; show the latest page, scrolled to the newest post |
+| Save and evaluate (Range) | Open this sheet, post the range-session question once for that saved session, then the usual send/loader/persona reply |
 | Scroll up | Prepend the next older page of 30; keep the current post under the finger |
 | Send | Save user message → Vertex stream → append model row. Follow the bottom only if the latest post was already on screen |
 | Busy | Cancel via `diary-eval-cancel`; retry `diary-eval-retry` |

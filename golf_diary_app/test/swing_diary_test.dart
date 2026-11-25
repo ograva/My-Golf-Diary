@@ -895,6 +895,116 @@ void main() {
     );
   });
 
+  testWidgets('save and evaluate posts the range session into the diary once',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues(
+        {'swing_diary_coach_persona': 'golf-buddy'});
+    addTearDown(() => SharedPreferences.setMockInitialValues({}));
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(() => SwingDiaryService().setOptedIn(true));
+    final release = Completer<void>();
+    final model = FakeDiaryModel(beforeReply: release.future);
+    await pumpRange(tester, model);
+
+    await tester.enterText(
+        find.byKey(const ValueKey('range-usual-yards-field')), '220');
+    final save = find.text('Save Drill Session');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+
+    final note = find.byKey(const ValueKey('range-session-note-field'));
+    await tester.ensureVisible(note);
+    await tester.enterText(note, 'Felt smooth');
+    final evaluate =
+        find.byKey(const ValueKey('range-save-evaluate-session-btn'));
+    await tester.ensureVisible(evaluate);
+    await tester.tap(evaluate);
+
+    var sawLoader = false;
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+      if (find.byKey(const ValueKey('diary-golf-loader')).evaluate().isNotEmpty) {
+        sawLoader = true;
+        break;
+      }
+    }
+    if (!release.isCompleted) release.complete();
+    expect(sawLoader, isTrue);
+    expect(find.text(kLastRangeSessionQuestion), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-send-busy')), findsOneWidget);
+    expect(find.text('Swing diary'), findsOneWidget);
+
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+      if (find.text('Solid contact.').evaluate().isNotEmpty) break;
+    }
+    expect(find.text('Solid contact.'), findsOneWidget);
+    expect(model.calls, 1);
+    expect(model.lastSystemInstruction, contains('fellow-amateur'));
+    expect(model.lastPrompt, contains('Felt smooth'));
+    expect(model.lastPrompt, contains('Saved range session to review:'));
+    expect(
+      model.lastPrompt!.split(kLastRangeSessionQuestion).length - 1,
+      1,
+    );
+
+    final sessions = await tester.runAsync(() => db.listRangeSessions());
+    final evaluations =
+        await tester.runAsync(() => SwingDiaryService().listEvaluations());
+    final evaluation =
+        evaluations!.singleWhere((row) => row.kind == 'evaluation');
+    expect(evaluation.sessionId, sessions!.single.id);
+    expect(evaluation.content, 'Solid contact.');
+    expect(
+      await tester.runAsync(() =>
+          SwingDiaryService().postRangeSessionQuestion(sessions.single.id)),
+      isFalse,
+    );
+    final messages =
+        await tester.runAsync(() => SwingDiaryService().listMessages());
+    expect(
+      messages!.where((message) => message.content == kLastRangeSessionQuestion),
+      hasLength(1),
+    );
+
+    Navigator.of(tester.element(find.text('Swing diary')), rootNavigator: true)
+        .pop();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    expect(find.text('Swing diary'), findsNothing);
+    for (final messenger in tester.stateList<ScaffoldMessengerState>(
+        find.byType(ScaffoldMessenger))) {
+      messenger.hideCurrentSnackBar();
+      messenger.clearSnackBars();
+    }
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 750));
+
+    await tester.ensureVisible(evaluate);
+    await tester.tap(evaluate);
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)));
+    await tester.pump();
+    expect(find.text(kEmptyRangeSessionMessage), findsOneWidget);
+    expect(model.calls, 1);
+    expect(find.text('Swing diary'), findsNothing);
+  });
+
   testWidgets('home shell keeps four tabs without a diary tab', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildGolfTheme(),

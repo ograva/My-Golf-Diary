@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/diary_context_note.dart';
+import '../models/range_session.dart';
 import 'local_database_service.dart';
 import 'swing_diary_prompt.dart';
 
@@ -32,6 +33,14 @@ class DiaryMessagePage {
 
 /// Messages fetched for the open thread. Older rows load on scroll-up.
 const int kDiaryThreadPageSize = 30;
+
+/// User post created once when a range visit is saved and evaluated.
+const String kLastRangeSessionQuestion =
+    'How did I do in my last range session?';
+
+/// Stable id so a second save of the same session does not post again.
+String rangeSessionReviewMessageId(String sessionId) =>
+    'dmsg_range_review_$sessionId';
 
 class DiaryExchange {
   const DiaryExchange({required this.evaluationId, required this.reply});
@@ -283,6 +292,46 @@ class SwingDiaryService {
     );
   }
 
+  /// Inserts the range-session question once per [sessionId].
+  ///
+  /// Returns false when that session already has the post.
+  Future<bool> postRangeSessionQuestion(String sessionId, {DateTime? now}) async {
+    final id = rangeSessionReviewMessageId(sessionId);
+    final db = await _db;
+    final clock = now ?? DateTime.now();
+    final ms = clock.millisecondsSinceEpoch;
+    try {
+      await db.insert('swing_diary_messages', {
+        'id': id,
+        'role': 'user',
+        'content': kLastRangeSessionQuestion,
+        'timestamp': ms,
+        'is_synced': 0,
+        'updated_at_ms': ms,
+        'deleted': 0,
+      });
+    } on DatabaseException catch (error) {
+      if (error.isUniqueConstraintError()) return false;
+      rethrow;
+    }
+    return true;
+  }
+
+  Future<String?> evaluationForSession(String sessionId) async {
+    final rows = await (await _db).query(
+      'range_evaluations',
+      columns: ['content'],
+      where: 'deleted = 0 AND kind = ? AND session_id = ?',
+      whereArgs: ['evaluation', sessionId],
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final content = rows.first['content'] as String?;
+    if (content == null || content.trim().isEmpty) return null;
+    return content;
+  }
+
   /// Builds the next prompt and, only when it would pass [tokenCeiling],
   /// writes one periodic summary before returning.
   Future<DiaryPromptPlan> preparePrompt({
@@ -290,6 +339,7 @@ class SwingDiaryService {
     CoachPersona persona = CoachPersona.defaultPersona,
     int tokenCeiling = kDiaryTokenCeiling,
     DateTime? now,
+    String? focusSessionId,
   }) async {
     final clock = now ?? DateTime.now();
     final clubs = await _database.getAllClubs();
@@ -304,6 +354,25 @@ class SwingDiaryService {
         .subtract(const Duration(days: kDiaryRecentWindowDays))
         .millisecondsSinceEpoch;
     final contextNotes = await listContextNotes(sinceMs: windowStart);
+    RangeSession? focusSession;
+    String? focusEvaluation;
+    if (focusSessionId != null) {
+      for (final session in sessions) {
+        if (session.id == focusSessionId) {
+          focusSession = session;
+          break;
+        }
+      }
+      focusEvaluation = await evaluationForSession(focusSessionId);
+    }
+    final trimmedQuestion = question.trim();
+    final promptMessages = (focusSessionId != null &&
+            trimmedQuestion.isNotEmpty &&
+            messages.isNotEmpty &&
+            messages.last.role == 'user' &&
+            messages.last.content.trim() == trimmedQuestion)
+        ? messages.sublist(0, messages.length - 1)
+        : messages;
     final plan = planDiaryPrompt(DiaryPromptInput(
       now: clock,
       clubs: clubs,
@@ -311,8 +380,10 @@ class SwingDiaryService {
       frequentVenues: venues,
       drills: drills,
       sessions: sessions,
+      focusSession: focusSession,
+      focusEvaluation: focusEvaluation,
       turns: [
-        for (final message in messages)
+        for (final message in promptMessages)
           DiaryTurn(role: message.role, content: message.content),
       ],
       contextNotes: contextNotes,
@@ -342,28 +413,45 @@ class SwingDiaryService {
     int? promptTokens,
     String? sessionId,
     DateTime? now,
+    bool skipUserMessage = false,
   }) async {
     final clock = now ?? DateTime.now();
     final db = await _db;
+    var modelMs = clock.millisecondsSinceEpoch + 1;
+    if (skipUserMessage && sessionId != null) {
+      final posted = await db.query(
+        'swing_diary_messages',
+        columns: ['timestamp'],
+        where: 'id = ? AND deleted = 0',
+        whereArgs: [rangeSessionReviewMessageId(sessionId)],
+        limit: 1,
+      );
+      if (posted.isNotEmpty) {
+        final userMs = posted.first['timestamp'] as int;
+        if (modelMs <= userMs) modelMs = userMs + 1;
+      }
+    }
     final userId = 'dmsg_${clock.millisecondsSinceEpoch}';
-    final modelId = 'dmsg_${clock.millisecondsSinceEpoch + 1}';
+    final modelId = 'dmsg_$modelMs';
     final evalId = 'eval_${clock.millisecondsSinceEpoch}';
     final today = await _todayRefs(clock);
     await db.transaction((txn) async {
-      await txn.insert('swing_diary_messages', {
-        'id': userId,
-        'role': 'user',
-        'content': userText,
-        'timestamp': clock.millisecondsSinceEpoch,
-        'is_synced': 0,
-        'updated_at_ms': clock.millisecondsSinceEpoch,
-        'deleted': 0,
-      });
+      if (!skipUserMessage) {
+        await txn.insert('swing_diary_messages', {
+          'id': userId,
+          'role': 'user',
+          'content': userText,
+          'timestamp': clock.millisecondsSinceEpoch,
+          'is_synced': 0,
+          'updated_at_ms': clock.millisecondsSinceEpoch,
+          'deleted': 0,
+        });
+      }
       await txn.insert('swing_diary_messages', {
         'id': modelId,
         'role': 'model',
         'content': reply,
-        'timestamp': clock.millisecondsSinceEpoch + 1,
+        'timestamp': modelMs,
         'is_synced': 0,
         'updated_at_ms': clock.millisecondsSinceEpoch,
         'deleted': 0,
@@ -390,7 +478,7 @@ class SwingDiaryService {
         id: modelId,
         role: 'model',
         content: reply,
-        timestamp: clock.millisecondsSinceEpoch + 1,
+        timestamp: modelMs,
       ),
     );
   }

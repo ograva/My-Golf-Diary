@@ -13,6 +13,7 @@ import '../services/swing_diary_service.dart';
 import '../services/vertex_diary_model.dart';
 import '../theme/app_theme.dart';
 import '../ui/yardage_display_copy.dart';
+import '../widgets/diary_launcher.dart';
 import '../widgets/practice_drill_sheet.dart';
 import '../widgets/range_session_log.dart';
 import '../ui/header_action_policy.dart';
@@ -71,6 +72,7 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   bool _clubsMissingSpecs = false;
   GolferProfileStore? _profileStore;
   bool _yardageExpanded = false;
+  bool _savingSession = false;
 
   YardageUiDensity get yardageDensity => resolveYardageUiDensity(_profile);
 
@@ -205,28 +207,49 @@ class RangeDrillScreenState extends State<RangeDrillScreen> {
   }
 
   Future<void> _saveAndEvaluate() async {
-    if (_hasPendingBlock) {
-      await _saveDrillSet(quiet: true);
-    }
+    if (_savingSession) return;
+    _savingSession = true;
+    RangeSession? session;
+    var posted = false;
     try {
-      await LocalDatabaseService.instance.compileRangeSession(
-        sessionNote: _sessionNoteController.text,
-        venueName: _venueController.text.trim(),
-      );
-    } on ArgumentError catch (error) {
+      if (_hasPendingBlock) {
+        await _saveDrillSet(quiet: true);
+      }
+      try {
+        session = await LocalDatabaseService.instance.compileRangeSession(
+          sessionNote: _sessionNoteController.text,
+          venueName: _venueController.text.trim(),
+        );
+      } on ArgumentError catch (error) {
+        if (!mounted) return;
+        final message = error.message?.toString() ?? kEmptyRangeSessionMessage;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        return;
+      }
       if (!mounted) return;
-      final message = error.message?.toString() ?? kEmptyRangeSessionMessage;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      return;
+      _sessionNoteController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session log saved. It is stored for later evaluation.'),
+        ),
+      );
+      await reload();
+      if (!mounted || session == null) return;
+      posted = await _diaryStore.postRangeSessionQuestion(session.id);
+    } finally {
+      _savingSession = false;
     }
-    if (!mounted) return;
-    _sessionNoteController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Session log saved. It is stored for later evaluation.'),
-      ),
+    if (!mounted || session == null) return;
+    await showSwingDiarySheet(
+      context,
+      diary: _diary,
+      store: _diaryStore,
+      entrySource: DiaryContextSource.range,
+      reviewSessionId: session.id,
+      autoAskReview: posted,
     );
-    await reload();
   }
 
   void _applyLeadIn(LeadInPrompt prompt) {

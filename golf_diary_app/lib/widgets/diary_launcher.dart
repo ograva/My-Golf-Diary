@@ -12,6 +12,8 @@ Future<void> showSwingDiarySheet(
   DiaryModel? diary,
   SwingDiaryService? store,
   DiaryContextSource? entrySource,
+  String? reviewSessionId,
+  bool autoAskReview = false,
 }) async {
   final model = diary ?? VertexDiaryModel();
   final diaryStore = store ?? SwingDiaryService();
@@ -23,6 +25,8 @@ Future<void> showSwingDiarySheet(
       diary: model,
       store: diaryStore,
       entrySource: entrySource,
+      reviewSessionId: reviewSessionId,
+      autoAskReview: autoAskReview,
     ),
   );
 }

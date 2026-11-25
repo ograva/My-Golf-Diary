@@ -102,7 +102,7 @@ Support the two distinct moments of a real range visit:
 | Tap drill title in `PracticeDrillSheet` | Sets `_selectedDrill`, copies drill title into `_notesController` (per-club cue), and closes sheet. |
 | Tap **Use this drill** in `PracticeDrillSheet` | Sets `_selectedDrill` without overwriting `_notesController`, and closes sheet. |
 | Tap **Save Drill Session** | Saves `RangeDrillLog` (`session_id = NULL`), updates club stats in My Bag, appends the block to **This visit so far**, resets counter and min/avg/max fields. |
-| Tap **Save and Evaluate Session** with blocks or session note | Flushes any unsaved club block input first → writes compiled `range_sessions` row + links `range_drills.session_id` → clears `_sessionNoteController` and active visit preview → opens the **Session Summary & Vertex AI Evaluation** sheet (or, if offline / before `RNGE-004` is active, shows snackbar *"Session log saved. Connect to evaluate with Vertex AI."* and scrolls/highlights the new compiled card in `range-session-log-list`). |
+| Tap **Save and Evaluate Session** with blocks or session note | Flushes any unsaved club block input first → writes compiled `range_sessions` row + links `range_drills.session_id` → clears `_sessionNoteController` → snackbar *"Session log saved. It is stored for later evaluation."* → opens Swing diary and posts “How did I do in my last range session?” once for that session (coach context is that session, plus its evaluation after the reply is stored). Tapping again with nothing new to save does not post a second time. |
 | Tap **Save and Evaluate Session** when completely empty | No uncompiled blocks, no pending block numbers, and blank session note → snackbar *"Log a club block or write a session note before saving the session."* |
 | Filter `This club` vs `All clubs` | `All clubs` shows all compiled session cards and standalone blocks. `This club` filters compiled session cards to those containing the selected club ( plus standalone blocks for that club). |
 
@@ -122,7 +122,7 @@ flowchart TD
   flush -->|Yes| autoSave[Auto-save pending club block] --> db[Compile & save range_sessions in SQLite]
   flush -->|No| db
   db --> log[Compiled card appears in Range Session Log]
-  db --> snack[Confirm session log saved — no auto Vertex]
+  db --> diary[Open Swing diary and post the session question once]
 ```
 
 ## 7. Key map

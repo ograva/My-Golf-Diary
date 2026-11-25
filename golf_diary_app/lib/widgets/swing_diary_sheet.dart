@@ -23,6 +23,8 @@ class SwingDiarySheet extends StatefulWidget {
     required this.store,
     this.entrySource,
     this.personaStore = const CoachPersonaStore(),
+    this.reviewSessionId,
+    this.autoAskReview = false,
   });
 
   final DiaryModel diary;
@@ -31,6 +33,12 @@ class SwingDiarySheet extends StatefulWidget {
 
   /// Tab that opened the diary. The thread is shared; callers still name the source.
   final DiaryContextSource? entrySource;
+
+  /// Saved range session to review. Set when save-and-evaluate opens the sheet.
+  final String? reviewSessionId;
+
+  /// Ask the coach about [reviewSessionId] once, after the user post is stored.
+  final bool autoAskReview;
 
   @override
   State<SwingDiarySheet> createState() => _SwingDiarySheetState();
@@ -51,6 +59,9 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   String? _errorMessage;
   String _draft = '';
   String? _pendingQuestion;
+  String? _pendingFocusSessionId;
+  var _pendingSkipUserMessage = false;
+  var _reviewAskStarted = false;
   DiaryCancel? _cancel;
   List<DiaryMessage> _messages = const [];
   List<RangeEvaluation> _evaluations = const [];
@@ -193,30 +204,54 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
     if (follow && (initial != null || newer.isNotEmpty)) {
       _scheduleFollowBottom();
     }
+    await _maybeAskReview();
+  }
+
+  Future<void> _maybeAskReview() async {
+    final sessionId = widget.reviewSessionId;
+    if (sessionId == null || !widget.autoAskReview || _reviewAskStarted) {
+      return;
+    }
+    if (!_optedIn || !widget.diary.available || _busy) return;
+    _reviewAskStarted = true;
+    await _send(
+      kLastRangeSessionQuestion,
+      focusSessionId: sessionId,
+      skipUserMessage: true,
+    );
   }
 
   Future<void> _continue() async {
     await widget.store.setOptedIn(true);
     if (!mounted) return;
     setState(() => _optedIn = true);
+    await _maybeAskReview();
   }
 
-  Future<void> _send(String text) async {
+  Future<void> _send(
+    String text, {
+    String? focusSessionId,
+    bool skipUserMessage = false,
+  }) async {
     final question = text.trim();
     if (!widget.diary.available || _busy || question.isEmpty) return;
     final cancel = DiaryCancel();
     _cancel = cancel;
     _pendingQuestion = question;
+    _pendingFocusSessionId = focusSessionId;
+    _pendingSkipUserMessage = skipUserMessage;
     setState(() {
       _busy = true;
       _draft = '';
       _errorMessage = null;
     });
+    if (_stickToBottom) _scheduleFollowBottom();
     try {
       final persona = await widget.personaStore.load();
       final plan = await widget.store.preparePrompt(
         question: question,
         persona: persona,
+        focusSessionId: focusSessionId,
       );
       if (cancel.isCancelled) throw const DiaryCancelled();
       if (!mounted) return;
@@ -234,13 +269,15 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
       }
       if (cancel.isCancelled) throw const DiaryCancelled();
       if (!mounted) return;
-      final sessionId = await widget.store.latestTodaySessionId();
+      final sessionId =
+          focusSessionId ?? await widget.store.latestTodaySessionId();
       await widget.store.ask(
         prompt: plan.prompt,
         promptTokens: plan.tokens,
         reply: buffer.toString(),
         userText: question,
         sessionId: sessionId,
+        skipUserMessage: skipUserMessage,
       );
       DistillResult? distilled;
       try {
@@ -566,7 +603,11 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     key: const ValueKey('diary-eval-retry'),
-                    onPressed: () => _send(_pendingQuestion ?? ''),
+                    onPressed: () => _send(
+                      _pendingQuestion ?? '',
+                      focusSessionId: _pendingFocusSessionId,
+                      skipUserMessage: _pendingSkipUserMessage,
+                    ),
                     child: const Text('Try again'),
                   ),
                 ),

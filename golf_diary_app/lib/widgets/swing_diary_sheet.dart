@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../models/diary_context_note.dart';
 import '../models/golfer_profile.dart';
@@ -37,10 +38,16 @@ class SwingDiarySheet extends StatefulWidget {
 
 class _SwingDiarySheetState extends State<SwingDiarySheet> {
   final _composer = TextEditingController();
+  final _threadScroll = ScrollController();
   var _loading = true;
   var _optedIn = false;
   var _showLog = false;
   var _busy = false;
+  var _loadingOlder = false;
+  var _hasOlder = false;
+
+  /// Follow new rows only while the latest post is already on screen.
+  var _stickToBottom = true;
   String? _errorMessage;
   String _draft = '';
   String? _pendingQuestion;
@@ -65,24 +72,127 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   void dispose() {
     _cancel?.cancel();
     _composer.dispose();
+    _threadScroll.dispose();
     super.dispose();
+  }
+
+  bool _nearBottom(ScrollMetrics metrics) {
+    return metrics.maxScrollExtent <= 0 ||
+        metrics.pixels >= metrics.maxScrollExtent - 48;
+  }
+
+  void _scheduleFollowBottom() {
+    var attempts = 0;
+    void tick() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_threadScroll.hasClients || !_stickToBottom) return;
+        final position = _threadScroll.position;
+        final max = position.maxScrollExtent;
+        if ((position.pixels - max).abs() <= 1) return;
+        position.jumpTo(max);
+        attempts += 1;
+        if (attempts < 4) tick();
+      });
+    }
+
+    tick();
+  }
+
+  bool _onThreadScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification is UserScrollNotification) {
+      _stickToBottom = notification.direction == ScrollDirection.idle &&
+          _nearBottom(notification.metrics);
+    } else if (notification is ScrollEndNotification) {
+      _stickToBottom = _nearBottom(notification.metrics);
+    }
+    final userMoved = notification is UserScrollNotification ||
+        notification is ScrollEndNotification ||
+        (notification is ScrollUpdateNotification &&
+            notification.dragDetails != null);
+    final nearTop = notification.metrics.pixels <= 64 &&
+        notification.metrics.maxScrollExtent > 0;
+    if (userMoved && nearTop && _hasOlder && !_loadingOlder) {
+      _loadOlder();
+    }
+    return false;
+  }
+
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || !_hasOlder || _messages.isEmpty) return;
+    _loadingOlder = true;
+    setState(() {});
+    final oldest = _messages.first;
+    final DiaryMessagePage page;
+    try {
+      page = await widget.store.listMessagePage(
+        beforeTimestamp: oldest.timestamp,
+        beforeId: oldest.id,
+      );
+    } catch (_) {
+      if (mounted) setState(() => _loadingOlder = false);
+      return;
+    }
+    if (!mounted) return;
+    final pixels =
+        _threadScroll.hasClients ? _threadScroll.position.pixels : 0.0;
+    final maxBefore =
+        _threadScroll.hasClients ? _threadScroll.position.maxScrollExtent : 0.0;
+    setState(() {
+      _loadingOlder = false;
+      _hasOlder = page.hasOlder;
+      if (page.messages.isNotEmpty) {
+        _messages = [...page.messages, ..._messages];
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_threadScroll.hasClients) return;
+      final delta = _threadScroll.position.maxScrollExtent - maxBefore;
+      final target =
+          (pixels + delta).clamp(0.0, _threadScroll.position.maxScrollExtent);
+      if ((target - _threadScroll.position.pixels).abs() > 0.5) {
+        _threadScroll.jumpTo(target);
+      }
+    });
   }
 
   Future<void> _load() async {
     final optedIn = await widget.store.isOptedIn();
     final profile = await LocalDatabaseService.instance.getGolferProfile();
     final clubs = await LocalDatabaseService.instance.getAllClubs();
-    final messages = await widget.store.listMessages();
     final evaluations = await widget.store.listEvaluations();
+    final DiaryMessagePage? initial;
+    final List<DiaryMessage> newer;
+    if (_messages.isEmpty) {
+      initial = await widget.store.listMessagePage();
+      newer = const [];
+    } else {
+      initial = null;
+      final latest = _messages.last;
+      newer = await widget.store.listMessagesAfter(
+        timestamp: latest.timestamp,
+        id: latest.id,
+      );
+    }
     if (!mounted) return;
+    final follow = initial != null || _stickToBottom;
     setState(() {
       _optedIn = optedIn;
-      _messages = messages;
       _evaluations = evaluations;
       _profile = profile;
       _clubsMissingSpecs = clubsMissingEquipmentSpecs(clubs);
       _loading = false;
+      if (initial != null) {
+        _messages = initial.messages;
+        _hasOlder = initial.hasOlder;
+        _stickToBottom = true;
+      } else if (newer.isNotEmpty) {
+        _messages = [..._messages, ...newer];
+      }
     });
+    if (follow && (initial != null || newer.isNotEmpty)) {
+      _scheduleFollowBottom();
+    }
   }
 
   Future<void> _continue() async {
@@ -120,6 +230,7 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
         buffer.write(chunk);
         if (!mounted) return;
         setState(() => _draft = buffer.toString());
+        if (_stickToBottom) _scheduleFollowBottom();
       }
       if (cancel.isCancelled) throw const DiaryCancelled();
       if (!mounted) return;
@@ -169,7 +280,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   void _applyLeadIn(LeadInPrompt prompt) {
     final current = _composer.text.trim();
     if (!current.contains(prompt.prefix)) {
-      _composer.text = current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
+      _composer.text =
+          current.isEmpty ? prompt.prefix : '$current\n${prompt.prefix}';
     }
   }
 
@@ -197,10 +309,8 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
   }
 
   Widget _chatBox(bool available) {
-    final canSend = _optedIn &&
-        available &&
-        !_busy &&
-        _composer.text.trim().isNotEmpty;
+    final canSend =
+        _optedIn && available && !_busy && _composer.text.trim().isNotEmpty;
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHigh,
@@ -272,143 +382,178 @@ class _SwingDiarySheetState extends State<SwingDiarySheet> {
                             evaluations: _evaluations,
                             onClose: () => setState(() => _showLog = false),
                           )
-                        : ListView(
-                            children: [
-                              if (!_optedIn) ...[
-                                const Text(
-                                  'When you evaluate or ask a question, Golf Diary may send your '
-                                  'range logs, on-course notes, scorecard reflections, club yardages, '
-                                  'and swing notes to Google Vertex AI. No API key is stored on this phone.',
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  children: [
-                                    OutlinedButton(
-                                      key: const ValueKey(
-                                          'diary-opt-in-dismiss'),
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Not now'),
+                        : NotificationListener<ScrollNotification>(
+                            onNotification: _onThreadScroll,
+                            child: SingleChildScrollView(
+                              controller: _threadScroll,
+                              primary: false,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (!_optedIn) ...[
+                                    const Text(
+                                      'When you evaluate or ask a question, Golf Diary may send your '
+                                      'range logs, on-course notes, scorecard reflections, club yardages, '
+                                      'and swing notes to Google Vertex AI. No API key is stored on this phone.',
                                     ),
-                                    ElevatedButton(
-                                      key: const ValueKey(
-                                          'diary-opt-in-continue'),
-                                      onPressed: _continue,
-                                      child: const Text('Continue'),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        OutlinedButton(
+                                          key: const ValueKey(
+                                              'diary-opt-in-dismiss'),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text('Not now'),
+                                        ),
+                                        ElevatedButton(
+                                          key: const ValueKey(
+                                              'diary-opt-in-continue'),
+                                          onPressed: _continue,
+                                          child: const Text('Continue'),
+                                        ),
+                                      ],
                                     ),
                                   ],
-                                ),
-                              ],
-                              if (!available)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 12),
-                                  child: Text(
-                                    'Your practice and round logs stay on this phone. '
-                                    'Connect to the internet to run Vertex AI evaluation.',
-                                    key: ValueKey('diary-offline-copy'),
-                                  ),
-                                ),
-                              const SizedBox(height: 12),
-                              for (final message in _messages)
-                                ListTile(
-                                  key: ValueKey('diary-message-${message.id}'),
-                                  leading: message.role == 'model'
-                                      ? null
-                                      : GolferAvatarCircle(
-                                          session: AccountAuthController
-                                              .instance.session,
-                                          profile: _profile,
-                                          radius: 16,
-                                        ),
-                                  title: Text(message.role == 'model'
-                                      ? 'Evaluation'
-                                      : 'You'),
-                                  subtitle: message.role == 'model'
-                                      ? DiaryMarkdownBody(data: message.content)
-                                      : Text(message.content),
-                                ),
-                              if (_optedIn) ...[
-                                if (_busy && _draft.isEmpty)
-                                  const ListTile(
-                                    key: ValueKey('diary-golf-loader'),
-                                    title: Text('Evaluation'),
-                                    subtitle: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Padding(
-                                        padding: EdgeInsets.only(top: 8),
-                                        child: GolfPuttLoader(
-                                          width: 120,
-                                          height: 32,
-                                        ),
+                                  if (!available)
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        'Your practice and round logs stay on this phone. '
+                                        'Connect to the internet to run Vertex AI evaluation.',
+                                        key: ValueKey('diary-offline-copy'),
                                       ),
                                     ),
-                                  ),
-                                if (_draft.isNotEmpty)
-                                  ListTile(
-                                    key: const ValueKey('diary-eval-draft'),
-                                    title: const Text('Evaluation'),
-                                    subtitle: DiaryMarkdownBody(data: _draft),
-                                  ),
-                                if (_baselineUpdated) ...[
-                                  Text(
-                                    _baselineSummary ?? 'Baseline updated',
-                                    key: const ValueKey('diary-baseline-updated'),
-                                  ),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: TextButton(
-                                      key: const ValueKey('diary-baseline-review'),
-                                      onPressed: _openBaseline,
-                                      child: const Text('Review'),
+                                  const SizedBox(height: 12),
+                                  if (_hasOlder)
+                                    SizedBox(
+                                      key: const ValueKey(
+                                          'diary-history-loader'),
+                                      height: 32,
+                                      child: Center(
+                                        child: _loadingOlder
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const SizedBox.shrink(),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                                for (final prompt in leadIns)
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Align(
+                                  for (final message in _messages)
+                                    ListTile(
+                                      key: ValueKey(
+                                          'diary-message-${message.id}'),
+                                      leading: message.role == 'model'
+                                          ? null
+                                          : GolferAvatarCircle(
+                                              session: AccountAuthController
+                                                  .instance.session,
+                                              profile: _profile,
+                                              radius: 16,
+                                            ),
+                                      title: Text(message.role == 'model'
+                                          ? 'Evaluation'
+                                          : 'You'),
+                                      subtitle: message.role == 'model'
+                                          ? DiaryMarkdownBody(
+                                              data: message.content)
+                                          : Text(message.content),
+                                    ),
+                                  if (_optedIn) ...[
+                                    if (_busy && _draft.isEmpty)
+                                      const ListTile(
+                                        key: ValueKey('diary-golf-loader'),
+                                        title: Text('Evaluation'),
+                                        subtitle: Align(
                                           alignment: Alignment.centerLeft,
-                                          child: ActionChip(
-                                            key: ValueKey(
-                                                'diary-lead-in-chip-${prompt.id}'),
-                                            label: Text(prompt.label),
-                                            onPressed: _busy
-                                                ? null
-                                                : () => _applyLeadIn(prompt),
+                                          child: Padding(
+                                            padding: EdgeInsets.only(top: 8),
+                                            child: GolfPuttLoader(
+                                              width: 120,
+                                              height: 32,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                      IconButton(
-                                        key: ValueKey(
-                                            'diary-lead-in-dismiss-${prompt.id}'),
-                                        tooltip: 'Dismiss',
-                                        onPressed: _busy
-                                            ? null
-                                            : () => _dismissLeadIn(prompt),
-                                        icon: const Icon(Icons.close, size: 18),
+                                    if (_draft.isNotEmpty)
+                                      ListTile(
+                                        key: const ValueKey('diary-eval-draft'),
+                                        title: const Text('Evaluation'),
+                                        subtitle:
+                                            DiaryMarkdownBody(data: _draft),
+                                      ),
+                                    if (_baselineUpdated) ...[
+                                      Text(
+                                        _baselineSummary ?? 'Baseline updated',
+                                        key: const ValueKey(
+                                            'diary-baseline-updated'),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: TextButton(
+                                          key: const ValueKey(
+                                              'diary-baseline-review'),
+                                          onPressed: _openBaseline,
+                                          child: const Text('Review'),
+                                        ),
                                       ),
                                     ],
-                                  ),
-                                Wrap(
-                                  spacing: 8,
-                                  children: [
-                                    TextButton(
-                                      key: const ValueKey('diary-baseline-btn'),
-                                      onPressed: _openBaseline,
-                                      child: Text(_profile.baselineLabel),
-                                    ),
-                                    TextButton(
-                                      key: const ValueKey(
-                                          'diary-evaluation-log-btn'),
-                                      onPressed: () =>
-                                          setState(() => _showLog = true),
-                                      child: const Text('Evaluation log'),
+                                    for (final prompt in leadIns)
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: ActionChip(
+                                                key: ValueKey(
+                                                    'diary-lead-in-chip-${prompt.id}'),
+                                                label: Text(prompt.label),
+                                                onPressed: _busy
+                                                    ? null
+                                                    : () =>
+                                                        _applyLeadIn(prompt),
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            key: ValueKey(
+                                                'diary-lead-in-dismiss-${prompt.id}'),
+                                            tooltip: 'Dismiss',
+                                            onPressed: _busy
+                                                ? null
+                                                : () => _dismissLeadIn(prompt),
+                                            icon: const Icon(Icons.close,
+                                                size: 18),
+                                          ),
+                                        ],
+                                      ),
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        TextButton(
+                                          key: const ValueKey(
+                                              'diary-baseline-btn'),
+                                          onPressed: _openBaseline,
+                                          child: Text(_profile.baselineLabel),
+                                        ),
+                                        TextButton(
+                                          key: const ValueKey(
+                                              'diary-evaluation-log-btn'),
+                                          onPressed: () =>
+                                              setState(() => _showLog = true),
+                                          child: const Text('Evaluation log'),
+                                        ),
+                                      ],
                                     ),
                                   ],
-                                ),
-                              ],
-                            ],
+                                ],
+                              ),
+                            ),
                           ),
               ),
               if (failed) ...[

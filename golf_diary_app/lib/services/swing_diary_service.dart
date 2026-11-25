@@ -20,6 +20,19 @@ class DiaryMessage {
   final int timestamp;
 }
 
+/// One screen of the diary thread, oldest first.
+class DiaryMessagePage {
+  const DiaryMessagePage({required this.messages, required this.hasOlder});
+
+  final List<DiaryMessage> messages;
+
+  /// True when rows older than [messages] are still in the database.
+  final bool hasOlder;
+}
+
+/// Messages fetched for the open thread. Older rows load on scroll-up.
+const int kDiaryThreadPageSize = 30;
+
 class DiaryExchange {
   const DiaryExchange({required this.evaluationId, required this.reply});
 
@@ -76,16 +89,63 @@ class SwingDiaryService {
     final rows = await (await _db).query(
       'swing_diary_messages',
       where: 'deleted = 0',
-      orderBy: 'timestamp ASC',
+      orderBy: 'timestamp ASC, id ASC',
     );
-    return rows
-        .map((row) => DiaryMessage(
-              id: row['id'] as String,
-              role: row['role'] as String,
-              content: row['content'] as String,
-              timestamp: row['timestamp'] as int,
-            ))
-        .toList();
+    return rows.map(_messageFromRow).toList();
+  }
+
+  /// Newest [limit] messages, or the [limit] rows strictly older than the cursor.
+  ///
+  /// Both results are chronological (oldest at index 0). The prompt path keeps
+  /// using [listMessages] so paging the sheet does not truncate model context.
+  Future<DiaryMessagePage> listMessagePage({
+    int limit = kDiaryThreadPageSize,
+    int? beforeTimestamp,
+    String? beforeId,
+  }) async {
+    if (limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'must be positive');
+    }
+    if ((beforeTimestamp == null) != (beforeId == null)) {
+      throw ArgumentError('beforeTimestamp and beforeId must be set together');
+    }
+    final hasCursor = beforeTimestamp != null;
+    final rows = await (await _db).query(
+      'swing_diary_messages',
+      where: hasCursor
+          ? 'deleted = 0 AND (timestamp < ? OR (timestamp = ? AND id < ?))'
+          : 'deleted = 0',
+      whereArgs:
+          hasCursor ? [beforeTimestamp, beforeTimestamp, beforeId] : null,
+      orderBy: 'timestamp DESC, id DESC',
+      limit: limit + 1,
+    );
+    final hasOlder = rows.length > limit;
+    final page = rows.take(limit).toList().reversed.map(_messageFromRow);
+    return DiaryMessagePage(messages: page.toList(), hasOlder: hasOlder);
+  }
+
+  /// Rows strictly newer than the cursor, oldest first.
+  Future<List<DiaryMessage>> listMessagesAfter({
+    required int timestamp,
+    required String id,
+  }) async {
+    final rows = await (await _db).query(
+      'swing_diary_messages',
+      where: 'deleted = 0 AND (timestamp > ? OR (timestamp = ? AND id > ?))',
+      whereArgs: [timestamp, timestamp, id],
+      orderBy: 'timestamp ASC, id ASC',
+    );
+    return rows.map(_messageFromRow).toList();
+  }
+
+  DiaryMessage _messageFromRow(Map<String, Object?> row) {
+    return DiaryMessage(
+      id: row['id'] as String,
+      role: row['role'] as String,
+      content: row['content'] as String,
+      timestamp: row['timestamp'] as int,
+    );
   }
 
   Future<List<RangeEvaluation>> listEvaluations() async {
@@ -106,7 +166,8 @@ class SwingDiaryService {
         .toList();
   }
 
-  Future<bool> hasDrillToday({DateTime? now}) async => hasDiaryActivityToday(now: now);
+  Future<bool> hasDrillToday({DateTime? now}) async =>
+      hasDiaryActivityToday(now: now);
 
   Future<bool> hasDiaryActivityToday({DateTime? now}) async {
     final clock = now ?? DateTime.now();
@@ -166,7 +227,8 @@ class SwingDiaryService {
         .map(
           (row) => DiaryContextNote(
             id: row['id'] as String,
-            source: DiaryContextSourceLabels.fromStorage(row['source'] as String),
+            source:
+                DiaryContextSourceLabels.fromStorage(row['source'] as String),
             content: row['content'] as String,
             contextDate: row['context_date'] as String,
             timestamp: row['timestamp'] as int,

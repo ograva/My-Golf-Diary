@@ -11,7 +11,7 @@
 
 A modal sheet (~85% viewport height) for **one ongoing diary thread**. Entry is only the **header book icon** on all four tabs (`diary-entry-*`). There is no diary tab, no Feedback button, and no Summarize today control in the main view.
 
-1. **Thread** — triggered entries (range block, FWY/SIM round finish/leave, scorecard finish summary) appear as list tiles without a model call.
+1. **Thread** — chronological, oldest at the top and newest at the bottom. Triggered entries (range block, FWY/SIM round finish/leave, scorecard finish summary) appear as list tiles without a model call. Opening the sheet scrolls so the **latest** post is on screen. Older messages load in batches of 30 when the golfer scrolls up (`diary-history-loader`); the viewport stays put when a batch is prepended. A new send or reply pins to the bottom only if they were already there.
 2. **Ask** — multiline **composer** pinned at the **bottom**; **Send** stores the note then calls Vertex when opted in and online.
 3. **History** — **Evaluation log** (`diary-evaluation-log-btn`) reads local `range_evaluations` only.
 
@@ -56,7 +56,7 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 
 | Widget | Role |
 | :--- | :--- |
-| `ListView` | Thread messages |
+| `SingleChildScrollView` | Chronological thread. Opens on the latest message. `diary-history-loader` marks older pages still in the database |
 | `TextField` | `diary-composer-field` |
 | `IconButton` | `diary-send-btn` / busy putt loader |
 | `GolfPuttLoader` | `diary-send-busy`, `diary-golf-loader` |
@@ -69,8 +69,9 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 
 | Action | Behavior |
 | :--- | :--- |
-| Open from header | Same sheet state; reload thread |
-| Send | Save user message → Vertex stream → append model row |
+| Open from header | Same sheet state; show the latest page, scrolled to the newest post |
+| Scroll up | Prepend the next older page of 30; keep the current post under the finger |
+| Send | Save user message → Vertex stream → append model row. Follow the bottom only if the latest post was already on screen |
 | Busy | Cancel via `diary-eval-cancel`; retry `diary-eval-retry` |
 | Evaluation log | Full-screen list inside sheet; Back returns to thread |
 
@@ -83,6 +84,7 @@ Unchanged pattern: privacy copy, `diary-opt-in-continue`, `diary-opt-in-dismiss`
 | Send | `diary-send-btn` |
 | Busy | `diary-send-busy` (send button), `diary-golf-loader` (thread row before first chunk) |
 | Message | `diary-message-{id}` |
+| Older history | `diary-history-loader` (shown while an older page is still stored) |
 | Eval log | `diary-evaluation-log-btn`, `diary-evaluation-log` |
 | Opt-in | `diary-opt-in-continue`, `diary-opt-in-dismiss` |
 | Offline | `diary-offline-copy` |

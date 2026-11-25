@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../on_course/fwy_aim.dart';
 import '../on_course/hole_projection.dart';
 import '../services/hole_map_pack_source.dart';
 import '../theme/app_theme.dart';
@@ -28,6 +29,7 @@ class FwyHoleScene {
     this.aimTarget,
     this.aimRingMeters,
     this.aimRingFaint = false,
+    this.aimArcFocus,
     this.manualPin,
     this.manualPinStale = false,
   });
@@ -48,6 +50,9 @@ class FwyHoleScene {
   final Offset? aimTarget;
   final double? aimRingMeters;
   final bool aimRingFaint;
+
+  /// Hole-local point the carry arc faces. Null aims the arc up the hole.
+  final Offset? aimArcFocus;
   final Offset? manualPin;
   final bool manualPinStale;
 }
@@ -317,14 +322,22 @@ class _FwyScenePainter extends CustomPainter {
 
     final ball = scene.ball;
     if (ball != null && scene.aimRingMeters != null) {
-      canvas.drawCircle(
-        _s(ball),
-        scene.aimRingMeters! * viewport.pixelsPerMeter,
+      final focus = scene.aimArcFocus ?? ball + const Offset(0, 1);
+      final arc = carryArcAngles(ball: _s(ball), focus: _s(focus));
+      canvas.drawArc(
+        Rect.fromCircle(
+          center: _s(ball),
+          radius: scene.aimRingMeters! * viewport.pixelsPerMeter,
+        ),
+        arc.start,
+        arc.sweep,
+        false,
         Paint()
           ..color =
               Colors.white.withValues(alpha: scene.aimRingFaint ? 0.35 : 0.9)
           ..strokeWidth = scene.aimRingFaint ? 1.2 : 2
-          ..style = PaintingStyle.stroke,
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round,
       );
     }
     if (ball != null && scene.aimTarget != null) {

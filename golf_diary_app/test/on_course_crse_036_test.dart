@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,7 +65,8 @@ void main() {
   setUp(() async {
     await LocalDatabaseService.debugClose();
     LocalDatabaseService.debugSetFileName('golf_diary_crse036.db');
-    await deleteDatabase(join(await getDatabasesPath(), 'golf_diary_crse036.db'));
+    await deleteDatabase(
+        join(await getDatabasesPath(), 'golf_diary_crse036.db'));
   });
 
   tearDown(() async {
@@ -185,6 +187,71 @@ void main() {
       expect(StandinHole.forPar(3).lengthYards, 165);
       expect(StandinHole.forPar(5).lengthYards, 510);
     });
+
+    test('carry mark is a 30 degree arc facing the aim', () {
+      const sweep = kCarryArcDegrees * math.pi / 180;
+      final up =
+          carryArcAngles(ball: Offset.zero, focus: const Offset(0, -100));
+      expect(up.sweep, closeTo(sweep, 1e-9));
+      expect(up.start, closeTo(-math.pi / 2 - sweep / 2, 1e-9));
+
+      final right =
+          carryArcAngles(ball: Offset.zero, focus: const Offset(100, 0));
+      expect(right.start, closeTo(-sweep / 2, 1e-9));
+
+      final missing = carryArcAngles(ball: Offset.zero, focus: Offset.zero);
+      expect(missing.sweep, closeTo(sweep, 1e-9));
+      expect(missing.start, closeTo(-math.pi / 2 - sweep / 2, 1e-9));
+    });
+
+    test('no aim faces the hole, or the nearest marker toward it', () {
+      const ball = Offset.zero;
+      const hole = Offset(0, 400);
+      const toward = Offset(10, 180);
+      const farther = Offset(-8, 260);
+      const behind = Offset(0, -40);
+      const sideways = Offset(200, 20);
+      final markers = [farther, behind, sideways, toward];
+
+      expect(
+        carryArcFocus(
+          ball: ball,
+          hole: hole,
+          holeIsAimTarget: true,
+          markers: markers,
+        ),
+        hole,
+      );
+      expect(
+        carryArcFocus(
+          ball: ball,
+          hole: hole,
+          holeIsAimTarget: false,
+          markers: markers,
+        ),
+        toward,
+      );
+      expect(
+        carryArcFocus(
+          ball: ball,
+          hole: hole,
+          holeIsAimTarget: false,
+          markers: const [behind, sideways],
+        ),
+        hole,
+      );
+      const tapped = Offset(-40, 90);
+      expect(
+        carryArcFocus(
+          ball: ball,
+          hole: hole,
+          holeIsAimTarget: false,
+          golferAim: tapped,
+          markers: markers,
+        ),
+        tapped,
+      );
+    });
   });
 
   testWidgets('FWY 390x844: full-bleed map, top rows, right rail, Record only',
@@ -222,7 +289,8 @@ void main() {
 
     final rail = tester.getRect(key('oncourse-side-rail'));
     expect(rail.right, closeTo(390 - 20, 0.5));
-    expect(rail.top, greaterThan(tester.getRect(key('on-course-hole-label')).bottom));
+    expect(rail.top,
+        greaterThan(tester.getRect(key('on-course-hole-label')).bottom));
     for (final id in [
       'oncourse-club-summary',
       'oncourse-lie-summary',
@@ -254,8 +322,10 @@ void main() {
     const body = 640 - kNavBarHeight;
     final rail = tester.getRect(key('oncourse-side-rail'));
     final record = tester.getRect(key('oncourse-record-shot-btn'));
-    expect(rail.top, greaterThan(tester.getRect(key('on-course-hole-label')).bottom));
-    expect(rail.bottom, lessThan(tester.getRect(key('oncourse-shots-peek')).top));
+    expect(rail.top,
+        greaterThan(tester.getRect(key('on-course-hole-label')).bottom));
+    expect(
+        rail.bottom, lessThan(tester.getRect(key('oncourse-shots-peek')).top));
     expect(record.bottom, lessThanOrEqualTo(body));
     expect(tester.getRect(key('oncourse-club-summary')).height,
         greaterThanOrEqualTo(36));
@@ -284,7 +354,8 @@ void main() {
     await pumpOnCourse(tester, course: kCourse);
     expect(key('oncourse-map-pack-image'), findsOneWidget);
     expect(find.text('© OpenStreetMap contributors (ODbL)'), findsOneWidget);
-    expect(key('oncourse-map-marker-ph-crse-villamor-h1-target'), findsOneWidget);
+    expect(
+        key('oncourse-map-marker-ph-crse-villamor-h1-target'), findsOneWidget);
     expect(key('oncourse-map-line-only-badge'), findsNothing);
 
     final marker =
@@ -316,7 +387,8 @@ void main() {
     await tester.tap(key('oncourse-rail-penalty'));
     await settleSheet(tester);
     expect(key('oncourse-penalty-popover'), findsOneWidget);
-    expect(tester.widget<IconButton>(key('oncourse-penalty-step-down')).onPressed,
+    expect(
+        tester.widget<IconButton>(key('oncourse-penalty-step-down')).onPressed,
         isNull);
     for (var i = 0; i < 6; i++) {
       await tester.tap(key('oncourse-penalty-step-up'));
@@ -390,7 +462,8 @@ void main() {
     await tester.tap(key('oncourse-gps-manual'));
     await settleSheet(tester);
     await settleDb(tester);
-    expect(find.descendant(
+    expect(
+        find.descendant(
             of: key('oncourse-gps-badge'), matching: find.text('Manual')),
         findsOneWidget);
 
@@ -423,7 +496,8 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await pumpOnCourse(tester);
-    expect(find.descendant(
+    expect(
+        find.descendant(
             of: key('oncourse-gps-badge'), matching: find.text('Manual')),
         findsOneWidget);
   });

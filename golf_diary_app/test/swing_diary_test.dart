@@ -29,6 +29,7 @@ class FakeDiaryModel implements DiaryModel {
     this.available = true,
     this.reply = 'Solid contact.',
     this.hold = false,
+    this.beforeReply,
     this.error,
     this.jsonReply,
   });
@@ -39,6 +40,9 @@ class FakeDiaryModel implements DiaryModel {
 
   /// When true, [generate] waits until [DiaryCancel.cancel] runs.
   final bool hold;
+
+  /// When set, [generate] waits for this future before the first chunk.
+  final Future<void>? beforeReply;
   Object? error;
   int calls = 0;
   String? lastPrompt;
@@ -61,6 +65,7 @@ class FakeDiaryModel implements DiaryModel {
     lastPrompt = prompt;
     lastSystemInstruction = systemInstruction;
     if (cancel?.isCancelled == true) throw const DiaryCancelled();
+    if (beforeReply != null) await beforeReply;
     if (hold) {
       final gate = Completer<void>();
       cancel?.bindAbort(() {
@@ -228,11 +233,12 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
     expect(find.byKey(const ValueKey('diary-save-note-btn')), findsNothing);
     expect(find.byKey(const ValueKey('diary-eval-debug')), findsNothing);
-    final composer = tester.widget<TextField>(
-        find.byKey(const ValueKey('diary-composer-field')));
+    final composer = tester
+        .widget<TextField>(find.byKey(const ValueKey('diary-composer-field')));
     expect(composer.minLines, 1);
     expect(composer.maxLines, greaterThan(1));
     expect(composer.keyboardType, TextInputType.multiline);
@@ -343,10 +349,11 @@ void main() {
       find.textContaining('stay on this phone'),
       findsOneWidget,
     );
-    final send = tester
-        .widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
+    final send =
+        tester.widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNull);
-    expect(find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('diary-summarize-today-btn')), findsNothing);
     expect(find.byKey(const ValueKey('diary-save-note-btn')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('diary-evaluation-log-btn')));
@@ -388,7 +395,8 @@ void main() {
     ));
   }
 
-  testWidgets('cancel leaves no evaluation while the send button shows a loader',
+  testWidgets(
+      'cancel leaves no evaluation while the send button shows a loader',
       (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -422,8 +430,8 @@ void main() {
     final evaluations =
         await tester.runAsync(() => SwingDiaryService().listEvaluations());
     expect(evaluations!.where((row) => row.kind == 'evaluation'), isEmpty);
-    final send = tester
-        .widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
+    final send =
+        tester.widget<IconButton>(find.byKey(const ValueKey('diary-send-btn')));
     expect(send.onPressed, isNotNull);
   });
 
@@ -520,7 +528,8 @@ void main() {
     expect(find.text('Sternum centered, turf brush'), findsOneWidget);
   });
 
-  testWidgets('a lead-in chip fills the composer and a saved baseline reaches the model',
+  testWidgets(
+      'a lead-in chip fills the composer and a saved baseline reaches the model',
       (tester) async {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 1;
@@ -545,7 +554,8 @@ void main() {
       contains('Body / physio watchout: '),
     );
 
-    await tester.ensureVisible(find.byKey(const ValueKey('diary-baseline-btn')));
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('diary-baseline-btn')));
     await tester.tap(find.byKey(const ValueKey('diary-baseline-btn')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -562,7 +572,8 @@ void main() {
 
     await askDiary(tester);
     expect(model.lastSystemInstruction, contains('Heel pain on hard turf'));
-    expect(model.lastSystemInstruction, isNot(contains('physical constraints')));
+    expect(
+        model.lastSystemInstruction, isNot(contains('physical constraints')));
   });
 
   testWidgets('a saved evaluation distills new golfer notes into the baseline',
@@ -582,7 +593,8 @@ void main() {
     await openDiary(tester);
     await askDiary(tester);
 
-    expect(find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('diary-baseline-updated')), findsOneWidget);
     expect(find.text('Kept the tempo cue'), findsOneWidget);
     final profile = await tester
         .runAsync(() => LocalDatabaseService.instance.getGolferProfile());
@@ -649,7 +661,8 @@ void main() {
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
-    await tester.ensureVisible(find.byKey(const ValueKey('diary-opt-in-dismiss')));
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('diary-opt-in-dismiss')));
     await tester.tap(find.byKey(const ValueKey('diary-opt-in-dismiss')));
     await tester.pump();
     expect(model.calls, 0);
@@ -674,6 +687,212 @@ void main() {
     await openDiary(tester);
     await askDiary(tester);
     expect(model.lastPrompt, contains('Back nine felt loose.'));
+  });
+
+  Future<void> seedThread(int count) async {
+    final database = await db.database;
+    final batch = database.batch();
+    for (var i = 0; i < count; i++) {
+      batch.insert('swing_diary_messages', {
+        'id': 'm${i.toString().padLeft(3, '0')}',
+        'role': i.isEven ? 'user' : 'model',
+        'content': 'msg-$i',
+        'timestamp': 1700000000000 + i,
+        'is_synced': 0,
+        'updated_at_ms': 1,
+        'deleted': 0,
+      });
+    }
+    await batch.commit(noResult: true);
+  }
+
+  ScrollableState threadScroll(WidgetTester tester) {
+    return tester.state<ScrollableState>(find.descendant(
+      of: find.byType(SingleChildScrollView),
+      matching: find.byType(Scrollable),
+    ));
+  }
+
+  Future<void> pumpDiarySheet(WidgetTester tester, FakeDiaryModel model) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildGolfTheme(),
+      home: Scaffold(
+        body: SwingDiarySheet(diary: model, store: SwingDiaryService()),
+      ),
+    ));
+    await tester.pump();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+    await tester.pump();
+  }
+
+  testWidgets('diary pages stay chronological and move older from the cursor',
+      (tester) async {
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    final store = SwingDiaryService();
+    final database = await tester.runAsync(() => db.database);
+    await tester.runAsync(() async {
+      await database!.insert('swing_diary_messages', {
+        'id': 'b',
+        'role': 'user',
+        'content': 'second',
+        'timestamp': 5,
+        'is_synced': 0,
+        'updated_at_ms': 1,
+        'deleted': 0,
+      });
+      await database.insert('swing_diary_messages', {
+        'id': 'a',
+        'role': 'user',
+        'content': 'first-tied',
+        'timestamp': 5,
+        'is_synced': 0,
+        'updated_at_ms': 1,
+        'deleted': 0,
+      });
+      await database.insert('swing_diary_messages', {
+        'id': 'c',
+        'role': 'model',
+        'content': 'newest',
+        'timestamp': 6,
+        'is_synced': 0,
+        'updated_at_ms': 1,
+        'deleted': 0,
+      });
+    });
+
+    final latest = await tester.runAsync(() => store.listMessagePage(limit: 2));
+    expect(latest!.hasOlder, isTrue);
+    expect(latest.messages.map((m) => m.id).toList(), ['b', 'c']);
+
+    final older = await tester.runAsync(() => store.listMessagePage(
+          limit: 2,
+          beforeTimestamp: latest.messages.first.timestamp,
+          beforeId: latest.messages.first.id,
+        ));
+    expect(older!.hasOlder, isFalse);
+    expect(older.messages.map((m) => m.id).toList(), ['a']);
+
+    final after = await tester
+        .runAsync(() => store.listMessagesAfter(timestamp: 5, id: 'b'));
+    expect(after!.map((m) => m.id).toList(), ['c']);
+    final all = await tester.runAsync(() => store.listMessages());
+    expect(all!.map((m) => m.id).toList(), ['a', 'b', 'c']);
+  });
+
+  testWidgets('diary opens on the latest post and prepends older pages',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(() async {
+      await SwingDiaryService().setOptedIn(true);
+      await seedThread(45);
+    });
+
+    await pumpDiarySheet(tester, FakeDiaryModel());
+    final scroll = threadScroll(tester);
+    expect(scroll.position.pixels, closeTo(scroll.position.maxScrollExtent, 1));
+    expect(find.text('msg-44'), findsOneWidget);
+    expect(find.text('msg-0'), findsNothing);
+    expect(find.byKey(const ValueKey('diary-history-loader')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('msg-20')).dy,
+      lessThan(tester.getTopLeft(find.text('msg-44')).dy),
+    );
+
+    final viewportTop =
+        tester.getTopLeft(find.byType(SingleChildScrollView)).dy;
+    scroll.position.jumpTo(0);
+    await tester.pump();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('msg-0'), findsOneWidget);
+    expect(find.byKey(const ValueKey('diary-history-loader')), findsNothing);
+    // Prepend keeps the previous top row (msg-15) on screen instead of
+    // jumping to the newly loaded first post. The value is the text inside
+    // the tile, so it sits a little below the scroll view's top edge.
+    expect(
+      tester.getTopLeft(find.text('msg-15')).dy - viewportTop,
+      lessThan(140),
+    );
+    expect(scroll.position.pixels, greaterThan(200));
+    expect(
+      tester.getTopLeft(find.text('msg-0')).dy,
+      lessThan(tester.getTopLeft(find.text('msg-15')).dy),
+    );
+    expect(
+        scroll.position.pixels, lessThan(scroll.position.maxScrollExtent - 80));
+  });
+
+  testWidgets('a reply pins to the bottom only when the latest post is visible',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    await tester.runAsync(() async {
+      await SwingDiaryService().setOptedIn(true);
+      await seedThread(kDiaryThreadPageSize);
+    });
+
+    final gate = Completer<void>();
+    final model = FakeDiaryModel(beforeReply: gate.future);
+    await pumpDiarySheet(tester, model);
+    final scroll = threadScroll(tester);
+    expect(scroll.position.pixels, closeTo(scroll.position.maxScrollExtent, 1));
+
+    scroll.position.jumpTo(120);
+    await tester.pump();
+    final parked = scroll.position.pixels;
+
+    await tester.enterText(
+      find.byKey(const ValueKey('diary-composer-field')),
+      'Keep my place',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('diary-send-btn')));
+    await tester.pump();
+    expect(scroll.position.pixels, closeTo(parked, 1));
+
+    gate.complete();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Keep my place'), findsOneWidget);
+    expect(find.text('Solid contact.'), findsOneWidget);
+    expect(scroll.position.pixels, closeTo(parked, 1));
+    expect(
+        scroll.position.pixels, lessThan(scroll.position.maxScrollExtent - 80));
+
+    scroll.position.jumpTo(scroll.position.maxScrollExtent);
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('diary-composer-field')),
+      'Follow me',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('diary-send-btn')));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Follow me'), findsOneWidget);
+    expect(
+      scroll.position.pixels,
+      closeTo(scroll.position.maxScrollExtent, 1),
+    );
   });
 
   testWidgets('home shell keeps four tabs without a diary tab', (tester) async {

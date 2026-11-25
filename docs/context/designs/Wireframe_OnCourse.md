@@ -38,6 +38,7 @@ Full-bleed `FwyHoleMap` under scrim overlays. **Top gradient band** (`oncourse-t
 - **Write in the diary** with the header book icon only (`diary-entry-on-course`, `Icons.auto_stories_outlined`, 48dp, immediately left of the account avatar). The leading ⋮ is round tools (invite caddy, concede, finish, GPS, rail side). It does not list Diary. There is no right-edge swipe.
 - **Course name** (`oncourse-course-summary`) opens the shared **Course** dialog, the same control as Scorecard ([Wireframe_NewRound.md](./Wireframe_NewRound.md)). Save writes the name, format, double eagle, rating, and slope onto the active round. Cancel writes nothing.
 - **Map** is always the body in FWY mode (`oncourse-map-background`). Overlays use `fwyOverlayText` / `fwySurface` ([`fwy_overlays.dart`](../../../golf_diary_app/lib/widgets/fwy_overlays.dart)).
+- **Carry mark** (Aim mode): a 30° arc at the selected club's carry distance, centred on the golfer's aim. With no aim set, the arc faces the hole, or the nearest marker toward the hole when the pin is not the target.
 - **Plan shot** via rail tiles → bottom sheets for club/lie/aim; GPS on Record only.
 - **Shots sheet** (`oncourse-shots-sheet`) lists `oncourse-shot-row-{n}`; overflow menu holds Concede / Finish ([CRSE-003](../../stories/CRSE/CRSE-003-penalties-mulligans-concede.md)).
 - Badges: stand-in yards, line-only, map download (`oncourse-map-download`).

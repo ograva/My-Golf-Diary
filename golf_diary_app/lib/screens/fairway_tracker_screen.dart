@@ -1447,7 +1447,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       }
       for (final m in _fwyMarkers(g)) {
         if ((m.local - local).distance * pixelsPerMeter <= 12) {
-          setState(() => _aimTarget = FwyAimTarget.marker(m.local, m.id));
+          setState(() => _aimTarget =
+              FwyAimTarget.marker(m.local, m.id, explicit: true));
           return;
         }
       }
@@ -1926,6 +1927,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     final strokesLocal = _fwyStrokes(g);
     final ringFaint = (g.green - ball).distance <= _ringMeters;
     final markers = _fwyMarkers(g);
+    final arcFocus = carryArcFocus(
+      ball: ball,
+      hole: g.green,
+      holeIsAimTarget: _aimTarget.kind == FwyAimKind.pin,
+      golferAim: _aimTarget.explicit ? _aimTarget.local : null,
+      markers: [for (final m in markers) m.local],
+    );
     final segmentYards = <int?>[
       for (var i = 1; i < _shots.length; i++)
         g.standin != null
@@ -1948,6 +1956,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       aimTarget: _aimTarget.local,
       aimRingMeters: _aimMode ? _ringMeters : null,
       aimRingFaint: ringFaint,
+      aimArcFocus: _aimMode ? arcFocus : null,
       manualPin: manual && _manualPin != null
           ? g.projection!
               .toLocal(_manualPin!.latitude, _manualPin!.longitude)

@@ -220,6 +220,8 @@ class DiaryPromptInput {
     this.systemPrompt,
     this.persona = CoachPersona.defaultPersona,
     this.tokenCeiling = kDiaryTokenCeiling,
+    this.focusSession,
+    this.focusEvaluation,
   });
 
   final DateTime now;
@@ -238,6 +240,12 @@ class DiaryPromptInput {
   final String? systemPrompt;
   final CoachPersona persona;
   final int tokenCeiling;
+
+  /// The range visit the golfer just saved, when this ask is about that visit.
+  final RangeSession? focusSession;
+
+  /// Coach reply already stored for [focusSession], when one exists.
+  final String? focusEvaluation;
 }
 
 class DiaryPromptPlan {
@@ -441,6 +449,19 @@ String _compose(
   if (earlierNotes.isNotEmpty) {
     buffer.writeln('\nDiary notes (on-course, scorecard, and other tabs):');
     _writeContextNotes(buffer, earlierNotes);
+  }
+
+  final focus = input.focusSession;
+  if (focus != null) {
+    buffer.writeln('\nSaved range session to review:');
+    _writeSessions(buffer, [focus]);
+    final prior = input.focusEvaluation?.trim() ?? '';
+    if (prior.isNotEmpty) {
+      buffer.writeln('Prior evaluation of this session:');
+      buffer.writeln(prior);
+    }
+    buffer.writeln(
+        'Task: Answer about this saved range session. Use its blocks, yardages, cues, and session note.');
   }
 
   buffer.writeln('\nLatest turns:');

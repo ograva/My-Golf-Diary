@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/screens/range_drill_screen.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
+import 'package:golf_diary_app/services/swing_diary_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -98,6 +99,15 @@ void main() {
     expect(card, findsOneWidget);
     expect(find.textContaining('Smooth session'), findsWidgets);
     expect(find.textContaining('Compiled session'), findsOneWidget);
+    expect(find.text('Swing diary'), findsOneWidget);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(find.text(kLastRangeSessionQuestion), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Swing diary'))).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.widgetWithText(ChoiceChip, '3 Wood'));
     await tester.pump();

@@ -329,4 +329,41 @@ Your tone is grounded, analytical, encouraging, and practical—like a trusted T
     );
     expect(plan.prompt, contains('Diary notes (on-course, scorecard, and other tabs):'));
   });
+
+  test('a focused range session and its evaluation are attached for the coach', () {
+    final now = DateTime(2026, 11, 11, 18);
+    final session = RangeSession(
+      id: 'rsess_focus',
+      venueName: 'Topgolf',
+      sessionNote: 'Tempo felt smooth',
+      timestamp: now.millisecondsSinceEpoch,
+      blocks: const [
+        RangeSessionBlock(
+          clubId: '7i',
+          clubName: '7 Iron',
+          shotCount: 10,
+          minYards: 145,
+          avgYards: 155,
+          maxYards: 162,
+          tempoNotes: 'Quiet hands',
+        ),
+      ],
+    );
+    final plan = planDiaryPrompt(DiaryPromptInput(
+      now: now,
+      drills: const [],
+      sessions: [session],
+      turns: const [],
+      tallies: const [],
+      question: 'How did I do in my last range session?',
+      focusSession: session,
+      focusEvaluation: 'Keep the 7-iron tempo.',
+    ));
+    expect(plan.prompt, contains('Saved range session to review:'));
+    expect(plan.prompt, contains('Tempo felt smooth'));
+    expect(plan.prompt, contains('Quiet hands'));
+    expect(plan.prompt, contains('Prior evaluation of this session:'));
+    expect(plan.prompt, contains('Keep the 7-iron tempo.'));
+    expect(plan.prompt, contains('Answer about this saved range session'));
+  });
 }

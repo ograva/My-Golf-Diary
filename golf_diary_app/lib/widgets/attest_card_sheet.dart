@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
   final _strokes = <List<Offset>>[];
   var _role = 'self';
   Uint8List? _selfie;
+  Size? _selfieSize;
   var _saving = false;
   Size _padSize = const Size(300, 120);
 
@@ -51,8 +53,12 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
       );
       if (shot == null || !mounted) return;
       final bytes = await shot.readAsBytes();
+      final size = await decodeImageSize(bytes);
       if (!mounted) return;
-      setState(() => _selfie = bytes);
+      setState(() {
+        _selfie = bytes;
+        _selfieSize = size;
+      });
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,10 +69,37 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
     }
   }
 
+  Future<void> _openSignaturePad() async {
+    final size = await showDialog<Size>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _SignaturePadDialog(
+        strokes: _strokes,
+        onChanged: () {
+          if (mounted) setState(() {});
+        },
+      ),
+    );
+    if (!mounted || size == null || size.width <= 0 || size.height <= 0) {
+      return;
+    }
+    setState(() => _padSize = size);
+  }
+
   Future<void> _commit() async {
     setState(() => _saving = true);
     try {
-      final signature = await renderSignaturePng(_strokes, _padSize);
+      final width = 900;
+      final height = math.max(
+        1,
+        (width * _padSize.height / math.max(_padSize.width, 1)).round(),
+      );
+      final signature = await renderSignaturePng(
+        _strokes,
+        _padSize,
+        width: width,
+        height: height,
+      );
       Uint8List? selfie;
       Uint8List? combined;
       if (_selfie != null) {
@@ -144,43 +177,11 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 6),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      _padSize = Size(constraints.maxWidth, 140);
-                      return Listener(
-                        key: const ValueKey('scorecard-attest-signature'),
-                        onPointerDown: (event) {
-                          setState(() => _strokes.add([event.localPosition]));
-                        },
-                        onPointerMove: (event) {
-                          if (_strokes.isEmpty) return;
-                          setState(
-                              () => _strokes.last.add(event.localPosition));
-                        },
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.black26),
-                          ),
-                          child: SizedBox(
-                            height: 140,
-                            width: double.infinity,
-                            child: CustomPaint(
-                              painter: _SignaturePainter(_strokes),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      key: const ValueKey('scorecard-attest-signature-clear'),
-                      onPressed:
-                          _hasStroke ? () => setState(_strokes.clear) : null,
-                      child: const Text('Clear'),
-                    ),
+                  OutlinedButton.icon(
+                    key: const ValueKey('scorecard-attest-signature'),
+                    onPressed: _openSignaturePad,
+                    icon: const Icon(Icons.draw_outlined),
+                    label: Text(_hasStroke ? 'Edit signature' : 'Sign'),
                   ),
                   if (_selfie == null)
                     OutlinedButton.icon(
@@ -205,7 +206,10 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
                           child: OutlinedButton(
                             key: const ValueKey(
                                 'scorecard-attest-selfie-remove'),
-                            onPressed: () => setState(() => _selfie = null),
+                            onPressed: () => setState(() {
+                              _selfie = null;
+                              _selfieSize = null;
+                            }),
                             child: const Text('Remove'),
                           ),
                         ),
@@ -221,7 +225,9 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
                   _Preview(
                     key: const ValueKey('scorecard-attest-preview'),
                     selfie: _selfie,
+                    selfieSize: _selfieSize,
                     strokes: _strokes,
+                    padSize: _padSize,
                   ),
                   const SizedBox(height: 12),
                   TextButton(
@@ -247,10 +253,18 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
 }
 
 class _Preview extends StatelessWidget {
-  const _Preview({super.key, required this.selfie, required this.strokes});
+  const _Preview({
+    super.key,
+    required this.selfie,
+    required this.selfieSize,
+    required this.strokes,
+    required this.padSize,
+  });
 
   final Uint8List? selfie;
+  final Size? selfieSize;
   final List<List<Offset>> strokes;
+  final Size padSize;
 
   @override
   Widget build(BuildContext context) {
@@ -263,43 +277,166 @@ class _Preview extends StatelessWidget {
         child: SizedBox(
           height: 80,
           width: double.infinity,
-          child: CustomPaint(painter: _SignaturePainter(strokes)),
+          child: CustomPaint(
+            painter: _SignaturePainter(strokes, source: padSize),
+          ),
         ),
       );
     }
-    return SizedBox(
-      height: 180,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.memory(selfie!, fit: BoxFit.contain),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: 0.22,
-              widthFactor: 0.84,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xD9FFFFFF),
-                  borderRadius: BorderRadius.circular(8),
+    final photo = selfieSize;
+    if (photo == null) {
+      return const SizedBox(
+        height: 180,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const maxH = 180.0;
+        final fitted = applyBoxFit(
+          BoxFit.contain,
+          photo,
+          Size(constraints.maxWidth, maxH),
+        ).destination;
+        final band = signatureOverlayRect(fitted, padSize);
+        return Center(
+          child: SizedBox(
+            width: fitted.width,
+            height: fitted.height,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.memory(selfie!, fit: BoxFit.fill),
                 ),
-                child: CustomPaint(painter: _SignaturePainter(strokes)),
-              ),
+                Positioned.fromRect(
+                  rect: band,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xD9FFFFFF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: CustomPaint(
+                      painter: _SignaturePainter(strokes, source: padSize),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        );
+      },
+    );
+  }
+}
+
+class _SignaturePadDialog extends StatefulWidget {
+  const _SignaturePadDialog({
+    required this.strokes,
+    required this.onChanged,
+  });
+
+  final List<List<Offset>> strokes;
+  final VoidCallback onChanged;
+
+  @override
+  State<_SignaturePadDialog> createState() => _SignaturePadDialogState();
+}
+
+class _SignaturePadDialogState extends State<_SignaturePadDialog> {
+  Size _padSize = Size.zero;
+
+  bool get _hasStroke => widget.strokes.any((stroke) => stroke.isNotEmpty);
+
+  void _changed() {
+    widget.onChanged();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Signature',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  TextButton(
+                    key: const ValueKey('scorecard-attest-signature-clear'),
+                    onPressed: _hasStroke
+                        ? () {
+                            widget.strokes.clear();
+                            _changed();
+                          }
+                        : null,
+                    child: const Text('Clear'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, _padSize),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final size =
+                        Size(constraints.maxWidth, constraints.maxHeight);
+                    if (size.width > 0 && size.height > 0) _padSize = size;
+                    return Listener(
+                      key: const ValueKey('scorecard-attest-signature-pad'),
+                      onPointerDown: (event) {
+                        widget.strokes.add([event.localPosition]);
+                        _changed();
+                      },
+                      onPointerMove: (event) {
+                        if (widget.strokes.isEmpty) return;
+                        widget.strokes.last.add(event.localPosition);
+                        _changed();
+                      },
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black26),
+                        ),
+                        child: CustomPaint(
+                          painter: _SignaturePainter(widget.strokes),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SignaturePainter extends CustomPainter {
-  _SignaturePainter(this.strokes);
+  _SignaturePainter(this.strokes, {this.source = Size.zero});
 
   final List<List<Offset>> strokes;
+  final Size source;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final sx = source.width <= 0 ? 1.0 : size.width / source.width;
+    final sy = source.height <= 0 ? 1.0 : size.height / source.height;
     final paint = Paint()
       ..color = Colors.black
       ..strokeWidth = 3
@@ -307,13 +444,17 @@ class _SignaturePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     for (final stroke in strokes) {
       if (stroke.length == 1) {
-        canvas.drawCircle(stroke.first, 1.5, Paint()..color = Colors.black);
+        canvas.drawCircle(
+          Offset(stroke.first.dx * sx, stroke.first.dy * sy),
+          1.5,
+          Paint()..color = Colors.black,
+        );
         continue;
       }
       if (stroke.length < 2) continue;
-      final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
+      final path = Path()..moveTo(stroke.first.dx * sx, stroke.first.dy * sy);
       for (final point in stroke.skip(1)) {
-        path.lineTo(point.dx, point.dy);
+        path.lineTo(point.dx * sx, point.dy * sy);
       }
       canvas.drawPath(path, paint);
     }

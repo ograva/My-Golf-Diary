@@ -92,9 +92,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/fairway_tracker_screen.dart": {
-    "mtime": 1795674647.9059627,
-    "seen": 1795710382.00898,
-    "ast_hash": "9b49d7a69b6250c3358f65814813fc51",
+    "mtime": 1795710745.3133807,
+    "seen": 1795710825.1582658,
+    "ast_hash": "e98cb917ba88a1b90cdad8e13d79fd8d",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/screens/range_drill_screen.dart": {
@@ -909,9 +909,9 @@
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_OnCourse.md": {
-    "mtime": 1795674647.9099627,
-    "seen": 1795710382.0091639,
-    "ast_hash": "2e7570ee9d277529c30ecda4bf926b39",
+    "mtime": 1795710722.2972627,
+    "seen": 1795710825.1584568,
+    "ast_hash": "30d19cd8dffb6a5c8e28bdfb5ea0f234",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_PracticeDrills.md": {
@@ -933,9 +933,9 @@
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_Scorecard.md": {
-    "mtime": 1795674647.9099627,
-    "seen": 1795710382.0091677,
-    "ast_hash": "81126f41b7969672375f71e8093dab31",
+    "mtime": 1795710719.9092488,
+    "seen": 1795710825.1584609,
+    "ast_hash": "a1d20c3d64818b086fa9e2c812e636d6",
     "semantic_hash": ""
   },
   "docs/context/designs/Wireframe_ShotEdit.md": {
@@ -1911,9 +1911,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/fwy_hole_map.dart": {
-    "mtime": 1795674647.9139624,
-    "seen": 1795710382.0090427,
-    "ast_hash": "19b3808424e20cea425fcb814a003a45",
+    "mtime": 1795710745.3253808,
+    "seen": 1795710825.1583304,
+    "ast_hash": "35d8d75a7924e32d9fccff54cd20d5f8",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/fwy_overlays.dart": {
@@ -1923,9 +1923,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/test/on_course_crse_036_test.dart": {
-    "mtime": 1795674647.9099627,
-    "seen": 1795710382.0090907,
-    "ast_hash": "3a7b44667080ee60f0f6c9aa515c104b",
+    "mtime": 1795710697.3091,
+    "seen": 1795710825.1583805,
+    "ast_hash": "6d63182cd45c8e0e7b8f1c7aeb3578d7",
     "semantic_hash": ""
   },
   "docs/shards/CRSE/CRSE-036-fwy-map-background-shell.md": {
@@ -2679,14 +2679,14 @@
     "semantic_hash": ""
   },
   "golf_diary_app/test/scorecard_round_controls_test.dart": {
-    "mtime": 1795674647.9099627,
-    "seen": 1795710382.009104,
-    "ast_hash": "f7c42fe3d313485a0279e204cd34728e",
+    "mtime": 1795710777.2535033,
+    "seen": 1795710825.1583946,
+    "ast_hash": "3269fe889460da6a31198cb463d9e40b",
     "semantic_hash": ""
   },
   "functions/attest_score_pdf.js": {
-    "mtime": 1795710358.5588894,
-    "seen": 1795710382.0089288,
+    "mtime": 1795710551.508991,
+    "seen": 1795710825.1582127,
     "ast_hash": "b71f8a034f1098c69c22735cf4943fce",
     "semantic_hash": ""
   },
@@ -2709,9 +2709,9 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/services/attest_card_image.dart": {
-    "mtime": 1795674647.9059627,
-    "seen": 1795710382.008989,
-    "ast_hash": "6f50a4596f0a0060f03d00b52106f445",
+    "mtime": 1795710745.3413808,
+    "seen": 1795710825.1582756,
+    "ast_hash": "edc66576ff33e2b7af4ee528661eacf1",
     "semantic_hash": ""
   },
   "golf_diary_app/lib/services/attest_jpeg.dart": {
@@ -2775,20 +2775,20 @@
     "semantic_hash": ""
   },
   "golf_diary_app/lib/widgets/attest_card_sheet.dart": {
-    "mtime": 1795674647.9139624,
-    "seen": 1795710382.0090346,
-    "ast_hash": "d76a63c88182ba32445b71f7ca9fea30",
+    "mtime": 1795710745.333381,
+    "seen": 1795710825.1583219,
+    "ast_hash": "824dc33ef8a44ed7f4ee81983928ca5e",
     "semantic_hash": ""
   },
   "golf_diary_app/test/attest_card_image_test.dart": {
-    "mtime": 1795674647.9059627,
-    "seen": 1795710382.0090733,
-    "ast_hash": "2e097b742ed76ed5bec7a185020a5085",
+    "mtime": 1795710701.49713,
+    "seen": 1795710825.1583622,
+    "ast_hash": "8686ef36dfb279b153481b24dbc94700",
     "semantic_hash": ""
   },
   "functions/package-lock.json": {
-    "mtime": 1795710332.9348295,
-    "seen": 1795710382.0093086,
+    "mtime": 1795674647.9099627,
+    "seen": 1795710825.1586084,
     "ast_hash": "87c20d8795401dec651279dd19b54293",
     "semantic_hash": ""
   }

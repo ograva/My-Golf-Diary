@@ -221,8 +221,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (holeCoordinates(course, hole + 1) == null) return;
     HoleMapPackSource.instance.loadHole(course, hole + 1).then((next) {
       if (next == null || !mounted || token != _packToken) return;
-      precacheImage(holeMapImageProvider(next.imageBytes), context)
-          .ignore();
+      precacheImage(holeMapImageProvider(next.imageBytes), context).ignore();
     }, onError: (_) {});
   }
 
@@ -440,8 +439,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
     try {
       return await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(
+        locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           timeLimit: Duration(seconds: 10),
         ),
@@ -524,8 +522,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               ? _playerFix
               : null;
           final position = streamFix == null ? await _readGps() : null;
-          final liveFix = streamFix ??
-              (_locationPermissionBlocked ? null : _playerFix);
+          final liveFix =
+              streamFix ?? (_locationPermissionBlocked ? null : _playerFix);
           if (position == null && liveFix != null) {
             lat = liveFix.latitude;
             lon = liveFix.longitude;
@@ -605,7 +603,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     if (finishingRound) {
       await _writeFinishedRoundDiary();
       if (mounted) {
-        await showAttestCardDialog(context, roundId: roundId, afterFinish: true);
+        await showAttestCardDialog(context,
+            roundId: roundId, afterFinish: true);
       }
     }
     if (finishingRound && mounted) {
@@ -642,8 +641,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       doubleEaglePoints: settings.molaveDoubleEaglePoints,
     );
     await SwingDiaryService(database: db).appendContextNote(
-      content:
-          'Round finished. ${card.summary}. ${settings.attestationLabel}.',
+      content: 'Round finished. ${card.summary}. ${settings.attestationLabel}.',
       source: DiaryContextSource.onCourse,
       roundId: roundId,
     );
@@ -1316,8 +1314,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       trailing: s.isHoled
           ? const Icon(Icons.flag_outlined)
           : s.notes.trim().isNotEmpty
-          ? const Icon(Icons.notes_outlined)
-          : const Icon(Icons.edit_outlined),
+              ? const Icon(Icons.notes_outlined)
+              : const Icon(Icons.edit_outlined),
     );
   }
 
@@ -1417,8 +1415,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     var target = const FwyAimTarget.pin();
     if ((g.green - ball).distance > radius) {
       for (final m in _fwyMarkers(g)) {
-        if (((m.local - ball).distance - radius).abs() <=
-            15 * kMetersPerYard) {
+        if (((m.local - ball).distance - radius).abs() <= 15 * kMetersPerYard) {
           target = FwyAimTarget.marker(m.local, m.id);
           break;
         }
@@ -1447,8 +1444,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       }
       for (final m in _fwyMarkers(g)) {
         if ((m.local - local).distance * pixelsPerMeter <= 12) {
-          setState(() => _aimTarget =
-              FwyAimTarget.marker(m.local, m.id, explicit: true));
+          setState(() =>
+              _aimTarget = FwyAimTarget.marker(m.local, m.id, explicit: true));
           return;
         }
       }
@@ -1816,8 +1813,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
     );
   }
 
-  Widget _fwyRail(BuildContext context, double tile, int penalties,
-      int mulligans) {
+  Widget _fwyRail(
+      BuildContext context, double tile, int penalties, int mulligans) {
     final club = _selectedClub;
     final aimValue = switch (_aimTarget.kind) {
       FwyAimKind.pin => 'Pin',
@@ -1958,8 +1955,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       aimRingFaint: ringFaint,
       aimArcFocus: _aimMode ? arcFocus : null,
       manualPin: manual && _manualPin != null
-          ? g.projection!
-              .toLocal(_manualPin!.latitude, _manualPin!.longitude)
+          ? g.projection!.toLocal(_manualPin!.latitude, _manualPin!.longitude)
           : null,
       manualPinStale: _manualPinStale,
     );
@@ -1994,14 +1990,6 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                 icon: const Icon(Icons.close),
               ),
             ],
-          ),
-        if (manual && !recordReady && !_aimMode)
-          _fwyBanner(
-            key: 'oncourse-manual-hint',
-            icon: Icons.pan_tool_alt_outlined,
-            text: _manualPin == null
-                ? 'Tap the map where your ball is'
-                : 'Move the pin to your ball (tap it if it has not moved)',
           ),
         if (doublePar && !_doubleParDismissed)
           _fwyBanner(
@@ -2060,6 +2048,28 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           ),
       ];
 
+      final clearInsets = EdgeInsets.fromLTRB(
+        freeLeft,
+        _kRailTop + (badges.isEmpty ? 0 : _kBadgeReserve),
+        freeRight,
+        _kDockHeight,
+      );
+      final teeScreen = HoleViewport.fit(
+        tee: g.tee,
+        green: g.green,
+        free: clearInsets
+            .deflateRect(Offset.zero & Size(constraints.maxWidth, height)),
+      ).toScreen(g.tee);
+      final manualHint = manual && !recordReady && !_aimMode
+          ? _fwyBanner(
+              key: 'oncourse-manual-hint',
+              icon: Icons.pan_tool_alt_outlined,
+              text: _manualPin == null
+                  ? 'Tap the map where your ball is'
+                  : 'Move the pin to your ball (tap it if it has not moved)',
+            )
+          : null;
+
       return Stack(
         children: [
           Positioned.fill(
@@ -2067,11 +2077,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
               key: const ValueKey('oncourse-map-background'),
               scene: scene,
               pack: _pack,
-              clearInsets: EdgeInsets.fromLTRB(
-                  freeLeft,
-                  _kRailTop + (badges.isEmpty ? 0 : _kBadgeReserve),
-                  freeRight,
-                  _kDockHeight),
+              clearInsets: clearInsets,
               onTapLocal: (local, ppm) => _onMapTap(g, local, ppm),
             ),
           ),
@@ -2114,6 +2120,16 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
             left: railRight ? null : _kRailInset,
             child: _fwyRail(context, tile, penalties, mulligans),
           ),
+          if (manualHint != null)
+            Positioned(
+              left: freeLeft,
+              right: freeRight,
+              bottom: manualHintBottomInset(
+                stackHeight: height,
+                teeScreenY: teeScreen.dy,
+              ),
+              child: manualHint,
+            ),
           if (banners.isNotEmpty)
             Positioned(
               left: freeLeft,
@@ -2149,8 +2165,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                             child: InkWell(
                               key: const ValueKey('oncourse-shots-peek'),
                               borderRadius: BorderRadius.circular(8),
-                              onTap: () =>
-                                  _openShotsSheet(strokes, penalties, holeScore),
+                              onTap: () => _openShotsSheet(
+                                  strokes, penalties, holeScore),
                               child: Center(
                                 child: Text(
                                   'Shots this hole (${_shots.length}) ⌃',
@@ -2176,8 +2192,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                       height: _kRecordHeight,
                       child: FilledButton(
                         key: const ValueKey('oncourse-record-shot-btn'),
-                        onPressed:
-                            _busy || !recordReady ? null : _recordShot,
+                        onPressed: _busy || !recordReady ? null : _recordShot,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.green,
                         ),
@@ -2264,8 +2279,8 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
 
   static final _bannerButton = ButtonStyle(
     minimumSize: WidgetStateProperty.all(const Size(0, 40)),
-    padding: WidgetStateProperty.all(
-        const EdgeInsets.symmetric(horizontal: 12)),
+    padding:
+        WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12)),
     visualDensity: VisualDensity.compact,
   );
 
@@ -2510,6 +2525,24 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       ),
     );
   }
+}
+
+/// Bottom inset for the manual-pin prompt: about three overlay rows above
+/// the tee triangle, clear of the marker.
+@visibleForTesting
+double manualHintBottomInset({
+  required double stackHeight,
+  required double teeScreenY,
+}) {
+  const rowsAboveTee = 3;
+  const rowExtent = 40.0;
+  const markerRise = 8.0;
+  final aboveMarker = teeScreenY - markerRise - rowsAboveTee * rowExtent;
+  final bannerBottomY = aboveMarker.clamp(
+    _kRailTop + rowExtent,
+    teeScreenY - markerRise - 8,
+  );
+  return stackHeight - bannerBottomY;
 }
 
 const double _kRailTop = 136;

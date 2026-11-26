@@ -38,6 +38,7 @@ Full-bleed `FwyHoleMap` under scrim overlays. **Top gradient band** (`oncourse-t
 - **Write in the diary** with the header book icon only (`diary-entry-on-course`, `Icons.auto_stories_outlined`, 48dp, immediately left of the account avatar). The leading ⋮ is round tools (invite caddy, concede, finish, GPS, rail side). It does not list Diary. There is no right-edge swipe.
 - **Course name** (`oncourse-course-summary`) opens the shared **Course** dialog, the same control as Scorecard ([Wireframe_NewRound.md](./Wireframe_NewRound.md)). Save writes the name, format, double eagle, rating, and slope onto the active round. Cancel writes nothing.
 - **Map** is always the body in FWY mode (`oncourse-map-background`). Overlays use `fwyOverlayText` / `fwySurface` ([`fwy_overlays.dart`](../../../golf_diary_app/lib/widgets/fwy_overlays.dart)).
+- Manual GPS with no confirmed pin shows `oncourse-manual-hint` (“Tap the map where your ball is”) about three rows above the tee marker (`oncourse-tee-marker`), clear of the triangle.
 - **Carry mark** (Aim mode): a 30° arc at the selected club's carry distance, centred on the golfer's aim. With no aim set, the arc faces the hole, or the nearest marker toward the hole when the pin is not the target.
 - **Plan shot** via rail tiles → bottom sheets for club/lie/aim; GPS on Record only.
 - **Shots sheet** (`oncourse-shots-sheet`) lists `oncourse-shot-row-{n}`; overflow menu holds Concede / Finish ([CRSE-003](../../stories/CRSE/CRSE-003-penalties-mulligans-concede.md)).
@@ -147,6 +148,8 @@ flowchart TD
 | Yards to pin | `on-course-distance-to-hole` | `Text` (Roboto Mono) |
 | Yards to marker | `oncourse-yards-to-marker` | `Text` |
 | Map surface | `oncourse-map-background` | `FwyHoleMap` |
+| Tee marker | `oncourse-tee-marker` | Tee point on the map |
+| Manual pin hint | `oncourse-manual-hint` | Banner about three rows above the tee |
 | Top overlay | `oncourse-top-overlay` | `DecoratedBox` + gradient |
 | Side rail | `oncourse-side-rail` | Column of `FwyRailTile` |
 | Club / lie / aim on rail | `oncourse-club-summary` … `oncourse-aim-summary` | `FwyRailTile` |

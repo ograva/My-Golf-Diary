@@ -115,7 +115,8 @@ class FwyHoleMap extends StatelessWidget {
           top: at.dy - markerSize / 2,
           width: markerSize,
           height: markerSize,
-          child: IgnorePointer(child: KeyedSubtree(key: ValueKey(key), child: child)),
+          child: IgnorePointer(
+              child: KeyedSubtree(key: ValueKey(key), child: child)),
         );
       }
 
@@ -136,8 +137,9 @@ class FwyHoleMap extends StatelessWidget {
           children: [
             Positioned.fill(
               child: ColoredBox(
-                color:
-                    pack == null ? GolfPalette.mapRough : GolfPalette.mapOutside,
+                color: pack == null
+                    ? GolfPalette.mapRough
+                    : GolfPalette.mapOutside,
               ),
             ),
             if (pack != null && frame != null)
@@ -169,6 +171,7 @@ class FwyHoleMap extends StatelessWidget {
                 ),
               ),
             ),
+            marker('oncourse-tee-marker', scene.tee, const SizedBox.shrink()),
             for (final m in scene.markers)
               marker('oncourse-map-marker-${m.id}', m.local,
                   const _SquareMarker()),
@@ -415,10 +418,7 @@ class _FwyScenePainter extends CustomPainter {
       ),
       textDirection: textDirection,
     )..layout();
-    tp.paint(
-        canvas,
-        at -
-            Offset(centered ? tp.width / 2 : 0, tp.height / 2));
+    tp.paint(canvas, at - Offset(centered ? tp.width / 2 : 0, tp.height / 2));
   }
 
   @override

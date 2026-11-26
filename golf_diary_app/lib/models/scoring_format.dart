@@ -54,6 +54,11 @@ class RoundFormatSettings {
     this.attestedByName = '',
     this.attestedRole = '',
     this.editedAfterAttestCount = 0,
+    this.attestSignaturePath = '',
+    this.attestSelfiePath = '',
+    this.attestCombinedPath = '',
+    this.attestPayloadPath = '',
+    this.attestPdfPath = '',
   });
 
   final String roundId;
@@ -66,8 +71,15 @@ class RoundFormatSettings {
   final String attestedByName;
   final String attestedRole;
   final int editedAfterAttestCount;
+  final String attestSignaturePath;
+  final String attestSelfiePath;
+  final String attestCombinedPath;
+  final String attestPayloadPath;
+  final String attestPdfPath;
 
   bool get isAttested => (attestedAtMs ?? 0) > 0;
+
+  bool get hasAttestPdf => attestPdfPath.isNotEmpty;
 
   bool get editedAfterAttest =>
       editedAfterAttestCount > 0 && !isAttested && attestedByName.isNotEmpty;
@@ -91,6 +103,11 @@ class RoundFormatSettings {
     String? attestedByName,
     String? attestedRole,
     int? editedAfterAttestCount,
+    String? attestSignaturePath,
+    String? attestSelfiePath,
+    String? attestCombinedPath,
+    String? attestPayloadPath,
+    String? attestPdfPath,
     bool clearAttestation = false,
     bool clearCourseRating = false,
     bool clearSlope = false,
@@ -104,11 +121,24 @@ class RoundFormatSettings {
       courseRating:
           clearCourseRating ? null : (courseRating ?? this.courseRating),
       slopeRating: clearSlope ? null : (slopeRating ?? this.slopeRating),
-      attestedAtMs: clearAttestation ? null : (attestedAtMs ?? this.attestedAtMs),
+      attestedAtMs:
+          clearAttestation ? null : (attestedAtMs ?? this.attestedAtMs),
       attestedByName: attestedByName ?? this.attestedByName,
       attestedRole: attestedRole ?? this.attestedRole,
       editedAfterAttestCount:
           editedAfterAttestCount ?? this.editedAfterAttestCount,
+      attestSignaturePath: clearAttestation
+          ? ''
+          : (attestSignaturePath ?? this.attestSignaturePath),
+      attestSelfiePath:
+          clearAttestation ? '' : (attestSelfiePath ?? this.attestSelfiePath),
+      attestCombinedPath: clearAttestation
+          ? ''
+          : (attestCombinedPath ?? this.attestCombinedPath),
+      attestPayloadPath:
+          clearAttestation ? '' : (attestPayloadPath ?? this.attestPayloadPath),
+      attestPdfPath:
+          clearAttestation ? '' : (attestPdfPath ?? this.attestPdfPath),
     );
   }
 }
@@ -190,7 +220,8 @@ FormatCardResult scoreRound(
     played += 1;
     gross += hole.gross;
     if (format == ScoringFormat.molave) {
-      points += molaveHolePoints(hole, doubleEaglePoints: doubleEaglePoints) ?? 0;
+      points +=
+          molaveHolePoints(hole, doubleEaglePoints: doubleEaglePoints) ?? 0;
     } else if (format == ScoringFormat.system36) {
       points += system36HolePoints(hole) ?? 0;
     }

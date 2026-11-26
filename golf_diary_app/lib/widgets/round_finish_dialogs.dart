@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/golf_models.dart';
-import '../models/scoring_format.dart';
-import '../services/local_database_service.dart';
+import '../services/attest_pdf_fetch.dart';
+import 'attest_card_sheet.dart';
 
 /// Holes 1..[holeCount] with no score, strokes, or gimme.
 /// [finishingHole] counts as scored because Finish Hole records it.
@@ -46,88 +46,36 @@ Future<bool> confirmFinishRound(BuildContext context, int blankHoles) async {
   return ok == true;
 }
 
-/// Attestation name/role dialog. Returns true when the card was attested.
+/// Attestation sheet. Returns true when the card was attested.
 /// With [afterFinish] the dismiss action reads Skip; the round stays finished.
+/// A returned PDF is stored for [scorecard-attest-pdf-link]. Offline leaves
+/// that link hidden and tells the golfer the PDF will be ready when online.
 Future<bool> showAttestCardDialog(
   BuildContext context, {
   required String roundId,
   bool afterFinish = false,
+  double? manualIndex,
 }) async {
-  final saved = await showDialog<({String name, String role})>(
+  final saved = await showModalBottomSheet<bool>(
     context: context,
-    builder: (context) => _AttestDialog(afterFinish: afterFinish),
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => AttestCardSheet(
+      roundId: roundId,
+      afterFinish: afterFinish,
+      manualIndex: manualIndex,
+    ),
   );
-  if (saved == null) return false;
-  await LocalDatabaseService.instance.attestRound(
-    roundId: roundId,
-    name: saved.name,
-    role: saved.role,
-  );
-  return true;
-}
-
-class _AttestDialog extends StatefulWidget {
-  const _AttestDialog({required this.afterFinish});
-
-  final bool afterFinish;
-
-  @override
-  State<_AttestDialog> createState() => _AttestDialogState();
-}
-
-class _AttestDialogState extends State<_AttestDialog> {
-  final _name = TextEditingController(text: 'Me');
-  var _role = 'self';
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Attest card'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            key: const ValueKey('scorecard-attest-name'),
-            controller: _name,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-          const SizedBox(height: 8),
-          DropdownButton<String>(
-            key: const ValueKey('scorecard-attest-role'),
-            value: _role,
-            isExpanded: true,
-            items: [
-              for (final item in attestRoles)
-                DropdownMenuItem(value: item, child: Text(item)),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _role = value);
-            },
-          ),
-        ],
+  if (saved != true) return false;
+  final ready = await AttestPdfFetch.tryFetch(roundId);
+  if (!ready && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('The PDF will be ready when online.'),
       ),
-      actions: [
-        TextButton(
-          key: const ValueKey('scorecard-attest-skip'),
-          onPressed: () => Navigator.pop(context),
-          child: Text(widget.afterFinish ? 'Skip' : 'Cancel'),
-        ),
-        FilledButton(
-          key: const ValueKey('scorecard-attest-save'),
-          onPressed: () =>
-              Navigator.pop(context, (name: _name.text, role: _role)),
-          child: const Text('Attest'),
-        ),
-      ],
     );
   }
+  return true;
 }
 
 /// Delete always confirms. Attested or flight rounds get a stronger warning.

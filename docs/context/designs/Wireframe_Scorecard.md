@@ -34,6 +34,7 @@ Show the selected round’s 18 holes, front/back/total versus par, penalties, an
 │ └───┴───┴───┘               │
 │ BACK 9                      │  same 3×3
 │ Attested by Pat · marker    │  finished rounds only
+│ Attested score PDF          │  scorecard-attest-pdf-link, only when the PDF is saved
 │ [ ⚑ Finish round          ] │  scorecard-finish-round, full width
 │ [+ Start new round][🗑 Delete]│  one row; Delete is red
 └─────────────────────────────┘
@@ -43,8 +44,9 @@ The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wi
 
 ### Round controls (below the card or the cart panel)
 
-- **Finish round** (`scorecard-finish-round`) is the full-width primary while the round is open. It replaces the standalone Attest button. If any hole on the card is blank (`isHolePlayed` false), a confirm asks first: “N holes blank, finish anyway?” (`scorecard-finish-confirm`). Finishing calls `completeRound`, writes the diary note, and opens the attest dialog right away. Its dismiss reads **Skip** (`scorecard-attest-skip`); the round stays finished.
-- Once finished, the primary slot shows **Attest card** (`scorecard-attest-btn`) only while the card is not attested, including after an edit cleared it. Attested cards show the badge alone (`scorecard-attest-badge`).
+- **Finish round** (`scorecard-finish-round`) is the full-width primary while the round is open. It replaces the standalone Attest button. If any hole on the card is blank (`isHolePlayed` false), a confirm asks first: “N holes blank, finish anyway?” (`scorecard-finish-confirm`). Finishing calls `completeRound`, writes the diary note, and opens the attest sheet right away. Its dismiss reads **Skip** (`scorecard-attest-skip`); the round stays finished.
+- The sheet collects name, role, a required signature (`scorecard-attest-signature`, clear `scorecard-attest-signature-clear`), and an optional front-camera selfie (`scorecard-attest-selfie`, retake `scorecard-attest-selfie-retake`, remove `scorecard-attest-selfie-remove`). Preview is `scorecard-attest-preview`. **Attest** (`scorecard-attest-save`) stays disabled until there is a stroke.
+- Once finished, the primary slot shows **Attest card** (`scorecard-attest-btn`) only while the card is not attested, including after an edit cleared it. Attested cards show the badge (`scorecard-attest-badge`). **Attested score PDF** (`scorecard-attest-pdf-link`) sits under that badge only when the Cloud Function has returned a PDF for this round. It is hidden while the round is unattested, while the device is offline, and while the function call is still in flight. Tap shares or opens the saved file. The link is not inside the sheet.
 - **Start new round** (`scorecard-new-round-btn`) and **Delete round** (`scorecard-delete-round`, error color) share one row. Delete always confirms (`scorecard-delete-confirm`). An attested round, or one shared through a flight or caddy session, adds a red warning line (`scorecard-delete-warning`). Delete soft-deletes with sync tombstones, so the round leaves every synced device. Afterwards the next most recent round is selected, or the empty state shows.
 - The status caption under the name (`scorecard-round-status`) reads **In progress**, **Finished · read-only**, or **Finished · editing**.
 
@@ -52,7 +54,7 @@ The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wi
 
 Hole taps, cart buttons, and the course dialog show a snackbar (`scorecard-read-only-snack`) instead of editing. The leading ⋮ adds **Edit finished round** (`scorecard-edit-finished-round`) to unlock the selected round until another round is selected. An unlocked attested card still uses the “Edit attested card?” confirm, and each edit after attesting increments `edited_after_attest_count`.
 
-On Course has no new buttons. Its existing **Finish Round** on the last hole runs the same blank-hole confirm and then the same skippable attest dialog.
+On Course has no new buttons and no PDF link. Its existing **Finish Round** on the last hole runs the same blank-hole confirm and then the same skippable attest sheet.
 
 Each tile:
 
@@ -131,7 +133,10 @@ flowchart TD
   finish -->|blank holes| confirm[N holes blank, finish anyway?]
   confirm --> done[completeRound]
   finish -->|all scored| done
-  done --> attest[Attest dialog, Skip allowed]
+  done --> attest[Attest sheet, Skip allowed]
+  attest --> pdf{PDF returned?}
+  pdf -->|yes| link[scorecard-attest-pdf-link]
+  pdf -->|no| wait[Link hidden until online]
   attest --> load
   grid --> del[Delete round confirm]
   del --> tomb[Soft delete + sync tombstones]
@@ -150,7 +155,14 @@ flowchart TD
 | Finish round | `scorecard-finish-round` | `FilledButton` |
 | Finish anyway | `scorecard-finish-confirm` | `FilledButton` in the blank-holes confirm |
 | Attest card | `scorecard-attest-btn` | `FilledButton`, finished and unattested only |
-| Skip attest | `scorecard-attest-skip` | `TextButton` in the attest dialog |
+| Skip attest | `scorecard-attest-skip` | `TextButton` in the attest sheet |
+| Signature | `scorecard-attest-signature` | Pad on the attest sheet |
+| Clear signature | `scorecard-attest-signature-clear` | `TextButton` |
+| Selfie | `scorecard-attest-selfie` | `OutlinedButton`, front camera |
+| Retake selfie | `scorecard-attest-selfie-retake` | `OutlinedButton` |
+| Remove selfie | `scorecard-attest-selfie-remove` | `OutlinedButton` |
+| Attest preview | `scorecard-attest-preview` | Combined image, or the signature |
+| Attested PDF | `scorecard-attest-pdf-link` | `TextButton` on the scorecard, only when a PDF is saved |
 | Delete round | `scorecard-delete-round` | `OutlinedButton`, error color |
 | Confirm delete | `scorecard-delete-confirm` | `FilledButton`, error color |
 | Delete warning | `scorecard-delete-warning` | `Text`, attested or flight rounds |

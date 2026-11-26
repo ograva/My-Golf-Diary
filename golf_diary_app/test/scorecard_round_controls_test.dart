@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golf_diary_app/screens/scorecard_screen.dart';
+import 'package:golf_diary_app/services/attest_pdf_client.dart';
+import 'package:golf_diary_app/services/attest_pdf_fetch.dart';
 import 'package:golf_diary_app/services/local_database_service.dart';
 import 'package:golf_diary_app/theme/app_theme.dart';
 import 'package:path/path.dart';
@@ -36,6 +40,18 @@ void main() {
       MaterialApp(theme: buildGolfTheme(), home: const ScorecardScreen()),
     );
     await settle(tester);
+  }
+
+  Future<void> tapAttestSave(WidgetTester tester) async {
+    final finder = find.byKey(const ValueKey('scorecard-attest-save'));
+    await tester.ensureVisible(finder);
+    await tester.tap(finder);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    }
+    await settleSheet(tester);
   }
 
   Future<void> tapKey(WidgetTester tester, String key) async {
@@ -82,6 +98,8 @@ void main() {
     expect(find.byKey(const ValueKey('scorecard-finish-round')), findsNothing);
     expect(find.text('Not attested'), findsOneWidget);
     expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('scorecard-attest-pdf-link')), findsNothing);
     expect(find.text('Finished · read-only'), findsOneWidget);
   });
 
@@ -99,10 +117,28 @@ void main() {
         find.byKey(const ValueKey('scorecard-finish-confirm')), findsNothing);
     await tester.enterText(
         find.byKey(const ValueKey('scorecard-attest-name')), 'Pat');
-    await tapKey(tester, 'scorecard-attest-save');
+    expect(
+      tester
+          .widget<FilledButton>(
+              find.byKey(const ValueKey('scorecard-attest-save')))
+          .onPressed,
+      isNull,
+    );
+    await tapKey(tester, 'scorecard-attest-signature');
+    await tapAttestSave(tester);
     expect(find.text('Attested by Pat · self'), findsOneWidget);
     expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('scorecard-attest-pdf-link')), findsNothing);
+    final attested = await tester.runAsync(() => db.getRoundFormat(roundId));
+    expect(attested!.attestSignaturePath, isNotEmpty);
+    expect(attested.attestCombinedPath, isEmpty);
 
+    final pendingSnack = find.byType(SnackBar);
+    if (pendingSnack.evaluate().isNotEmpty) {
+      ScaffoldMessenger.of(tester.element(pendingSnack.first)).clearSnackBars();
+      await settleSheet(tester);
+    }
     await tapKey(tester, 'scorecard-hole-tile-3');
     expect(find.byKey(const ValueKey('scorecard-read-only-snack')),
         findsOneWidget);
@@ -165,4 +201,25 @@ void main() {
     expect(find.byKey(const ValueKey('scorecard-empty-state')), findsOneWidget);
     expect(find.byKey(const ValueKey('scorecard-delete-round')), findsNothing);
   });
+
+  testWidgets('a returned PDF shows the scorecard link', (tester) async {
+    await tester.runAsync(useFreshDatabase);
+    addTearDown(() => tester.runAsync(restoreDatabase));
+    addTearDown(() => AttestPdfFetch.debugClient = null);
+    AttestPdfFetch.debugClient = _ReadyPdf();
+    await tester.runAsync(() => roundWithHoles(18));
+    await pumpScorecard(tester);
+    await tapKey(tester, 'scorecard-finish-round');
+    await tapKey(tester, 'scorecard-attest-signature');
+    await tapAttestSave(tester);
+    expect(find.byKey(const ValueKey('scorecard-attest-pdf-link')),
+        findsOneWidget);
+    expect(find.text('The PDF will be ready when online.'), findsNothing);
+  });
+}
+
+class _ReadyPdf implements AttestPdfClient {
+  @override
+  Future<Uint8List> render(Map<String, Object?> body) async =>
+      Uint8List.fromList('%PDF-1.4\n'.codeUnits);
 }

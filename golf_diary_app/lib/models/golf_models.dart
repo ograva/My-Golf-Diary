@@ -96,6 +96,8 @@ class ShotRecord {
   final double distanceYards;
   final double? simCarryYards;
   final double? simDistanceToHoleYards;
+  /// Paced distance to the hole in yards, entered on the Green lie.
+  final double? puttDistanceYards;
   final String notes;
   /// `left`, `center`, or `right` when captured on a mapped Course hole.
   final String aimDirection;
@@ -116,6 +118,7 @@ class ShotRecord {
     this.distanceYards = 0.0,
     this.simCarryYards,
     this.simDistanceToHoleYards,
+    this.puttDistanceYards,
     this.notes = '',
     this.aimDirection = 'center',
     required this.timestamp,
@@ -139,6 +142,7 @@ class ShotRecord {
       'distance_yards': distanceYards,
       'sim_carry_yards': simCarryYards,
       'sim_distance_to_hole_yards': simDistanceToHoleYards,
+      'putt_distance_yards': puttDistanceYards,
       'notes': notes,
       'aim_direction': aimDirection,
       'timestamp': timestamp,
@@ -167,6 +171,7 @@ class ShotRecord {
       simDistanceToHoleYards: map['sim_distance_to_hole_yards'] != null
           ? (map['sim_distance_to_hole_yards'] as num).toDouble()
           : null,
+      puttDistanceYards: (map['putt_distance_yards'] as num?)?.toDouble(),
       notes: map['notes'] ?? '',
       aimDirection: map['aim_direction'] as String? ?? 'center',
       timestamp: map['timestamp'] as int,

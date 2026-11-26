@@ -54,7 +54,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -218,6 +218,9 @@ class LocalDatabaseService {
           db, 'golf_rounds', 'attest_payload_path', 'TEXT');
       await _addColumnIfMissing(db, 'golf_rounds', 'attest_pdf_path', 'TEXT');
     }
+    if (oldVersion < 21) {
+      await _addColumnIfMissing(db, 'shots', 'putt_distance_yards', 'REAL');
+    }
   }
 
   Future<void> _addColumnIfMissing(
@@ -299,6 +302,7 @@ class LocalDatabaseService {
         distance_yards REAL DEFAULT 0.0,
         sim_carry_yards REAL,
         sim_distance_to_hole_yards REAL,
+        putt_distance_yards REAL,
         notes TEXT,
         aim_direction TEXT NOT NULL DEFAULT 'center',
         timestamp INTEGER NOT NULL,
@@ -1442,9 +1446,11 @@ class LocalDatabaseService {
     required int holeNumber,
     required int nextPar,
     int holeCount = 18,
+    double? puttDistanceYards,
   }) async {
     await syncStrokeCountFromShots(roundId, holeNumber);
-    await _recordHoledStroke(roundId, holeNumber);
+    await _recordHoledStroke(roundId, holeNumber,
+        puttDistanceYards: puttDistanceYards);
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole != null && hole.conceded == 0) {
       final score =
@@ -1471,7 +1477,8 @@ class LocalDatabaseService {
   /// Logs the putt that drops the ball, so Finish Hole scores strokes +
   /// penalties + 1. Skipped once the player has picked up at double par, on a
   /// conceded hole, or when the hole already ends with a holed stroke.
-  Future<void> _recordHoledStroke(String roundId, int holeNumber) async {
+  Future<void> _recordHoledStroke(String roundId, int holeNumber,
+      {double? puttDistanceYards}) async {
     final hole = await getHoleScore(roundId, holeNumber);
     if (hole == null || hole.conceded == 1) return;
     if (hole.par > 0 && hole.strokes + hole.penalties >= 2 * hole.par) return;
@@ -1495,6 +1502,7 @@ class LocalDatabaseService {
       lieType: 'green',
       startLat: 0,
       startLon: 0,
+      puttDistanceYards: puttDistanceYards,
       notes: kHoledShotNote,
       timestamp: now,
     );
@@ -1542,10 +1550,12 @@ class LocalDatabaseService {
     String aimDirection = 'center',
     double? simCarryYards,
     double? simDistanceToHoleYards,
+    double? puttDistanceYards,
     String notes = '',
   }) async {
     final db = await database;
     final simulator = distanceYards != null;
+    final hasFix = currentLat != 0 || currentLon != 0;
 
     final prevShotMaps = await db.query(
       'shots',
@@ -1561,7 +1571,8 @@ class LocalDatabaseService {
       final prevShot = ShotRecord.fromMap(prevShotMaps.first);
       strokeNumber = prevShot.strokeNumber + 1;
 
-      if (!simulator) {
+      final prevHasFix = prevShot.startLat != 0 || prevShot.startLon != 0;
+      if (!simulator && hasFix && prevHasFix) {
         final distanceMeters = Geolocator.distanceBetween(
           prevShot.startLat,
           prevShot.startLon,
@@ -1596,6 +1607,7 @@ class LocalDatabaseService {
       aimDirection: simulator ? 'center' : aimDirection,
       simCarryYards: simulator ? simCarryYards : null,
       simDistanceToHoleYards: simulator ? simDistanceToHoleYards : null,
+      puttDistanceYards: lieType == 'green' ? puttDistanceYards : null,
       notes: simulator ? notes.trim() : '',
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
@@ -2458,6 +2470,7 @@ class LocalDatabaseService {
       'distance_yards',
       'sim_carry_yards',
       'sim_distance_to_hole_yards',
+      'putt_distance_yards',
       'notes',
       'aim_direction',
       'timestamp',

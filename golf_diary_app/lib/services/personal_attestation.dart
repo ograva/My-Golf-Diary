@@ -3,8 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/ph_golf_hole_coords.dart';
 import '../models/golf_models.dart';
 import '../models/scoring_format.dart';
+import 'attest_stroke_stats.dart';
 import 'attestation_file_store.dart';
 import 'local_database_service.dart';
 
@@ -74,6 +76,25 @@ class PersonalAttestation {
           },
       ],
     };
+    final shotRows = await database.query(
+      'shots',
+      where: 'round_id = ? AND deleted = 0',
+      whereArgs: [roundId],
+      orderBy: 'hole_number ASC, stroke_number ASC',
+    );
+    final clubRows = await database.query('clubs');
+    final strokeStats = buildStrokeStats(
+      shots: shotRows.map(ShotRecord.fromMap).toList(),
+      clubs: {for (final row in clubRows) row['id'] as String: Club.fromMap(row)},
+      scores: holes,
+      greenFor: (hole) {
+        final coords = holeCoordinates(courseName, hole);
+        return coords == null
+            ? null
+            : (lat: coords.greenLat, lon: coords.greenLon);
+      },
+    );
+    if (strokeStats != null) payload['strokeStats'] = strokeStats;
     final stored = await AttestationFileStore.instance.writeRound(
       roundId: roundId,
       signaturePng: signaturePng,

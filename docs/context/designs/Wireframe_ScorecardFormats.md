@@ -82,3 +82,20 @@ See [Wireframe_HoleEditor.md](./Wireframe_HoleEditor.md).
 | Flight | `scorecard-flight-btn` |
 | Cart format | `scorecard-cart-format-total` |
 | Paid mulligan | `hole-editor-paid-mulligan` |
+## 6. Attested PDF page 2 — on-course stats (MGDV-6-016)
+
+Rendered by `attestScorePdf` only when the frozen payload has `strokeStats`. Page 1 is unchanged. Same brand bar, green `#1a5e3a`, striped rows, boxed tables as page 1.
+
+```
+[brand bar]
+On-course stats
+Course · date
+[Longest 251 yds | Most used Driver | Putts 37 (per hole · 1st putt yds) | Pen · Mull · Gimme]
+[GIR 4/18 | Fairways hit 7/12 | Up and down 3/14 | 3-putts 1]
+Clubs (wood, hybrid, iron ≤ 9)          Putts made (paced yds)
+Club | Shots | Min | Avg | Max          Yds | Made | Rate   (0-3, 4-7, 8-15, 16+)
+Holes
+Hole | Par | Gross | To appr. | Putts | 1st putt | Pen | Mull | Clubs before approach
+TOT row
+footer: legend (* estimated approach, G = gimme counted as one putt)
+```

@@ -81,6 +81,7 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
   String _appliedCourseName = 'Local Course';
   Club? _selectedClub;
   String _lieType = 'tee';
+  int? _puttDistanceYards;
   RoundScore? _holeScore;
   List<ShotRecord> _shots = [];
   int _roundTotal = 0;
@@ -527,6 +528,9 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           if (position == null && liveFix != null) {
             lat = liveFix.latitude;
             lon = liveFix.longitude;
+          } else if (position == null && _lieType == 'green') {
+            lat = 0;
+            lon = 0;
           } else if (position == null) {
             if (mounted && !_locationPermissionBlocked) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -555,9 +559,13 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
           currentLon: lon,
           aimDirection: deriveAimDirection(
               ball: ball, green: geometry.green, target: target),
+          puttDistanceYards: _lieType == 'green'
+              ? _puttDistanceYards?.toDouble()
+              : null,
         );
         if (mounted) {
           setState(() {
+            _puttDistanceYards = null;
             _aimMode = false;
             _aimTarget = const FwyAimTarget.pin();
             if (manual) _manualPinStale = true;
@@ -591,7 +599,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
       holeNumber: _holeNumber,
       nextPar: nextPar,
       holeCount: holeCount,
+      puttDistanceYards:
+          _lieType == 'green' ? _puttDistanceYards?.toDouble() : null,
     );
+    _puttDistanceYards = null;
     if (_holeNumber < holeCount) {
       setState(() {
         _holeNumber += 1;
@@ -926,7 +937,12 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         }).toList(),
       ),
     );
-    if (picked != null && mounted) setState(() => _lieType = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        if (picked != _lieType) _puttDistanceYards = null;
+        _lieType = picked;
+      });
+    }
   }
 
   Widget _selectorButton({
@@ -1045,6 +1061,88 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
         ),
       ),
     );
+  }
+
+  static const puttDistanceChoices = [1, 2, 3, 5, 7, 10, 15, 20];
+
+  /// Paced yards to the hole on the Green lie, in place of GPS distance.
+  Widget _puttDistancePicker() {
+    final picked = _puttDistanceYards;
+    final custom = picked != null && !puttDistanceChoices.contains(picked);
+    return SingleChildScrollView(
+      key: const ValueKey('oncourse-putt-distance-picker'),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Text('To hole (yds)', style: fwyOverlayText(context)),
+          ),
+          for (final yards in puttDistanceChoices)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: ChoiceChip(
+                key: ValueKey('oncourse-putt-distance-chip-$yards'),
+                visualDensity: VisualDensity.compact,
+                label: Text(yards == 20 ? '20+' : '$yards'),
+                selected: picked == yards,
+                onSelected: (on) =>
+                    setState(() => _puttDistanceYards = on ? yards : null),
+              ),
+            ),
+          ChoiceChip(
+            key: const ValueKey('oncourse-putt-distance-custom-chip'),
+            visualDensity: VisualDensity.compact,
+            label: Text(custom ? '$picked yds' : 'Other'),
+            selected: custom,
+            onSelected: (_) => _openCustomPuttDistance(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openCustomPuttDistance() async {
+    final controller = TextEditingController(
+        text: _puttDistanceYards == null ? '' : '$_puttDistanceYards');
+    final value = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        void submit() {
+          final parsed = int.tryParse(controller.text.trim());
+          if (parsed != null && parsed > 0 && parsed <= 99) {
+            Navigator.of(dialogContext).pop(parsed);
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Distance to hole'),
+          content: TextField(
+            key: const ValueKey('oncourse-putt-distance-custom-field'),
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Yards (paced steps)',
+            ),
+            onSubmitted: (_) => submit(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const ValueKey('oncourse-putt-distance-custom-save'),
+              onPressed: submit,
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (value != null && mounted) setState(() => _puttDistanceYards = value);
   }
 
   List<Widget> _simulatorFieldWidgets() {
@@ -2187,6 +2285,10 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                         ],
                       ),
                     ),
+                    if (_lieType == 'green') ...[
+                      const SizedBox(height: 4),
+                      _puttDistancePicker(),
+                    ],
                     const SizedBox(height: 4),
                     SizedBox(
                       height: _kRecordHeight,
@@ -2390,6 +2492,11 @@ class FairwayTrackerScreenState extends State<FairwayTrackerScreen>
                                             ],
                                           ),
                                           ..._simulatorFieldWidgets(),
+                                          if (!_simulator &&
+                                              _lieType == 'green') ...[
+                                            const SizedBox(height: 8),
+                                            _puttDistancePicker(),
+                                          ],
                                           const SizedBox(height: 4),
                                           _stepper(
                                             label: 'Penalty',

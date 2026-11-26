@@ -45,7 +45,7 @@ The course name opens the shared **Course** dialog ([Wireframe_NewRound.md](./Wi
 ### Round controls (below the card or the cart panel)
 
 - **Finish round** (`scorecard-finish-round`) is the full-width primary while the round is open. It replaces the standalone Attest button. If any hole on the card is blank (`isHolePlayed` false), a confirm asks first: “N holes blank, finish anyway?” (`scorecard-finish-confirm`). Finishing calls `completeRound`, writes the diary note, and opens the attest sheet right away. Its dismiss reads **Skip** (`scorecard-attest-skip`); the round stays finished.
-- The sheet collects name, role, a required signature (`scorecard-attest-signature`, clear `scorecard-attest-signature-clear`), and an optional front-camera selfie (`scorecard-attest-selfie`, retake `scorecard-attest-selfie-retake`, remove `scorecard-attest-selfie-remove`). Preview is `scorecard-attest-preview`. **Attest** (`scorecard-attest-save`) stays disabled until there is a stroke.
+- The sheet collects name, role, a required signature, and an optional front-camera selfie (`scorecard-attest-selfie`, retake `scorecard-attest-selfie-retake`, remove `scorecard-attest-selfie-remove`). **Sign** (`scorecard-attest-signature`) opens a full-screen pad (`scorecard-attest-signature-pad`) so there is room to scribble and the sheet behind does not scroll. **Clear** (`scorecard-attest-signature-clear`) sits on that pad. Preview is `scorecard-attest-preview`. On a selfie, the signature is scaled to the width of the portrait photo. **Attest** (`scorecard-attest-save`) stays disabled until there is a stroke.
 - Once finished, the primary slot shows **Attest card** (`scorecard-attest-btn`) only while the card is not attested, including after an edit cleared it. Attested cards show the badge (`scorecard-attest-badge`). **Attested score PDF** (`scorecard-attest-pdf-link`) sits under that badge only when the Cloud Function has returned a PDF for this round. It is hidden while the round is unattested, while the device is offline, and while the function call is still in flight. Tap shares or opens the saved file. The link is not inside the sheet.
 - **Start new round** (`scorecard-new-round-btn`) and **Delete round** (`scorecard-delete-round`, error color) share one row. Delete always confirms (`scorecard-delete-confirm`). An attested round, or one shared through a flight or caddy session, adds a red warning line (`scorecard-delete-warning`). Delete soft-deletes with sync tombstones, so the round leaves every synced device. Afterwards the next most recent round is selected, or the empty state shows.
 - The status caption under the name (`scorecard-round-status`) reads **In progress**, **Finished · read-only**, or **Finished · editing**.
@@ -156,8 +156,9 @@ flowchart TD
 | Finish anyway | `scorecard-finish-confirm` | `FilledButton` in the blank-holes confirm |
 | Attest card | `scorecard-attest-btn` | `FilledButton`, finished and unattested only |
 | Skip attest | `scorecard-attest-skip` | `TextButton` in the attest sheet |
-| Signature | `scorecard-attest-signature` | Pad on the attest sheet |
-| Clear signature | `scorecard-attest-signature-clear` | `TextButton` |
+| Signature | `scorecard-attest-signature` | `OutlinedButton` that opens the full-screen pad |
+| Signature pad | `scorecard-attest-signature-pad` | Full-screen scribble surface |
+| Clear signature | `scorecard-attest-signature-clear` | `TextButton` on the full-screen pad |
 | Selfie | `scorecard-attest-selfie` | `OutlinedButton`, front camera |
 | Retake selfie | `scorecard-attest-selfie-retake` | `OutlinedButton` |
 | Remove selfie | `scorecard-attest-selfie-remove` | `OutlinedButton` |

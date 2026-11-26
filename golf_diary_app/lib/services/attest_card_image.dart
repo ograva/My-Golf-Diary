@@ -67,7 +67,29 @@ Future<Uint8List> limitSelfieJpeg(Uint8List bytes, {int maxEdge = 1600}) async {
   }
 }
 
-/// Signature on a white bar in the bottom 22% of the selfie. Output matches
+/// Where a signature sits on a selfie. Width matches the photo (a portrait
+/// selfie, typically) and the height follows the signature's own aspect, so
+/// a wide strip does not run past the frame. If that height would be taller
+/// than the photo, the band shrinks uniformly and stays inside.
+Rect signatureOverlayRect(Size selfie, Size signature) {
+  var width = selfie.width;
+  var height =
+      signature.width <= 0 ? width : width * signature.height / signature.width;
+  if (height > selfie.height) {
+    height = selfie.height;
+    width = signature.height <= 0
+        ? selfie.width
+        : height * signature.width / signature.height;
+  }
+  return Rect.fromLTWH(
+    (selfie.width - width) / 2,
+    selfie.height - height,
+    width,
+    height,
+  );
+}
+
+/// Signature scaled to the selfie width and drawn on the photo. Output matches
 /// the selfie size (after the 1600px limit).
 Future<Uint8List> compositeSignatureOnSelfie({
   required Uint8List selfie,
@@ -81,26 +103,17 @@ Future<Uint8List> compositeSignatureOnSelfie({
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     canvas.drawImage(photo, Offset.zero, Paint());
-    final inset = w * 0.08;
-    final bar = RRect.fromRectAndRadius(
-      Rect.fromLTWH(inset, h * 0.78, w - inset * 2, h * 0.22),
-      Radius.circular(w * 0.02),
-    );
-    canvas.drawRRect(
-      bar,
-      Paint()..color = const Color(0xD9FFFFFF),
-    );
-    final pad = bar.height * 0.12;
-    final inner = Rect.fromLTWH(
-      bar.left + pad,
-      bar.top + pad,
-      bar.width - pad * 2,
-      bar.height - pad * 2,
+    final dest = signatureOverlayRect(
+      Size(w, h),
+      Size(sign.width.toDouble(), sign.height.toDouble()),
     );
     final src =
         Rect.fromLTWH(0, 0, sign.width.toDouble(), sign.height.toDouble());
-    final fitted = applyBoxFit(BoxFit.contain, src.size, inner.size);
-    final dest = Alignment.center.inscribe(fitted.destination, inner);
+    final edge = w < h ? w : h;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(dest, Radius.circular(edge * 0.02)),
+      Paint()..color = const Color(0xD9FFFFFF),
+    );
     canvas.drawImageRect(
       sign,
       src,
@@ -126,13 +139,28 @@ Future<Uint8List> compositeSignatureOnSelfie({
   }
 }
 
+Future<Size> decodeImageSize(Uint8List bytes) async {
+  final image = await _decode(bytes);
+  try {
+    return Size(image.width.toDouble(), image.height.toDouble());
+  } finally {
+    image.dispose();
+  }
+}
+
 Future<ui.Image> _decode(Uint8List bytes, {int? maxEdge}) async {
   final probe = await ui.instantiateImageCodec(bytes);
   final frame = await probe.getNextFrame();
   final image = frame.image;
-  if (maxEdge == null) return image;
+  if (maxEdge == null) {
+    probe.dispose();
+    return image;
+  }
   final long = image.width > image.height ? image.width : image.height;
-  if (long <= maxEdge) return image;
+  if (long <= maxEdge) {
+    probe.dispose();
+    return image;
+  }
   final scale = maxEdge / long;
   final tw = (image.width * scale).round();
   final th = (image.height * scale).round();

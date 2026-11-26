@@ -471,6 +471,12 @@ void main() {
         tester.widget<FilledButton>(key('oncourse-record-shot-btn'));
     expect(record().onPressed, isNull);
     expect(key('oncourse-manual-hint'), findsOneWidget);
+    final hint = tester.getRect(key('oncourse-manual-hint'));
+    final teeMarker = tester.getRect(key('oncourse-tee-marker'));
+    expect(hint.bottom, lessThanOrEqualTo(teeMarker.top),
+        reason: 'prompt sits above the tee marker');
+    expect(teeMarker.top - hint.bottom, greaterThan(80),
+        reason: 'about three rows above the tee');
 
     await tester.tapAt(const Offset(160, 520));
     await tester.pump();

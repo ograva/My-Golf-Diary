@@ -35,6 +35,46 @@ void main() {
     codec.dispose();
   });
 
+  test('a wide signature scales to a portrait selfie width', () {
+    const selfie = Size(600, 800);
+    const signature = Size(900, 300);
+    final band = signatureOverlayRect(selfie, signature);
+    expect(band.width, selfie.width);
+    expect(band.height, 200);
+    expect(band.left, 0);
+    expect(band.bottom, selfie.height);
+    expect(band.top, greaterThanOrEqualTo(0));
+  });
+
+  test('portrait composite keeps the signature inside the photo', () async {
+    final selfie = encodeJpegRgba(_solid(30, 40, 20, 40, 90), 30, 40);
+    final signature = await renderSignaturePng(
+      [
+        [const Offset(4, 8), const Offset(80, 12)],
+      ],
+      const Size(90, 30),
+      width: 90,
+      height: 30,
+    );
+    final combined = await compositeSignatureOnSelfie(
+      selfie: selfie,
+      signature: signature,
+    );
+    final codec = await ui.instantiateImageCodec(combined);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    expect(image.width, 30);
+    expect(image.height, 40);
+    final bytes =
+        await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+    final top = bytes!.getUint8(0);
+    final bottomIndex = (39 * 30 + 15) * 4;
+    final bottom = bytes.getUint8(bottomIndex);
+    expect(bottom, greaterThan(top + 80));
+    image.dispose();
+    codec.dispose();
+  });
+
   test('no-selfie attest leaves the combined path null', () async {
     const file = 'golf_diary_attest_files.db';
     await LocalDatabaseService.debugClose();

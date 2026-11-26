@@ -61,6 +61,17 @@ void main() {
     await settle(tester);
   }
 
+  Future<void> signPad(WidgetTester tester) async {
+    await tapKey(tester, 'scorecard-attest-signature');
+    expect(find.byKey(const ValueKey('scorecard-attest-signature-pad')),
+        findsOneWidget);
+    await tester
+        .tap(find.byKey(const ValueKey('scorecard-attest-signature-pad')));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await settle(tester);
+  }
+
   Future<String> roundWithHoles(int played) async {
     final roundId = await db.startNewRound(courseName: 'Local Course');
     for (var hole = 1; hole <= played; hole++) {
@@ -124,7 +135,7 @@ void main() {
           .onPressed,
       isNull,
     );
-    await tapKey(tester, 'scorecard-attest-signature');
+    await signPad(tester);
     await tapAttestSave(tester);
     expect(find.text('Attested by Pat · self'), findsOneWidget);
     expect(find.byKey(const ValueKey('scorecard-attest-btn')), findsNothing);
@@ -210,7 +221,7 @@ void main() {
     await tester.runAsync(() => roundWithHoles(18));
     await pumpScorecard(tester);
     await tapKey(tester, 'scorecard-finish-round');
-    await tapKey(tester, 'scorecard-attest-signature');
+    await signPad(tester);
     await tapAttestSave(tester);
     expect(find.byKey(const ValueKey('scorecard-attest-pdf-link')),
         findsOneWidget);

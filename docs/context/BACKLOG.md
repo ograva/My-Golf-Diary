@@ -40,6 +40,8 @@ Every file under `docs/stories/` except `README.md` (53 stories).
 | MGDV-6-013 | [MGDV-6-013](../shards/MGDV/MGDV-6-013-committee-attestation.md) | Not Started |
 | MGDV-6-014 | [MGDV-6-014](../shards/MGDV/MGDV-6-014-post-tournament-diary.md) | Not Started |
 | MGDV-6-015 | [MGDV-6-015](../shards/MGDV/MGDV-6-015-caddy-flight-hardening.md) | Not Started |
+| MGDV-6-016 | [MGDV-6-016](../shards/MGDV/MGDV-6-016-attest-pdf-stroke-stats.md) | Completed |
+| MGDV-6-016 | [MGDV-6-016](../shards/MGDV/MGDV-6-016-attest-pdf-stroke-stats.md) | Completed |
 | PWA-001 | [PWA-001](../shards/PWA/PWA-001-github-pages-publish.md) | Completed |
 | PWA-002 | [PWA-002](../shards/PWA/PWA-002-offline-precache-shell.md) | Completed |
 | RNGE-001 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) | Superseded |
@@ -110,6 +112,7 @@ Ship order: **MGDV-2** first (done), then **MGDV-3** / **MGDV-4** / **MGDV-5**. 
 | MGDV-6-013 | Marker and committee attestation | MGDV | High | Not Started | M | MGDV-6-013 | [MGDV-6-013](../shards/MGDV/MGDV-6-013-committee-attestation.md) |
 | MGDV-6-014 | Post-tournament diary handoff | RNGE | Medium | Not Started | M | MGDV-6-014 | [MGDV-6-014](../shards/MGDV/MGDV-6-014-post-tournament-diary.md) |
 | MGDV-6-015 | Caddy flight hardening | MGDV | High | Not Started | L | MGDV-6-015 | [MGDV-6-015](../shards/MGDV/MGDV-6-015-caddy-flight-hardening.md) |
+| MGDV-6-016 | Attested PDF on-course stats page | MGDV | Medium | Completed | M | MGDV-6-016 | [MGDV-6-016](../shards/MGDV/MGDV-6-016-attest-pdf-stroke-stats.md) |
 | PWA-001 | GitHub Pages publish | PWA | High | Completed | M | PWA-001 | [PWA-001](../shards/PWA/PWA-001-github-pages-publish.md) |
 | PWA-002 | Offline precache shell | PWA | High | Completed | M | PWA-002 | [PWA-002](../shards/PWA/PWA-002-offline-precache-shell.md) |
 | RNGE-010 | Range drill layout | RNGE | High | Superseded | M | RNGE-001, RNGE-002 | [RNGE-010](../shards/RNGE/RNGE-010-drill-layout.md) |

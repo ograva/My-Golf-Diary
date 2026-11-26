@@ -159,6 +159,7 @@ flowchart TD
 | Aim left / center / right | `oncourse-aim-left` `oncourse-aim-center` `oncourse-aim-right` | `SegmentedButton` slots |
 | Par chips | `oncourse-par-chip-3` … `5` | `ChoiceChip` |
 | Club / lie | `oncourse-club-chip-{id}` `oncourse-lie-chip-{lie}` | `ChoiceChip` |
+| Green lie: paced yards to hole (MGDV-6-016) | `oncourse-putt-distance-picker`, `oncourse-putt-distance-chip-{1,2,3,5,7,10,15,20}` (20 shows "20+"), `oncourse-putt-distance-custom-chip`, `oncourse-putt-distance-custom-field`, `oncourse-putt-distance-custom-save` | Scrollable `ChoiceChip` row above Record Shot; custom `AlertDialog` (1–99 yds) |
 | Record | `oncourse-record-shot-btn` | `FilledButton` |
 | Penalty / mulligan / concede / finish | `oncourse-penalty-1-btn` … `oncourse-finish-hole-btn` | `OutlinedButton` |
 | Holed | `oncourse-holed-btn` | `TextButton` |
@@ -167,6 +168,10 @@ flowchart TD
 | Bootstrap banner | `oncourse-bootstrap-banner` | `MaterialBanner` |
 
 Simulator-only keys: [Wireframe_OnCourse-Simulator.md](./Wireframe_OnCourse-Simulator.md) §7.
+
+### Green lie putt distance (MGDV-6-016)
+
+When the lie is **Green** (Course mode), a row `To hole (yds) [1] [2] [3] [5] [7] [10] [15] [20+] [Other]` sits above Record Shot in place of a GPS distance. Local players pace steps as yards. The pick is optional, cleared after Record Shot / Finish Hole or a lie change, and saved as `shots.putt_distance_yards`. Record Shot = a putt from that distance that did not drop; Finish Hole with a pick = the holed putt from that distance. A green shot saves even when GPS is unavailable.
 
 ## 8. Distance & unmapped rules (CRSE-005)
 

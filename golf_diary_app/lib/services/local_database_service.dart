@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'attestation_file_store.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart';
@@ -52,7 +54,7 @@ class LocalDatabaseService {
 
     return openDatabase(
       path,
-      version: 18,
+      version: 20,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -201,6 +203,20 @@ class LocalDatabaseService {
         )
       ''');
       }
+    }
+    if (oldVersion < 19) {
+      // Reserved for tournament tables (Architecture §5.0.2). Not created here.
+    }
+    if (oldVersion < 20) {
+      await _addColumnIfMissing(
+          db, 'golf_rounds', 'attest_signature_path', 'TEXT');
+      await _addColumnIfMissing(
+          db, 'golf_rounds', 'attest_selfie_path', 'TEXT');
+      await _addColumnIfMissing(
+          db, 'golf_rounds', 'attest_combined_path', 'TEXT');
+      await _addColumnIfMissing(
+          db, 'golf_rounds', 'attest_payload_path', 'TEXT');
+      await _addColumnIfMissing(db, 'golf_rounds', 'attest_pdf_path', 'TEXT');
     }
   }
 
@@ -787,6 +803,7 @@ class LocalDatabaseService {
 
   /// Removes an in-progress round the golfer chose not to keep.
   Future<void> discardRound(String roundId) async {
+    await AttestationFileStore.instance.deleteRound(roundId);
     final db = await database;
     await db.update(
       'golf_rounds',
@@ -1117,6 +1134,11 @@ class LocalDatabaseService {
       attestedByName: row['attested_by_name'] as String? ?? '',
       attestedRole: row['attested_role'] as String? ?? '',
       editedAfterAttestCount: row['edited_after_attest_count'] as int? ?? 0,
+      attestSignaturePath: row['attest_signature_path'] as String? ?? '',
+      attestSelfiePath: row['attest_selfie_path'] as String? ?? '',
+      attestCombinedPath: row['attest_combined_path'] as String? ?? '',
+      attestPayloadPath: row['attest_payload_path'] as String? ?? '',
+      attestPdfPath: row['attest_pdf_path'] as String? ?? '',
     );
   }
 
@@ -1141,19 +1163,47 @@ class LocalDatabaseService {
     required String roundId,
     required String name,
     required String role,
+    int? attestedAtMs,
+    String? signaturePath,
+    String? selfiePath,
+    String? combinedPath,
+    String? payloadPath,
   }) async {
+    if (signaturePath == null || signaturePath.isEmpty) {
+      await AttestationFileStore.instance.deleteRound(roundId);
+    }
     final db = await database;
     await db.update(
       'golf_rounds',
       _dirty({
-        'attested_at_ms': _nowMs(),
+        'attested_at_ms': attestedAtMs ?? _nowMs(),
         'attested_by_name': name.trim(),
         'attested_role': role,
         'edited_after_attest_count': 0,
+        'attest_signature_path': _emptyToNull(signaturePath),
+        'attest_selfie_path': _emptyToNull(selfiePath),
+        'attest_combined_path': _emptyToNull(combinedPath),
+        'attest_payload_path': _emptyToNull(payloadPath),
+        'attest_pdf_path': null,
       }),
       where: 'round_id = ?',
       whereArgs: [roundId],
     );
+  }
+
+  Future<void> saveAttestPdfPath(String roundId, String path) async {
+    final db = await database;
+    await db.update(
+      'golf_rounds',
+      _dirty({'attest_pdf_path': _emptyToNull(path)}),
+      where: 'round_id = ?',
+      whereArgs: [roundId],
+    );
+  }
+
+  String? _emptyToNull(String? value) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   /// Clears the lock and counts the edit. The attestor name stays for the badge.
@@ -1164,6 +1214,7 @@ class LocalDatabaseService {
         current.attestedByName.isEmpty) {
       return;
     }
+    await AttestationFileStore.instance.deleteRound(roundId);
     final db = await database;
     await db.update(
       'golf_rounds',
@@ -1171,6 +1222,11 @@ class LocalDatabaseService {
         'attested_at_ms': null,
         'edited_after_attest_count':
             current.editedAfterAttestCount + (current.isAttested ? 1 : 0),
+        'attest_signature_path': null,
+        'attest_selfie_path': null,
+        'attest_combined_path': null,
+        'attest_payload_path': null,
+        'attest_pdf_path': null,
       }),
       where: 'round_id = ?',
       whereArgs: [roundId],
@@ -2281,6 +2337,11 @@ class LocalDatabaseService {
         attested_by_name TEXT NOT NULL DEFAULT '',
         attested_role TEXT NOT NULL DEFAULT '',
         edited_after_attest_count INTEGER NOT NULL DEFAULT 0,
+        attest_signature_path TEXT,
+        attest_selfie_path TEXT,
+        attest_combined_path TEXT,
+        attest_payload_path TEXT,
+        attest_pdf_path TEXT,
         flight_id TEXT,
         is_synced INTEGER NOT NULL DEFAULT 0,
         updated_at_ms INTEGER NOT NULL DEFAULT 0,

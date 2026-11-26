@@ -7,6 +7,9 @@ import '../models/diary_context_note.dart';
 import '../models/golf_models.dart';
 import '../models/round_summary.dart';
 import '../models/scoring_format.dart';
+import '../services/attest_pdf_fetch.dart';
+import '../services/attest_pdf_share.dart';
+import '../services/attestation_file_store.dart';
 import '../services/diary_model.dart';
 import '../services/local_database_service.dart';
 import '../services/swing_diary_service.dart';
@@ -47,6 +50,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   bool _cartHighContrast = false;
   int _cartSelectedHole = 1;
   bool _wakelockActive = false;
+  var _fetchingPdf = false;
   RoundFormatSettings? _format;
   double? _handicap;
   String? _unlockedRoundId;
@@ -102,8 +106,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
         _recentRounds.any(
           (r) => r.roundId == _selectedRoundId && !r.isCompleted,
         );
-    final shouldLock =
-        _viewMode == ScorecardViewMode.cart && roundActive;
+    final shouldLock = _viewMode == ScorecardViewMode.cart && roundActive;
     if (shouldLock && !_wakelockActive) {
       try {
         await WakelockPlus.enable();
@@ -122,8 +125,8 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _primeCartHole() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    final current = await LocalDatabaseService.instance
-        .currentHoleNumber(roundId);
+    final current =
+        await LocalDatabaseService.instance.currentHoleNumber(roundId);
     if (!mounted) return;
     setState(() => _cartSelectedHole = current.clamp(1, _holesOnCard));
   }
@@ -164,6 +167,43 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     });
     await _primeCartHole();
     await _syncWakelock();
+    await _refreshAttestPdf();
+  }
+
+  /// Fills in a PDF that was waiting on the function. Hides the link until then.
+  Future<void> _refreshAttestPdf() async {
+    if (_fetchingPdf) return;
+    final roundId = _selectedRoundId;
+    final format = _format;
+    if (roundId == null ||
+        format == null ||
+        !format.isAttested ||
+        format.hasAttestPdf) {
+      return;
+    }
+    _fetchingPdf = true;
+    try {
+      final ready = await AttestPdfFetch.tryFetch(roundId);
+      if (ready && mounted && _selectedRoundId == roundId) {
+        await loadScorecard();
+      }
+    } finally {
+      _fetchingPdf = false;
+    }
+  }
+
+  Future<void> _openAttestPdf() async {
+    final path = _format?.attestPdfPath ?? '';
+    if (path.isEmpty) return;
+    final bytes = await AttestationFileStore.instance.read(path);
+    if (!mounted) return;
+    if (bytes == null || bytes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The PDF will be ready when online.')),
+      );
+      return;
+    }
+    await shareAttestPdf(bytes, 'attested-score.pdf');
   }
 
   int _holesOnCardForCourse(String courseName) =>
@@ -223,8 +263,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
       _showReadOnly();
       return;
     }
-    final recent =
-        await LocalDatabaseService.instance.distinctCourseNames();
+    final recent = await LocalDatabaseService.instance.distinctCourseNames();
     if (!mounted) return;
     final result = await showCourseRoundDialog(
       context: context,
@@ -395,7 +434,11 @@ class ScorecardScreenState extends State<ScorecardScreen> {
   Future<void> _attest() async {
     final roundId = _selectedRoundId;
     if (roundId == null) return;
-    final saved = await showAttestCardDialog(context, roundId: roundId);
+    final saved = await showAttestCardDialog(
+      context,
+      roundId: roundId,
+      manualIndex: _handicap,
+    );
     if (!saved || !mounted) return;
     await loadScorecard();
   }
@@ -412,7 +455,12 @@ class ScorecardScreenState extends State<ScorecardScreen> {
     setState(() => _unlockedRoundId = null);
     await loadScorecard();
     if (!mounted) return;
-    await showAttestCardDialog(context, roundId: roundId, afterFinish: true);
+    await showAttestCardDialog(
+      context,
+      roundId: roundId,
+      afterFinish: true,
+      manualIndex: _handicap,
+    );
     if (!mounted) return;
     await loadScorecard();
   }
@@ -778,10 +826,10 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                     if (_viewMode == ScorecardViewMode.classic)
                       _NineGrid(
-                      title: 'FRONT 9',
-                      startHole: 1,
-                      holeRow: _holeRow,
-                      unplayedPar: _unplayedPar,
+                        title: 'FRONT 9',
+                        startHole: 1,
+                        holeRow: _holeRow,
+                        unplayedPar: _unplayedPar,
                         onHoleTap: _editHole,
                       ),
                     if (_viewMode == ScorecardViewMode.classic &&
@@ -801,6 +849,15 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         format.attestationLabel,
                         key: const ValueKey('scorecard-attest-badge'),
                       ),
+                      if (format.hasAttestPdf)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            key: const ValueKey('scorecard-attest-pdf-link'),
+                            onPressed: _openAttestPdf,
+                            child: const Text('Attested score PDF'),
+                          ),
+                        ),
                     ],
                     const SizedBox(height: 16),
                     if (_selectedRoundId != null && !_finished)
@@ -810,9 +867,7 @@ class ScorecardScreenState extends State<ScorecardScreen> {
                         icon: const Icon(Icons.flag_outlined),
                         label: const Text('Finish round'),
                       )
-                    else if (_finished &&
-                        format != null &&
-                        !format.isAttested)
+                    else if (_finished && format != null && !format.isAttested)
                       FilledButton.icon(
                         key: const ValueKey('scorecard-attest-btn'),
                         onPressed: _attest,

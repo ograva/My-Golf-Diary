@@ -43,6 +43,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Golf Diary uses your location to measure shot distances on the course.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a selfie for attesting the scorecard.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

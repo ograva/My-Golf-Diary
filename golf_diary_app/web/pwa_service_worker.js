@@ -10,6 +10,7 @@ const CACHE_NAME = 'golf-diary-shell-v2';
 // Course map packs written by the app (CacheApiCourseMapPackStore); they are
 // versioned by the app and must survive shell updates.
 const COURSE_MAP_CACHE_PREFIX = 'golf-diary-course-maps';
+const ATTEST_CACHE_PREFIX = 'golf-diary-attestations';
 const MANIFEST = 'precache_manifest.json';
 const BUILD_TIMEOUT_MS = 4000;
 
@@ -77,7 +78,9 @@ async function activateShell() {
     keys
       .filter(
         (key) =>
-          key !== CACHE_NAME && !key.startsWith(COURSE_MAP_CACHE_PREFIX),
+          key !== CACHE_NAME &&
+          !key.startsWith(COURSE_MAP_CACHE_PREFIX) &&
+          !key.startsWith(ATTEST_CACHE_PREFIX),
       )
       .map((key) => caches.delete(key)),
   );

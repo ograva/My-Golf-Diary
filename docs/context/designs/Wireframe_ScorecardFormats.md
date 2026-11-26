@@ -37,7 +37,7 @@ The OUT / IN / TOT banner keeps the score. Its format sentence uses `scorecard-f
 
 ### Attestation (below the card)
 
-Shown only after the round is finished. **Finish round** (`scorecard-finish-round`) opens the attest dialog right away; **Skip** leaves the round finished and unattested. See [Wireframe_Scorecard.md](./Wireframe_Scorecard.md) § Round controls.
+Shown only after the round is finished. **Finish round** (`scorecard-finish-round`) opens the attest sheet right away; **Skip** leaves the round finished and unattested. **Attested score PDF** (`scorecard-attest-pdf-link`) shows under the badge only after the function returns a file. See [Wireframe_Scorecard.md](./Wireframe_Scorecard.md) § Round controls.
 
 ```
 │ FRONT 9 / BACK 9 or cart                │
@@ -48,7 +48,7 @@ Shown only after the round is finished. **Finish round** (`scorecard-finish-roun
 
 - Open round: **Finish round** only. No badge.
 - Finished, not attested: badge **Not attested** and **Attest card**.
-- Attested: badge only.
+- Attested: badge, plus **Attested score PDF** only when `attest_pdf_path` is set.
 - Edited after attest (after **Edit finished round**): **Edited after attest** and **Attest card** again.
 
 ### Tokens

@@ -7,7 +7,8 @@ void main() {
     final worker = File('web/pwa_service_worker.js').readAsStringSync();
     final build = File('tool/build_web.sh').readAsStringSync();
     final mainSource = File('lib/main.dart').readAsStringSync();
-    final startup = File('lib/services/cloud_sync_service.dart').readAsStringSync();
+    final startup =
+        File('lib/services/cloud_sync_service.dart').readAsStringSync();
 
     expect(worker, contains("const CACHE_NAME = 'golf-diary-shell-v2'"));
     expect(worker, contains('precache_manifest.json'));
@@ -27,6 +28,11 @@ void main() {
     );
     expect(worker, contains('!key.startsWith(COURSE_MAP_CACHE_PREFIX)'));
     expect(
+      worker,
+      contains("const ATTEST_CACHE_PREFIX = 'golf-diary-attestations'"),
+    );
+    expect(worker, contains('!key.startsWith(ATTEST_CACHE_PREFIX)'));
+    expect(
       File('lib/services/course_map_pack_store_web.dart').readAsStringSync(),
       contains("cacheName = 'golf-diary-course-maps-"),
     );
@@ -42,10 +48,15 @@ void main() {
     expect(build, contains('useLocalCanvasKit'));
     expect(build, contains('precache_manifest.json'));
 
-    final mainBody = mainSource.split('Future<void> main()').last.split('Future<void> _startOptionalCloud()').first;
+    final mainBody = mainSource
+        .split('Future<void> main()')
+        .last
+        .split('Future<void> _startOptionalCloud()')
+        .first;
     expect(mainBody, contains('runApp(const GolfDiaryApp())'));
     expect(mainBody, contains('unawaited(_startOptionalCloud())'));
-    expect(mainBody.indexOf('runApp('), lessThan(mainBody.indexOf('unawaited(_startOptionalCloud())')));
+    expect(mainBody.indexOf('runApp('),
+        lessThan(mainBody.indexOf('unawaited(_startOptionalCloud())')));
     expect(mainBody, isNot(contains('initializeFirebase')));
 
     expect(startup, contains('kOptionalFirebaseStartupLimit'));

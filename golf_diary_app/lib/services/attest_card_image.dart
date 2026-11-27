@@ -5,6 +5,30 @@ import 'package:flutter/material.dart';
 
 import 'attest_jpeg.dart';
 
+/// Landscape canvas the signature is captured on, so it lays over a portrait
+/// selfie as a band across the bottom.
+const kSignaturePadAspect = 16 / 9;
+
+/// White behind the signature on a selfie: 95% opaque, so a hint of the photo
+/// shows through while the ink stays solid black.
+const kSignatureOverlayGround = Color(0xF2FFFFFF);
+
+/// Largest 16:9 rect centered in [area] (letterboxed when [area] is portrait).
+Rect signaturePadRect(Size area) {
+  var width = area.width;
+  var height = width / kSignaturePadAspect;
+  if (height > area.height) {
+    height = area.height;
+    width = height * kSignaturePadAspect;
+  }
+  return Rect.fromLTWH(
+    (area.width - width) / 2,
+    (area.height - height) / 2,
+    width,
+    height,
+  );
+}
+
 /// Wide signature PNG, white ground, black ~3px stroke.
 Future<Uint8List> renderSignaturePng(
   List<List<Offset>> strokes,
@@ -112,13 +136,16 @@ Future<Uint8List> compositeSignatureOnSelfie({
     final edge = w < h ? w : h;
     canvas.drawRRect(
       RRect.fromRectAndRadius(dest, Radius.circular(edge * 0.02)),
-      Paint()..color = const Color(0xD9FFFFFF),
+      Paint()..color = kSignatureOverlayGround,
     );
+    // Multiply: the PNG's white ground leaves the band untouched, ink stays black.
     canvas.drawImageRect(
       sign,
       src,
       dest,
-      Paint()..filterQuality = FilterQuality.medium,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..blendMode = BlendMode.multiply,
     );
     final image =
         await recorder.endRecording().toImage(photo.width, photo.height);

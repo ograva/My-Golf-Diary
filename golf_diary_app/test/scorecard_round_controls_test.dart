@@ -63,7 +63,11 @@ void main() {
 
   Future<void> signPad(WidgetTester tester) async {
     await tapKey(tester, 'scorecard-attest-signature');
-    expect(find.byKey(const ValueKey('scorecard-attest-signature-pad')),
+    final pad = find.byKey(const ValueKey('scorecard-attest-signature-pad'));
+    expect(pad, findsOneWidget);
+    final padSize = tester.getSize(pad);
+    expect(padSize.width / padSize.height, closeTo(16 / 9, 0.01));
+    expect(find.byKey(const ValueKey('scorecard-attest-signature-guide')),
         findsOneWidget);
     await tester
         .tap(find.byKey(const ValueKey('scorecard-attest-signature-pad')));

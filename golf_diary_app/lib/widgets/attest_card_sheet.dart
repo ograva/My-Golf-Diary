@@ -32,7 +32,7 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
   Uint8List? _selfie;
   Size? _selfieSize;
   var _saving = false;
-  Size _padSize = const Size(300, 120);
+  Size _padSize = const Size(320, 180);
 
   bool get _hasStroke => _strokes.any((stroke) => stroke.isNotEmpty);
 
@@ -75,6 +75,7 @@ class _AttestCardSheetState extends State<AttestCardSheet> {
       barrierDismissible: false,
       builder: (context) => _SignaturePadDialog(
         strokes: _strokes,
+        padSize: _hasStroke ? _padSize : Size.zero,
         onChanged: () {
           if (mounted) setState(() {});
         },
@@ -312,7 +313,7 @@ class _Preview extends StatelessWidget {
                   rect: band,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xD9FFFFFF),
+                      color: kSignatureOverlayGround,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: CustomPaint(
@@ -332,10 +333,14 @@ class _Preview extends StatelessWidget {
 class _SignaturePadDialog extends StatefulWidget {
   const _SignaturePadDialog({
     required this.strokes,
+    required this.padSize,
     required this.onChanged,
   });
 
   final List<List<Offset>> strokes;
+
+  /// Size [strokes] were drawn at, or zero when there are none yet.
+  final Size padSize;
   final VoidCallback onChanged;
 
   @override
@@ -343,9 +348,24 @@ class _SignaturePadDialog extends StatefulWidget {
 }
 
 class _SignaturePadDialogState extends State<_SignaturePadDialog> {
-  Size _padSize = Size.zero;
+  late Size _padSize = widget.padSize;
 
   bool get _hasStroke => widget.strokes.any((stroke) => stroke.isNotEmpty);
+
+  /// Strokes follow the pad when it resizes (e.g. on rotation); the aspect is
+  /// fixed, so one scale factor keeps the signature intact.
+  void _resizeTo(Size size) {
+    if (size.width <= 0 || size.height <= 0 || size == _padSize) return;
+    if (_padSize.width > 0) {
+      final scale = size.width / _padSize.width;
+      for (final stroke in widget.strokes) {
+        for (var i = 0; i < stroke.length; i++) {
+          stroke[i] = stroke[i] * scale;
+        }
+      }
+    }
+    _padSize = size;
+  }
 
   void _changed() {
     widget.onChanged();
@@ -391,30 +411,56 @@ class _SignaturePadDialogState extends State<_SignaturePadDialog> {
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final size =
-                        Size(constraints.maxWidth, constraints.maxHeight);
-                    if (size.width > 0 && size.height > 0) _padSize = size;
-                    return Listener(
-                      key: const ValueKey('scorecard-attest-signature-pad'),
-                      onPointerDown: (event) {
-                        widget.strokes.add([event.localPosition]);
-                        _changed();
-                      },
-                      onPointerMove: (event) {
-                        if (widget.strokes.isEmpty) return;
-                        widget.strokes.last.add(event.localPosition);
-                        _changed();
-                      },
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.black26),
+                    final pad = signaturePadRect(
+                      Size(constraints.maxWidth, constraints.maxHeight),
+                    );
+                    _resizeTo(pad.size);
+                    final portrait =
+                        constraints.maxHeight > constraints.maxWidth;
+                    return Stack(
+                      children: [
+                        Positioned.fromRect(
+                          rect: pad,
+                          child: Listener(
+                            key: const ValueKey(
+                                'scorecard-attest-signature-pad'),
+                            onPointerDown: (event) {
+                              widget.strokes.add([event.localPosition]);
+                              _changed();
+                            },
+                            onPointerMove: (event) {
+                              if (widget.strokes.isEmpty) return;
+                              widget.strokes.last.add(event.localPosition);
+                              _changed();
+                            },
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.black26),
+                              ),
+                              child: CustomPaint(
+                                key: const ValueKey(
+                                    'scorecard-attest-signature-guide'),
+                                painter: const _SignatureGuidePainter(),
+                                foregroundPainter:
+                                    _SignaturePainter(widget.strokes),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                          ),
                         ),
-                        child: CustomPaint(
-                          painter: _SignaturePainter(widget.strokes),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
+                        if (portrait)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: pad.bottom + 12,
+                            child: Text(
+                              'Rotate your phone for a bigger pad',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -425,6 +471,34 @@ class _SignaturePadDialogState extends State<_SignaturePadDialog> {
       ),
     );
   }
+}
+
+/// Pad-only signing line with an "x" at its left; never part of the saved PNG.
+class _SignatureGuidePainter extends CustomPainter {
+  const _SignatureGuidePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height * 0.72;
+    final left = size.width * 0.08;
+    final right = size.width * 0.92;
+    final line = Paint()
+      ..color = Colors.black26
+      ..strokeWidth = 1.5;
+    canvas.drawLine(Offset(left, y), Offset(right, y), line);
+    final x = (size.height * 0.05).clamp(5.0, 12.0);
+    final cx = left + x;
+    final cy = y - x - 6;
+    final mark = Paint()
+      ..color = Colors.black38
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(cx - x, cy - x), Offset(cx + x, cy + x), mark);
+    canvas.drawLine(Offset(cx - x, cy + x), Offset(cx + x, cy - x), mark);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SignatureGuidePainter oldDelegate) => false;
 }
 
 class _SignaturePainter extends CustomPainter {
